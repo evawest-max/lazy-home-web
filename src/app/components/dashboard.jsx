@@ -56,7 +56,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import Navbar from './Navbar';
 
 
-export default function Dashboard({ onNavigate }) {
+export default function Dashboard({ onNavigate, user }) {
     const [activeTab, setActiveTab] = useState(0);
     const [transactionPin, setTransactionPin] = useState('');
     const [transactionAction, setTransactionAction] = useState('pay');
@@ -106,13 +106,13 @@ export default function Dashboard({ onNavigate }) {
                                 LazyHomes
                             </Text>
                             <Text fontSize="xs" color="whiteAlpha.800">
-                                Welcome back, John
+                                Welcome back, {user.fullName.split(' ')[0]}!
                             </Text>
                         </VStack>
                         <Avatar
                             size="md"
                             name="John Adeyemi"
-                            src="https://i.pravatar.cc/150?img=33"
+                            src={user.image || "https://i.pravatar.cc/150?img=33"}
                             cursor="pointer"
                         />
                     </HStack>
@@ -198,14 +198,13 @@ export default function Dashboard({ onNavigate }) {
                                 <VStack spacing={4} align="stretch" pt={4}>
                                     <Button
                                         as={Link}
-                                        to="/create-listing/step-1"
+                                        to="/create-listing/steps"
                                         variant="solid"
                                         size="lg"
                                         bg="white"
                                         color="brand.primary"
                                         leftIcon={<Plus size={20} />}
                                         _hover={{ bg: 'whiteAlpha.900' }}
-                                    // onClick={() => onNavigate?.('/create-listing/step-1')}
                                     >
                                         Create New Listing
                                     </Button>

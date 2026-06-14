@@ -19,7 +19,7 @@ export default function IdentityVerification() {
     <Box minH="100vh" bg="brand.background" pb="100px">
       <Box bg="brand.primary" px={6} pt={12} pb={8}>
         <HStack mb={6}>
-          <Link to="profile">
+          <Link to="/profile">
             <IconButton
               icon={<ArrowLeft size={20} />}
               variant="ghost"

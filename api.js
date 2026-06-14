@@ -50,11 +50,22 @@ export const loginUser = (data) =>
   API.post("/api/v1/auth/login", data);
 
 export const verifyEmail = (token) =>
-  API.get(`/api/v1/auth/verify-email/${token}`);
+  API.post(`/api/v1/verification/verify-email/${token}`);
 
 export const resendVerificationEmail = (email) =>
-  API.post("/api/v1/auth/resend-verification", {
+  API.post("/api/v1/verification/resend-verification-email", {
     email,
+  });
+
+export const sendOTP = ({ phone }) =>
+  API.post("/api/v1/verification/send-otp", {
+    phone,
+  });
+
+export const verifyOTP = ({ phone, otp }) =>
+  API.post("/api/v1/verification/verify-otp", {
+    phone,
+    otp,
   });
 
 export const forgotPassword = (email) =>
@@ -63,9 +74,19 @@ export const forgotPassword = (email) =>
   });
 
 export const resetPassword = (token, password) =>
-  API.post(`/api/v1/auth/reset-password/${token}`, {
-    password,
+  API.post(`/api/v1/auth/reset-password/${token}`, { password });
+
+export const changePassword = (
+  currentPassword,
+  newPassword
+) =>
+  API.post("/api/v1/auth/change-password", {
+    currentPassword,
+    newPassword,
   });
+
+export const googleSignIn = (idToken) =>
+  API.post("/api/v1/auth/google-login", { token: idToken });
 
 // ======================================================
 // ====================== USER ==========================
@@ -74,21 +95,15 @@ export const resetPassword = (token, password) =>
 export const getCurrentUser = () =>
   API.get("/api/v1/users/me");
 
-export const updateProfile = (formData) =>
-  API.put("/api/v1/users/profile", formData, {
+export const updateProfile = (formData, id) =>
+  API.patch(`/api/v1/users/profile/${id}`, formData, {
     headers: {
       "Content-Type": "multipart/form-data",
     },
   });
 
-export const changePassword = (
-  currentPassword,
-  newPassword
-) =>
-  API.post("/api/v1/users/change-password", {
-    currentPassword,
-    newPassword,
-  });
+
+
 
 // ======================================================
 // ================== VERIFICATION ======================
@@ -109,7 +124,7 @@ export const getVerificationStatus = () =>
 // ======================================================
 
 export const createProperty = (formData) =>
-  API.post("/api/v1/properties", formData, {
+  API.patch("/api/v1/properties", formData, {
     headers: {
       "Content-Type": "multipart/form-data",
     },

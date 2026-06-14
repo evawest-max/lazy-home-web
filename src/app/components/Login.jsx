@@ -1,9 +1,37 @@
 import { Box, Button, VStack, Text, Heading, HStack, Divider } from '@chakra-ui/react';
 import { Mail, Phone, Chrome, ShieldCheck, RefreshCw, Lock, Home, Search, FileText, User } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation,} from 'react-router-dom';
 import Navbar from './Navbar';
+import { GoogleLogin } from '@react-oauth/google';
+import { googleSignIn } from '../../../api';
+import { useEffect } from 'react';
+import { color } from 'framer-motion';
 
-export default function Login() {
+export default function Login({ onLogin }) {
+  const { state } = useLocation();
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    console.log(credentialResponse);
+    // Send the token to your backend
+    // const { data } = await googleSignIn(credentialResponse.credential);
+    // localStorage.setItem("token", data.token);
+    try {
+      const idToken = credentialResponse.credential;
+      const { data } = await googleSignIn(idToken); // call backend
+      console.log(data);
+      localStorage.setItem('token', data.accessToken);
+
+      onLogin(data.user);
+      // window.location.href = '/dashboard';
+    } catch (err) {
+      console.error(err);
+      console.log('Google sign-in failed.');
+    }
+  };
+
+  const handleGoogleError = () => {
+    console.log('Google Login Failed');
+  };
   return (
     <Box minH="100vh" bg="brand.background" px={6} py={12}>
       <VStack spacing={8} maxW="400px" mx="auto">
@@ -11,8 +39,13 @@ export default function Login() {
           <Heading fontSize="3xl" color="brand.primary">
             Welcome Back
           </Heading>
+          {state?.email && (
+            <Text color="brand.gray.600" fontSize="sm" textAlign="center" px={4} whiteSpace="pre-wrap" >
+              We sent a code to <Box fontWeight="bold" color="green.600" >{state?.email}</Box>. Check your inbox.
+            </Text>
+          )}
           <Text color="brand.gray.600">
-            Sign in to continue your rental journey
+            Sign in to continue your rental journey with LazyHomes
           </Text>
         </VStack>
 
@@ -41,36 +74,58 @@ export default function Login() {
         </Box>
 
         <VStack spacing={4} w="100%">
-          <Button
+          <Box
             w="100%"
-            variant="secondary"
-            leftIcon={<Chrome size={20} />}
+            // variant="secondary"
+            // leftIcon={<Chrome size={20} />}
             size="lg"
+            border="2px solid"
+            borderColor="green.700"
+            borderRadius="md"
+            _hover={{ bg: 'brand.gray.50' }}
+            color="green.700"
+            fontWeight="bold"
           >
-            Continue with Google
-          </Button>
+            <GoogleLogin
+              theme="filled_white"   // options: "outline", "filled_blue", "filled_black"
+              size="large"          // options: "large", "medium", "small"
+              shape="rectangular"          // options: "rectangular", "pill", "circle"
+              text="continue_with"
+              w="100%"
+              h="100%"
+              onSuccess={handleGoogleSuccess}
+              onError={handleGoogleError}
+            />
+          </Box>
 
           <Link to="/login-form" style={{ width: '100%' }}>
             <Button
               w="100%"
               variant="secondary"
-              leftIcon={<Mail size={20} />}
-              size="lg"
+              leftIcon={<Mail size={20 } />}
+              size="sm"
+              justifyContent="flex-start"
+              gap="20%"
+              weight="sm"
+              h="40px"
+              color="gray.600"
+              borderradius="md"
+              _hover={{ bg: 'brand.gray.100' }}
             >
-              Continue with Email
+              Continue with Email/Password
             </Button>
           </Link>
 
-          <Link to="/otp" style={{ width: '100%' }}>  
-          <Button
-            w="100%"
-            variant="secondary"
-            leftIcon={<Phone size={20} />}
-            size="lg"
-          >
-            Continue with Phone
-          </Button>
-          </Link>
+          {/* <Link to="/otp" style={{ width: '100%' }}>
+            <Button
+              w="100%"
+              variant="secondary"
+              leftIcon={<Phone size={20} />}
+              size="lg"
+            >
+              Continue with Phone
+            </Button>
+          </Link> */}
         </VStack>
 
         <HStack w="100%">

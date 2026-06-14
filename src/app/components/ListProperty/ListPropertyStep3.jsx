@@ -31,7 +31,7 @@ import {
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 
-export default function ListPropertyStep3({ formData, setFormData, onNext }) {
+  export default function ListPropertyStep3({ formData, setFormData, onBack, onNext }) {
     const currentStep = 3;
     const totalSteps = 4;
 
@@ -54,18 +54,19 @@ export default function ListPropertyStep3({ formData, setFormData, onNext }) {
         if (!isStepThreeValid()) {
             event?.preventDefault?.();
             setFormError('Please fill in all required fields before continuing.');
-            return;
+        return false;
         }
 
         sessionStorage.setItem('listingFormData', JSON.stringify(formData));
         if (onNext) {
             onNext(formData);
         }
+      return true;
     };
 
   return (
     <Box minH="100vh" bg="brand.background" pb="120px">
-      <Box bg="brand.primary" px={6} pt={12} pb={8}>
+      {/* <Box bg="brand.primary" px={6} pt={12} pb={8}>
         <HStack mb={6}>
           <Link to="/dashboard">
           <IconButton
@@ -110,7 +111,7 @@ export default function ListPropertyStep3({ formData, setFormData, onNext }) {
             ))}
           </HStack>
         </VStack>
-      </Box>
+      </Box> */}
 
       <VStack align="stretch" px={6} mt={-4} spacing={6}>
         <Box bg="white" borderRadius="xl" p={6} boxShadow="md" border="2px solid" borderColor="brand.success">
@@ -457,19 +458,18 @@ export default function ListPropertyStep3({ formData, setFormData, onNext }) {
             >
                 <Grid templateColumns="1fr 2fr" gap={3}>
                     <Button
-                        as={Link}
-                        to="/create-listing/step-2"
                         variant="secondary"
                         size="lg"
+                  onClick={onBack}
                     >
                         Back
                     </Button>
                     <Button
-                        as={Link}
-                        to="/create-listing/step-4"
                         variant="primary"
                         size="lg"
-                        onClick={handleContinue}
+                  onClick={() => {
+                        handleContinue();
+                  }}
                     >
                         Continue to Bank Details
                     </Button>

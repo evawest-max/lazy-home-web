@@ -29,7 +29,7 @@ import {
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
-export default function ListPropertyStep4({ formData, setFormData, onNext, onSubmit }) {
+export default function ListPropertyStep4({ formData, setFormData, onBack, onSubmit }) {
     const currentStep = 4;
     const totalSteps = 4;
 
@@ -83,7 +83,7 @@ export default function ListPropertyStep4({ formData, setFormData, onNext, onSub
 
     return (
         <Box minH="100vh" bg="brand.background" pb="120px">
-            <Box bg="brand.primary" px={6} pt={12} pb={8}>
+            {/* <Box bg="brand.primary" px={6} pt={12} pb={8}>
                 <HStack mb={6}>
                     <Link to="/create-listing/step-3">
                     <IconButton
@@ -128,7 +128,7 @@ export default function ListPropertyStep4({ formData, setFormData, onNext, onSub
                         ))}
                     </HStack>
                 </VStack>
-            </Box>
+            </Box> */}
 
             <VStack align="stretch" px={6} mt={-4} spacing={6}>
                 <Box bg="white" borderRadius="xl" p={6} boxShadow="md" border="2px solid" borderColor="brand.success">
@@ -495,6 +495,14 @@ export default function ListPropertyStep4({ formData, setFormData, onNext, onSub
                             READY TO PUBLISH - YOUR LISTING WILL BE VERIFIED IN 24 HOURS
                         </Text>
                     </HStack>
+                    <Button
+                        w="100%"
+                        variant="secondary"
+                        size="lg"
+                        onClick={onBack}
+                    >
+                        Back
+                    </Button>
                     <Button
                         w="100%"
                         variant="primary"

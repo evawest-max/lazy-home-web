@@ -1,36 +1,36 @@
 import {
-    Box,
-    VStack,
-    HStack,
-    Text,
-    Button,
-    IconButton,
-    Grid,
-    Progress,
-    Image,
+  Box,
+  VStack,
+  HStack,
+  Text,
+  Button,
+  IconButton,
+  Grid,
+  Progress,
+  Image,
 } from '@chakra-ui/react';
 import {
-    ArrowLeft,
-    Upload,
-    Image as ImageIcon,
-    Video,
-    X,
-    ShieldCheck,
-    AlertCircle,
-    Camera,
-    CheckCircle,
-    ArrowLeftIcon,
+  ArrowLeft,
+  Upload,
+  Image as ImageIcon,
+  Video,
+  X,
+  ShieldCheck,
+  AlertCircle,
+  Camera,
+  CheckCircle,
+  ArrowLeftIcon,
 } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 
-export default function ListPropertyStep2( { formData, setFormData, onNext }) {
-    const currentStep = 2;
-    const totalSteps = 4;
+export default function ListPropertyStep2({ formData, setFormData, onBack, onNext }) {
+  const currentStep = 2;
+  const totalSteps = 4;
 
-    const initialData = { photos: [], video: "" };
+  const initialData = { photos: [], video: "" };
 
-    const [uploadedPhotos, setUploadedPhotos] = useState(
+  const [uploadedPhotos, setUploadedPhotos] = useState(
     formData.photos || [
       "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&q=80",
       "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800&q=80",
@@ -93,65 +93,67 @@ export default function ListPropertyStep2( { formData, setFormData, onNext }) {
   };
 
   const handleContinue = () => {
+    let isValid = true;
     sessionStorage.setItem('listingFormData', JSON.stringify(formData));
 
     // if (onNext) {
     //   onNext({ photos: uploadedPhotos, video: videoUrl });
     // }
+    return isValid;
   };
 
 
 
-    return (
-        <Box minH="100vh" bg="brand.background" pb="120px">
-            <Box bg="brand.primary" px={6} pt={12} pb={8}>
-                <HStack mb={6}>
-                    <Link to="/dashboard">
-                    <IconButton
-                        icon={<ArrowLeft size={20} />}
-                        variant="ghost"
-                        color="white"
-                        _hover={{ bg: 'whiteAlpha.200' }}
-                        aria-label="Back"
-                    />
-                    </Link>
-                    <Text fontSize="xl" fontWeight="bold" color="white" flex={1}>
-                        List Your Property
-                    </Text>
-                </HStack>
+  return (
+    <Box minH="100vh" bg="brand.background" pb="120px">
+      {/* <Box bg="brand.primary" px={6} pt={12} pb={8}>
+        <HStack mb={6}>
+          <Link to="/dashboard">
+            <IconButton
+              icon={<ArrowLeft size={20} />}
+              variant="ghost"
+              color="white"
+              _hover={{ bg: 'whiteAlpha.200' }}
+              aria-label="Back"
+            />
+          </Link>
+          <Text fontSize="xl" fontWeight="bold" color="white" flex={1}>
+            List Your Property
+          </Text>
+        </HStack>
 
-                <VStack spacing={3} align="stretch">
-                    <HStack justify="space-between">
-                        <Text fontSize="sm" color="whiteAlpha.900">
-                            Step {currentStep} of {totalSteps}
-                        </Text>
-                        <Text fontSize="sm" color="whiteAlpha.900">
-                            {Math.round((currentStep / totalSteps) * 100)}% Complete
-                        </Text>
-                    </HStack>
-                    <Progress
-                        value={(currentStep / totalSteps) * 100}
-                        size="sm"
-                        colorScheme="green"
-                        borderRadius="full"
-                        bg="whiteAlpha.300"
-                    />
+        <VStack spacing={3} align="stretch">
+          <HStack justify="space-between">
+            <Text fontSize="sm" color="whiteAlpha.900">
+              Step {currentStep} of {totalSteps}
+            </Text>
+            <Text fontSize="sm" color="whiteAlpha.900">
+              {Math.round((currentStep / totalSteps) * 100)}% Complete
+            </Text>
+          </HStack>
+          <Progress
+            value={(currentStep / totalSteps) * 100}
+            size="sm"
+            colorScheme="green"
+            borderRadius="full"
+            bg="whiteAlpha.300"
+          />
 
-                    <HStack spacing={2} justify="center" mt={2}>
-                        {[1, 2, 3, 4].map((step) => (
-                            <Box
-                                key={step}
-                                w="8px"
-                                h="8px"
-                                borderRadius="full"
-                                bg={step <= currentStep ? 'white' : 'whiteAlpha.400'}
-                            />
-                        ))}
-                    </HStack>
-                </VStack>
-            </Box>
+          <HStack spacing={2} justify="center" mt={2}>
+            {[1, 2, 3, 4].map((step) => (
+              <Box
+                key={step}
+                w="8px"
+                h="8px"
+                borderRadius="full"
+                bg={step <= currentStep ? 'white' : 'whiteAlpha.400'}
+              />
+            ))}
+          </HStack>
+        </VStack>
+      </Box> */}
 
-            <VStack align="stretch" px={6} mt={-4} spacing={6}>
+      <VStack align="stretch" px={6} mt={-4} spacing={6}>
         <Box bg="white" borderRadius="xl" p={6} boxShadow="md" border="2px solid" borderColor="brand.accent">
           <VStack spacing={4}>
             <HStack justify="center" bg="brand.accent" py={3} px={4} borderRadius="lg" w="100%">
@@ -409,39 +411,39 @@ export default function ListPropertyStep2( { formData, setFormData, onNext }) {
       </VStack>
 
 
-            <Box
-                position="fixed"
-                bottom={0}
-                left={0}
-                right={0}
-                bg="white"
-                borderTop="2px solid"
-                borderColor="brand.primary"
-                p={6}
-                boxShadow="2xl"
-            >
-                <Grid templateColumns="1fr 2fr" gap={3}>
-                        <Button 
-                        as={Link}
-                        to="/create-listing/step-1"
-                        variant="secondary" 
-                        size="lg"
-                         leftIcon={<ArrowLeftIcon size={18} />}
-                           
-                        >
-                            Back
-                        </Button>
-                        <Button 
-                        as={Link}
-                        to="/create-listing/step-3"
-                        variant="primary" 
-                        size="lg"
-                        onClick={handleContinue}
-                        >
-                            Continue to Pricing
-                        </Button>
-                </Grid>
-            </Box>
-        </Box>
-    );
+      <Box
+        position="fixed"
+        bottom={0}
+        left={0}
+        right={0}
+        bg="white"
+        borderTop="2px solid"
+        borderColor="brand.primary"
+        p={6}
+        boxShadow="2xl"
+      >
+        <Grid templateColumns="1fr 2fr" gap={3}>
+          <Button
+            variant="secondary"
+            size="lg"
+            leftIcon={<ArrowLeftIcon size={18} />}
+            onClick={onBack}
+          >
+            Back
+          </Button>
+          <Button
+            variant="primary"
+            size="lg"
+            onClick={() => {
+              if (handleContinue()) {
+                onNext?.();
+              }
+            }}
+          >
+            Continue to Pricing
+          </Button>
+        </Grid>
+      </Box>
+    </Box>
+  );
 }
