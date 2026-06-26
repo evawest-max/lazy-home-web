@@ -35,11 +35,11 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import ListPropertyStep2 from './ListPropertyStep2';
-import ListPropertyStep3 from './ListPropertyStep3';
-import ListPropertyStep4 from './ListPropertyStep4';
+import UpdatePropertyStep2 from './UpdatePropertyStep2';
+import UpdatePropertyStep3 from './UpdatePropertyStep3';
+import UpdatePropertyStep4 from './UpdatePropertyStep4';
 
-export default function ListProperty({ formData, setFormData, onSubmit, initialStep = 1, isLoading, setIsLoading }) {
+export default function UpdateProperty({ updatedFormdata, setUpdatedFormdata, onSubmit, initialStep = 1, isLoading, setIsLoading }) {
   const navigate = useNavigate();
   const [activeStep, setActiveStep] = useState(Math.max(0, initialStep - 1));
   const totalSteps = 4;
@@ -60,7 +60,7 @@ export default function ListProperty({ formData, setFormData, onSubmit, initialS
   ];
 
   const toggleAmenity = (amenity) => {
-    setFormData((prev) => ({
+    setUpdatedFormdata((prev) => ({
       ...prev,
       amenities: prev.amenities.includes(amenity)
         ? prev.amenities.filter((a) => a !== amenity)
@@ -70,7 +70,7 @@ export default function ListProperty({ formData, setFormData, onSubmit, initialS
 
   const addCustomAmenity = () => {
     if (customAmenity.trim()) {
-      setFormData((prev) => ({
+      setUpdatedFormdata((prev) => ({
         ...prev,
         amenities: [...prev.amenities, customAmenity.trim()],
       }));
@@ -92,11 +92,11 @@ export default function ListProperty({ formData, setFormData, onSubmit, initialS
 
   const isStepOneValid = () =>
     requiredFields.every(
-      (field) => formData[field] && String(formData[field]).trim() !== ''
+      (field) => updatedFormdata[field] && String(updatedFormdata[field]).trim() !== ''
     );
 
   const persistDraft = () => {
-    const draft = JSON.stringify(formData);
+    const draft = JSON.stringify(updatedFormdata);
     sessionStorage.setItem(draftKey, draft);
     localStorage.setItem(draftKey, draft);
   };
@@ -105,7 +105,7 @@ export default function ListProperty({ formData, setFormData, onSubmit, initialS
     if (formError && isStepOneValid()) {
       setFormError('');
     }
-  }, [formData, formError]);
+  }, [updatedFormdata, formError]);
 
   const handleContinue = (event) => {
     if (!isStepOneValid()) {
@@ -123,6 +123,10 @@ export default function ListProperty({ formData, setFormData, onSubmit, initialS
     setActiveStep(Math.max(0, initialStep - 1));
   }, [initialStep]);
 
+  const storeData = () => {
+
+  }
+
   return (
 
     <Box minH="100vh" bg="brand.background" pb="120px">
@@ -137,7 +141,7 @@ export default function ListProperty({ formData, setFormData, onSubmit, initialS
             onClick={() => navigate('/dashboard')}
           />
           <Text fontSize="xl" fontWeight="bold" color="white" flex={1}>
-            List Your Property
+            update your {updatedFormdata.title || "Property"}
           </Text>
         </HStack>
 
@@ -230,16 +234,16 @@ export default function ListProperty({ formData, setFormData, onSubmit, initialS
                   </Alert>
                 )}
 
-                <FormControl isRequired isInvalid={formError && !formData.title}>
+                <FormControl isRequired isInvalid={formError && !updatedFormdata.title}>
                   <FormLabel color="brand.gray.700" fontSize="sm" fontWeight="600">
                     Property Title
                   </FormLabel>
                   <Input
                     placeholder="e.g. 3 Bedroom Duplex in Lekki Phase 1"
                     size="lg"
-                    value={formData.title}
+                    value={updatedFormdata.title}
                     onChange={(e) => {
-                      setFormData(prev => ({ ...prev, title: e.target.value }));
+                      setUpdatedFormdata(prev => ({ ...prev, title: e.target.value }));
                       if (formError) setFormError('');
                     }}
                     _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
@@ -254,8 +258,8 @@ export default function ListProperty({ formData, setFormData, onSubmit, initialS
                   <Select
                     placeholder="Select property type"
                     size="lg"
-                    value={formData.propertyType}
-                    onChange={(e) => setFormData(prev => ({ ...prev, propertyType: e.target.value }))}
+                    value={updatedFormdata.propertyType}
+                    onChange={(e) => setUpdatedFormdata(prev => ({ ...prev, propertyType: e.target.value }))}
                     _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
                   >
                     <option>Apartment/Flat</option>
@@ -281,8 +285,8 @@ export default function ListProperty({ formData, setFormData, onSubmit, initialS
                     <Select
                       placeholder="Select"
                       size="lg"
-                      value={formData.bedrooms}
-                      onChange={(e) => setFormData(prev => ({ ...prev, bedrooms: e.target.value }))}
+                      value={updatedFormdata.bedrooms || ""}
+                      onChange={(e) => setUpdatedFormdata(prev => ({ ...prev, bedrooms: e.target.value }))}
                       _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
                     >
                       <option>Studio</option>
@@ -302,8 +306,8 @@ export default function ListProperty({ formData, setFormData, onSubmit, initialS
                     <Select
                       placeholder="Select"
                       size="lg"
-                      value={formData.bathrooms}
-                      onChange={(e) => setFormData(prev => ({ ...prev, bathrooms: e.target.value }))}
+                      value={updatedFormdata.bathrooms || ""}
+                      onChange={(e) => setUpdatedFormdata(prev => ({ ...prev, bathrooms: e.target.value }))}
                       _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
                     >
                       <option>1</option>
@@ -322,8 +326,8 @@ export default function ListProperty({ formData, setFormData, onSubmit, initialS
                     <Select
                       placeholder="Select"
                       size="lg"
-                      value={formData.toilet}
-                      onChange={(e) => setFormData(prev => ({ ...prev, toilet: e.target.value }))}
+                      value={updatedFormdata.toilet || ""}
+                      onChange={(e) => setUpdatedFormdata(prev => ({ ...prev, toilet: e.target.value }))}
                       _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
                     >
                       <option>1</option>
@@ -344,8 +348,8 @@ export default function ListProperty({ formData, setFormData, onSubmit, initialS
                     placeholder="e.g. 2400"
                     type="number"
                     size="lg"
-                    value={formData.size}
-                    onChange={(e) => setFormData(prev => ({ ...prev, size: e.target.value }))}
+                    value={updatedFormdata.size || ""}
+                    onChange={(e) => setUpdatedFormdata(prev => ({ ...prev, size: e.target.value }))}
                     _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
                   />
                 </FormControl>
@@ -358,8 +362,8 @@ export default function ListProperty({ formData, setFormData, onSubmit, initialS
                     placeholder="Describe your property in detail. Mention key features, amenities, nearby landmarks, etc."
                     size="lg"
                     rows={6}
-                    value={formData.description}
-                    onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                    value={updatedFormdata.description || ""}
+                    onChange={(e) => setUpdatedFormdata(prev => ({ ...prev, description: e.target.value }))}
                     _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
                   />
                   <Text fontSize="xs" color="brand.gray.500" mt={2}>
@@ -374,7 +378,7 @@ export default function ListProperty({ formData, setFormData, onSubmit, initialS
                   <VStack spacing={2} align="stretch">
                     <Grid templateColumns="repeat(2, 1fr)" gap={3}>
                       {amenityOptions.map((amenity) => {
-                        const isSelected = formData.amenities.includes(amenity);
+                        const isSelected = updatedFormdata.amenities.includes(amenity);
                         return (
                           <HStack
                             key={amenity}
@@ -401,11 +405,11 @@ export default function ListProperty({ formData, setFormData, onSubmit, initialS
                       })}
                     </Grid>
 
-                    {formData.amenities.filter(a => !amenityOptions.includes(a)).length > 0 && (
+                    {updatedFormdata.amenities.filter(a => !amenityOptions.includes(a)).length > 0 && (
                       <VStack spacing={2} align="stretch">
                         <Text fontSize="xs" fontWeight="600" color="brand.gray.600">Custom Amenities:</Text>
                         <Grid templateColumns="repeat(2, 1fr)" gap={3}>
-                          {formData.amenities.filter(a => !amenityOptions.includes(a)).map((amenity, index) => (
+                          {updatedFormdata.amenities.filter(a => !amenityOptions.includes(a)).map((amenity, index) => (
                             <HStack
                               key={index}
                               bg="brand.background"
@@ -465,8 +469,8 @@ export default function ListProperty({ formData, setFormData, onSubmit, initialS
                   <Select
                     placeholder="Select state"
                     size="lg"
-                    value={formData.state}
-                    onChange={(e) => setFormData(prev => ({ ...prev, state: e.target.value }))}
+                    value={updatedFormdata.state || ""}
+                    onChange={(e) => setUpdatedFormdata(prev => ({ ...prev, state: e.target.value }))}
                     _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
                   >
                     <option>Lagos</option>
@@ -485,8 +489,8 @@ export default function ListProperty({ formData, setFormData, onSubmit, initialS
                   <Input
                     placeholder="e.g. Lekki, Victoria Island, Ikoyi"
                     size="lg"
-                    value={formData.city}
-                    onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
+                    value={updatedFormdata.city || ""}
+                    onChange={(e) => setUpdatedFormdata(prev => ({ ...prev, city: e.target.value }))}
                     _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
                   />
                 </FormControl>
@@ -498,8 +502,8 @@ export default function ListProperty({ formData, setFormData, onSubmit, initialS
                   <Input
                     placeholder="Full street address"
                     size="lg"
-                    value={formData.address}
-                    onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
+                    value={updatedFormdata.address || ""}
+                    onChange={(e) => setUpdatedFormdata(prev => ({ ...prev, address: e.target.value }))}
                     _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
                   />
                 </FormControl>
@@ -511,8 +515,8 @@ export default function ListProperty({ formData, setFormData, onSubmit, initialS
                   <Input
                     placeholder="e.g. Near Shoprite, 5 mins from Elegushi Beach"
                     size="lg"
-                    value={formData.landmarks}
-                    onChange={(e) => setFormData(prev => ({ ...prev, landmarks: e.target.value }))}
+                    value={updatedFormdata.landmarks || ""}
+                    onChange={(e) => setUpdatedFormdata(prev => ({ ...prev, landmarks: e.target.value }))}
                     _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
                   />
                 </FormControl>
@@ -524,8 +528,8 @@ export default function ListProperty({ formData, setFormData, onSubmit, initialS
                   <Input
                     placeholder="e.g. https://maps.google.com/?q=123+Main+Street"
                     size="lg"
-                    value={formData.mapsLink}
-                    onChange={(e) => setFormData(prev => ({ ...prev, mapsLink: e.target.value }))}
+                    value={updatedFormdata.mapsLink || ""}
+                    onChange={(e) => setUpdatedFormdata(prev => ({ ...prev, mapsLink: e.target.value }))}
                     _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
                   />
                 </FormControl>
@@ -591,9 +595,9 @@ export default function ListProperty({ formData, setFormData, onSubmit, initialS
 
       {
         activeStep === 1 && (
-          <ListPropertyStep2
-            formData={formData}
-            setFormData={setFormData}
+          <UpdatePropertyStep2
+            updatedFormdata={updatedFormdata}
+            setUpdatedFormdata={setUpdatedFormdata}
             onBack={() => setActiveStep(0)}
             onNext={() => setActiveStep(2)}
           />
@@ -602,9 +606,9 @@ export default function ListProperty({ formData, setFormData, onSubmit, initialS
 
       {
         activeStep === 2 && (
-          <ListPropertyStep3
-            formData={formData}
-            setFormData={setFormData}
+          <UpdatePropertyStep3
+            updatedFormdata={updatedFormdata}
+            setUpdatedFormdata={setUpdatedFormdata}
             onBack={() => setActiveStep(1)}
             onNext={() => setActiveStep(3)}
           />
@@ -613,9 +617,9 @@ export default function ListProperty({ formData, setFormData, onSubmit, initialS
 
       {
         activeStep === 3 && (
-          <ListPropertyStep4
-            formData={formData}
-            setFormData={setFormData}
+          <UpdatePropertyStep4
+            updatedFormdata={updatedFormdata}
+            setUpdatedFormdata={setUpdatedFormdata}
             onBack={() => setActiveStep(2)}
             onSubmit={onSubmit}
             isLoading={isLoading}

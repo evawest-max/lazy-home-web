@@ -30,10 +30,10 @@ import {
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
-export default function ListPropertyStep4({ formData, setFormData, onBack, onSubmit, isLoading, setIsLoading }) {
+export default function UpdatePropertyStep4({ updatedFormdata, setUpdatedFormdata, onBack, onSubmit, isLoading, setIsLoading }) {
     const currentStep = 4;
     const totalSteps = 4;
-    const landlordDetails = formData?.landlordDetails ?? {};
+    const landlordDetails = updatedFormdata?.landlordDetails ?? {};
     const draftKey = 'listingFormData';
 
     const [accountVerified, setAccountVerified] = useState(false);
@@ -48,7 +48,7 @@ export default function ListPropertyStep4({ formData, setFormData, onBack, onSub
         ) && String(landlordDetails.accountNumber ?? '').length === 10;
 
         const checkboxesValid = requiredCheckboxes.every(
-            (checkbox) => formData?.[checkbox] === true
+            (checkbox) => updatedFormdata?.[checkbox] === true
         );
 
         return fieldsValid && checkboxesValid;
@@ -58,7 +58,7 @@ export default function ListPropertyStep4({ formData, setFormData, onBack, onSub
         if (formError && isStepFourValid()) {
             setFormError('');
         }
-    }, [formData, formError]);
+    }, [updatedFormdata, formError]);
 
     useEffect(() => {
         const isVerified = String(landlordDetails.accountNumber ?? '').length === 10 && landlordDetails.bankName && landlordDetails.fullName;
@@ -80,17 +80,17 @@ export default function ListPropertyStep4({ formData, setFormData, onBack, onSub
         }
 
         const draft = {
-            ...formData,
+            ...updatedFormdata,
             landlordDetails: {
                 ...landlordDetails,
-                backupBankName: formData.backupBankName ?? landlordDetails.backupBankName ?? '',
-                backupAccountNumber: formData.backupAccountNumber ?? landlordDetails.backupAccountNumber ?? '',
+                backupBankName: updatedFormdata.backupBankName ?? landlordDetails.backupBankName ?? '',
+                backupAccountNumber: updatedFormdata.backupAccountNumber ?? landlordDetails.backupAccountNumber ?? '',
             },
         };
 
         sessionStorage.setItem(draftKey, JSON.stringify(draft));
         localStorage.setItem(draftKey, JSON.stringify(draft));
-        setFormData(draft);
+        setUpdatedFormdata(draft);
         
         if (onSubmit) {
             onSubmit(draft);
@@ -202,7 +202,7 @@ export default function ListPropertyStep4({ formData, setFormData, onBack, onSub
                                 size="lg"
                                 value={landlordDetails.fullName ?? ''}
                                 onChange={(e) => {
-                                    setFormData(prev => ({
+                                    setUpdatedFormdata(prev => ({
                                         ...prev,
                                         landlordDetails: {
                                             ...(prev.landlordDetails ?? {}),
@@ -228,7 +228,7 @@ export default function ListPropertyStep4({ formData, setFormData, onBack, onSub
                                 size="lg"
                                 value={landlordDetails.bankName ?? ''}
                                 onChange={(e) => {
-                                    setFormData(prev => ({
+                                    setUpdatedFormdata(prev => ({
                                         ...prev,
                                         landlordDetails: {
                                             ...(prev.landlordDetails ?? {}),
@@ -274,7 +274,7 @@ export default function ListPropertyStep4({ formData, setFormData, onBack, onSub
                                 value={landlordDetails.accountNumber ?? ''}
                                 onChange={(e) => {
                                     const value = e.target.value.replace(/\D/g, '');
-                                    setFormData(prev => ({
+                                    setUpdatedFormdata(prev => ({
                                         ...prev,
                                         landlordDetails: {
                                             ...(prev.landlordDetails ?? {}),
@@ -328,8 +328,8 @@ export default function ListPropertyStep4({ formData, setFormData, onBack, onSub
                             <Select
                                 placeholder="Select backup bank"
                                 size="lg"
-                                value={formData.backupBankName}
-                                onChange={(e) => setFormData(prev => ({ ...prev, backupBankName: e.target.value }))}
+                                value={updatedFormdata.backupBankName}
+                                onChange={(e) => setUpdatedFormdata(prev => ({ ...prev, backupBankName: e.target.value }))}
                                 _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
                             >
                                 <option>Access Bank</option>
@@ -349,10 +349,10 @@ export default function ListPropertyStep4({ formData, setFormData, onBack, onSub
                                 type="text"
                                 maxLength={10}
                                 size="lg"
-                                value={formData.backupAccountNumber}
+                                value={updatedFormdata.backupAccountNumber}
                                 onChange={(e) => {
                                     const value = e.target.value.replace(/\D/g, '');
-                                    setFormData(prev => ({ ...prev, backupAccountNumber: value }));
+                                    setUpdatedFormdata(prev => ({ ...prev, backupAccountNumber: value }));
                                 }}
                                 _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
                             />
@@ -455,9 +455,9 @@ export default function ListPropertyStep4({ formData, setFormData, onBack, onSub
                         <Checkbox
                             colorScheme="teal"
                             size="lg"
-                            isChecked={formData?.termsAccepted}
+                            isChecked={updatedFormdata?.termsAccepted}
                             onChange={(e) => {
-                                setFormData(prev => ({ ...prev, termsAccepted: e.target.checked }));
+                                setUpdatedFormdata(prev => ({ ...prev, termsAccepted: e.target.checked }));
                                 if (formError) setFormError('');
                             }}
                         >
@@ -469,9 +469,9 @@ export default function ListPropertyStep4({ formData, setFormData, onBack, onSub
                         <Checkbox
                             colorScheme="teal"
                             size="lg"
-                            isChecked={formData?.escrowAccepted}
+                            isChecked={updatedFormdata?.escrowAccepted}
                             onChange={(e) => {
-                                setFormData(prev => ({ ...prev, escrowAccepted: e.target.checked }));
+                                setUpdatedFormdata(prev => ({ ...prev, escrowAccepted: e.target.checked }));
                                 if (formError) setFormError('');
                             }}
                         >
@@ -483,9 +483,9 @@ export default function ListPropertyStep4({ formData, setFormData, onBack, onSub
                         <Checkbox
                             colorScheme="teal"
                             size="lg"
-                            isChecked={formData?.policyAccepted}
+                            isChecked={updatedFormdata?.policyAccepted}
                             onChange={(e) => {
-                                setFormData(prev => ({ ...prev, policyAccepted: e.target.checked }));
+                                setUpdatedFormdata(prev => ({ ...prev, policyAccepted: e.target.checked }));
                                 if (formError) setFormError('');
                             }}
                         >

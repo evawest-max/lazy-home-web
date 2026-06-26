@@ -124,7 +124,7 @@ export const getVerificationStatus = () =>
 // ======================================================
 
 export const createProperty = (formData) =>
-  API.patch("/api/v1/properties", formData, {
+  API.post("/api/v1/properties", formData, {
     headers: {
       "Content-Type": "multipart/form-data",
     },

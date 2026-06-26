@@ -24,33 +24,34 @@ import {
 import { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 
-export default function ListPropertyStep2({ formData, setFormData, onBack, onNext }) {
+export default function UpdatePropertyStep2({ updatedFormdata, setUpdatedFormdata, onBack, onNext }) {
   const currentStep = 2;
   const totalSteps = 4;
 
   const draftKey = 'listingFormData';
 
   const [uploadedPhotos, setUploadedPhotos] = useState(
-    formData.photos || formData.media?.images || [
-      "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&q=80",
-      "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800&q=80",
-      "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&q=80",
-    ]
+    updatedFormdata.photos || [] || updatedFormdata.media?.images
   );
 
-  const [videoUrl, setVideoUrl] = useState(formData.video || formData.media?.videos?.[0] || "");
+  const [videoUrl, setVideoUrl] = useState(updatedFormdata.video || updatedFormdata.media?.videos?.[0] || "");
 
   const photoInputRef = useRef(null);
   const videoInputRef = useRef(null);
 
   // ✅ Cleanup object URLs to prevent memory leaks
   useEffect(() => {
+    console.log(uploadedPhotos)
     return () => {
-      uploadedPhotos.forEach((url) => {
-        if (url.startsWith("blob:")) {
-          URL.revokeObjectURL(url);
-        }
-      });
+      // uploadedPhotos.forEach((url) => {
+      //   if (url.startsWith("blob:")) {
+      //     URL.revokeObjectURL(url);
+      //   }
+      // });
+      setUploadedPhotos(FormData.images||[].map(file => ({
+        url: URL.createObjectURL(file),
+        name: file.name
+      })));
 
       if (videoUrl && videoUrl.startsWith("blob:")) {
         URL.revokeObjectURL(videoUrl);
@@ -66,7 +67,7 @@ export default function ListPropertyStep2({ formData, setFormData, onBack, onNex
 
     setUploadedPhotos((prev) => [...prev, ...newPreviews].slice(0, 20));
 
-    setFormData((prev) => {
+    setUpdatedFormdata((prev) => {
       const existingFiles = Array.isArray(prev._photoFiles) ? prev._photoFiles : [];
       const mergedFiles = [...existingFiles, ...files].slice(0, 20);
       const photos = [...(prev.photos ?? prev.media?.images ?? []), ...newPreviews].slice(0, 20);
@@ -90,7 +91,7 @@ export default function ListPropertyStep2({ formData, setFormData, onBack, onNex
     const newVideoUrl = URL.createObjectURL(file);
     setVideoUrl(newVideoUrl);
 
-    setFormData((prev) => ({
+    setUpdatedFormdata((prev) => ({
       ...prev,
       _videoFile: file,
       video: newVideoUrl,
@@ -105,7 +106,7 @@ export default function ListPropertyStep2({ formData, setFormData, onBack, onNex
     setUploadedPhotos((prev) =>
       prev.filter((_, i) => i !== index)
     );
-    setFormData((prev) => {
+    setUpdatedFormdata((prev) => {
       const photos = [...(prev.photos ?? prev.media?.images ?? [])].filter((_, i) => i !== index);
       const fileList = Array.isArray(prev._photoFiles) ? prev._photoFiles.filter((_, i) => i !== index) : [];
 
@@ -123,8 +124,8 @@ export default function ListPropertyStep2({ formData, setFormData, onBack, onNex
   };
 
   const handleContinue = () => {
-    const photos = Array.isArray(formData.photos) ? formData.photos : uploadedPhotos;
-    const currentVideo = formData.video || videoUrl || '';
+    const photos = Array.isArray(updatedFormdata.photos) ? updatedFormdata.photos : uploadedPhotos;
+    const currentVideo = updatedFormdata.video || videoUrl || '';
 
     // Collect actual File objects from refs/state
     const photoFiles = photoInputRef.current?.files ? Array.from(photoInputRef.current.files) : [];
@@ -133,13 +134,13 @@ export default function ListPropertyStep2({ formData, setFormData, onBack, onNex
     // keep File objects in memory under `_photoFiles` and `_videoFile`,
     // but persist a serializable draft to storage (no File objects)
     const memoryDraft = {
-      ...formData,
-      _photoFiles: photoFiles.length > 0 ? photoFiles : (formData._photoFiles ?? []),
-      _videoFile: videoFile || (formData._videoFile ?? null),
+      ...updatedFormdata,
+      _photoFiles: photoFiles.length > 0 ? photoFiles : (updatedFormdata._photoFiles ?? []),
+      _videoFile: videoFile || (updatedFormdata._videoFile ?? null),
       photos,
       video: currentVideo,
       media: {
-        ...(formData.media ?? {}),
+        ...(updatedFormdata.media ?? {}),
         images: photos,
         videos: currentVideo ? [currentVideo] : [],
       },
@@ -159,7 +160,7 @@ export default function ListPropertyStep2({ formData, setFormData, onBack, onNex
       console.error('Error saving listing draft:', err);
     }
 
-    setFormData(memoryDraft);
+    setUpdatedFormdata(memoryDraft);
 
     return true;
   };
@@ -168,52 +169,6 @@ export default function ListPropertyStep2({ formData, setFormData, onBack, onNex
 
   return (
     <Box minH="100vh" bg="brand.background" pb="120px">
-      {/* <Box bg="brand.primary" px={6} pt={12} pb={8}>
-        <HStack mb={6}>
-          <Link to="/dashboard">
-            <IconButton
-              icon={<ArrowLeft size={20} />}
-              variant="ghost"
-              color="white"
-              _hover={{ bg: 'whiteAlpha.200' }}
-              aria-label="Back"
-            />
-          </Link>
-          <Text fontSize="xl" fontWeight="bold" color="white" flex={1}>
-            List Your Property
-          </Text>
-        </HStack>
-
-        <VStack spacing={3} align="stretch">
-          <HStack justify="space-between">
-            <Text fontSize="sm" color="whiteAlpha.900">
-              Step {currentStep} of {totalSteps}
-            </Text>
-            <Text fontSize="sm" color="whiteAlpha.900">
-              {Math.round((currentStep / totalSteps) * 100)}% Complete
-            </Text>
-          </HStack>
-          <Progress
-            value={(currentStep / totalSteps) * 100}
-            size="sm"
-            colorScheme="green"
-            borderRadius="full"
-            bg="whiteAlpha.300"
-          />
-
-          <HStack spacing={2} justify="center" mt={2}>
-            {[1, 2, 3, 4].map((step) => (
-              <Box
-                key={step}
-                w="8px"
-                h="8px"
-                borderRadius="full"
-                bg={step <= currentStep ? 'white' : 'whiteAlpha.400'}
-              />
-            ))}
-          </HStack>
-        </VStack>
-      </Box> */}
 
       <VStack align="stretch" px={6} mt={-4} spacing={6}>
         <Box bg="white" borderRadius="xl" p={6} boxShadow="md" border="2px solid" borderColor="brand.accent">
@@ -303,7 +258,7 @@ export default function ListPropertyStep2({ formData, setFormData, onBack, onNex
                   {uploadedPhotos.map((photo, index) => (
                     <Box key={index} position="relative" borderRadius="lg" overflow="hidden">
                       <Image
-                        src={photo}
+                        src={photo || ""}
                         alt={`Property photo ${index + 1}`}
                         h="100px"
                         w="100%"

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
     Box,
     VStack,
@@ -46,6 +46,9 @@ import {
     ClipboardList,
     Briefcase,
 } from 'lucide-react';
+import { Menu, MenuButton, MenuList, MenuItem } from '@chakra-ui/react';
+import { ChevronDownIcon } from '@chakra-ui/icons';
+
 import PropertyCard from './PropertyCard';
 import TrustBanner from './TrustBanner';
 import TestimonialCard from './TestimonialCard';
@@ -54,14 +57,18 @@ import FilterSearch from './FilterSearch';
 import { mockInspections, mockProperties } from './mockData';
 import { Link, useNavigate } from 'react-router-dom';
 import Navbar from './Navbar';
+import { deleteProperty, getUserProperties } from '../../../api';
 
 
-export default function Dashboard({ onNavigate, user }) {
+export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
     const [activeTab, setActiveTab] = useState(0);
     const [transactionPin, setTransactionPin] = useState('');
     const [transactionAction, setTransactionAction] = useState('pay');
     const [listingsPage, setListingsPage] = useState(1);
     const [transactionsPage, setTransactionsPage] = useState(1);
+    const [myProperties, setMyProperties] = useState([])
+    const [myPropertiesExtraData, setMyPropertiesExtraData] = useState({})
+
     const itemsPerPage = 4;
     const { isOpen: isPinOpen, onOpen: onOpenPin, onClose: onClosePin } = useDisclosure();
 
@@ -70,13 +77,29 @@ export default function Dashboard({ onNavigate, user }) {
     // Pagination calculations for listings
     const listingsStartIndex = (listingsPage - 1) * itemsPerPage;
     const listingsEndIndex = listingsStartIndex + itemsPerPage;
-    const paginatedListings = mockProperties.slice(listingsStartIndex, listingsEndIndex);
+    const paginatedListings = myProperties.slice(listingsStartIndex, listingsEndIndex);
 
     // Pagination calculations for transactions
     const transactionsTotalPages = Math.ceil(mockInspections.length / itemsPerPage);
     const transactionsStartIndex = (transactionsPage - 1) * itemsPerPage;
     const transactionsEndIndex = transactionsStartIndex + itemsPerPage;
     const paginatedTransactions = mockInspections.slice(transactionsStartIndex, transactionsEndIndex);
+
+    useEffect(() => {
+        const fetchProperties = async () => {
+            try {
+                const response = await getUserProperties();
+                console.log(response);
+                setMyProperties(response.data.data);
+                setMyPropertiesExtraData(response.data.extra)
+            } catch (error) {
+                console.error("Failed to fetch properties:", error);
+            }
+        };
+
+        fetchProperties();
+    }, []);
+
 
     const openPinModal = (action) => {
         setTransactionAction(action);
@@ -95,6 +118,20 @@ export default function Dashboard({ onNavigate, user }) {
         onClosePin();
         alert(`Transaction initiated. Please check your email to complete the ${actionLabel}.`);
     };
+
+    const deleteMyProperty= (id)=>{
+        try {
+            const response= deleteProperty(id)
+            console.log("item deleted", response)
+        } catch (error) {
+            console.log("not deleted", error)
+        }
+    }
+
+    const editProperty= (data)=>{
+        setUpdatedFormdata(data);
+        navigate("/update-listing/steps")
+    }
 
     return (
         <Box minH="100vh" bg="brand.background" pb="80px">
@@ -213,7 +250,7 @@ export default function Dashboard({ onNavigate, user }) {
                                         <HStack justify="space-between">
                                             <VStack align="start" spacing={0}>
                                                 <Text fontSize="2xl" fontWeight="bold" color="brand.primary">
-                                                    {mockProperties.reduce((total, property) => total + (property.status === 'active' ? 1 : 0), 0)}
+                                                    {myProperties.reduce((total, property) => total + (property.approved ? 1 : 0), 0)}
                                                 </Text>
                                                 <Text fontSize="xs" color="brand.gray.600">
                                                     Active Listings
@@ -221,7 +258,7 @@ export default function Dashboard({ onNavigate, user }) {
                                             </VStack>
                                             <VStack align="start" spacing={0}>
                                                 <Text fontSize="2xl" fontWeight="bold" color="brand.success">
-                                                    ₦{mockProperties.reduce((total, property) => total + property.price, 0).toLocaleString()}
+                                                    ₦{myProperties.reduce((total, property) => total + property.rentAmount, 0).toLocaleString()}
                                                 </Text>
                                                 <Text fontSize="xs" color="brand.gray.600">
                                                     Total Value
@@ -229,10 +266,10 @@ export default function Dashboard({ onNavigate, user }) {
                                             </VStack>
                                             <VStack align="start" spacing={0}>
                                                 <Text fontSize="2xl" fontWeight="bold" color="brand.warning">
-                                                    {mockProperties.reduce((total, property) => total + (property.approved === false ? 1 : 0), 0)}
+                                                    {myProperties.reduce((total, property) => total + (property.approved === false ? 1 : 0), 0)}
                                                 </Text>
                                                 <Text fontSize="xs" color="brand.gray.600">
-                                                    Pending
+                                                    Pending approval
                                                 </Text>
                                             </VStack>
                                         </HStack>
@@ -296,7 +333,7 @@ export default function Dashboard({ onNavigate, user }) {
                                                     Total Earnings
                                                 </StatLabel>
                                                 <StatNumber color="brand.primary" fontSize="xl">
-                                                    ₦{mockProperties.reduce((total, property) => total + property.price, 0).toLocaleString()}
+                                                    ₦{myPropertiesExtraData.totalRevenue}
                                                 </StatNumber>
                                                 <StatHelpText color="brand.success" fontSize="xs">
                                                     <TrendingUp size={12} style={{ display: 'inline' }} /> +15%
@@ -321,10 +358,10 @@ export default function Dashboard({ onNavigate, user }) {
                                         <Box bg="white" borderRadius="lg" p={4}>
                                             <Stat>
                                                 <StatLabel color="brand.gray.600" fontSize="xs">
-                                                    Properties
+                                                    Total Properties listed
                                                 </StatLabel>
                                                 <StatNumber color="brand.primary" fontSize="xl">
-                                                    {mockProperties.length}
+                                                    {myPropertiesExtraData.totalProperties}
                                                 </StatNumber>
                                                 <StatHelpText color="brand.success" fontSize="xs">
                                                     +2 this month
@@ -374,7 +411,7 @@ export default function Dashboard({ onNavigate, user }) {
                                     _hover={{ boxShadow: 'md' }}
                                 >
                                     <Image
-                                        src={item.image}
+                                        src={item.media.images[0].url}
                                         alt="item"
                                         borderRadius="lg"
                                         h="100px"
@@ -384,27 +421,41 @@ export default function Dashboard({ onNavigate, user }) {
 
                                     <VStack align="start" flex={1} spacing={1}>
                                         <Text fontWeight="600" fontSize="sm">
-                                            3 Bedroom Duplex
+                                            {item.title}
                                         </Text>
                                         <Text fontSize="xs" color="brand.gray.600">
-                                            Lekki Phase 1
+                                            {item.address.area}, {item.address.state}
                                         </Text>
                                         <HStack>
                                             {item.rentPaid && item.verified && item.approved ? (
                                                 <Badge variant="verified" fontSize="xs">Rent Paid</Badge>
                                             ) : item.verified && item.approved ? (
                                                 <Badge variant="verified" fontSize="xs">Active</Badge>
-                                            ) : <Badge variant="unverified" fontSize="xs">Under review</Badge>}
-                                            <Text fontSize="xs" color="brand.gray.600">{item.price.toLocaleString()}/year</Text>
+                                            ) : <Badge variant="unverified" fontSize="xs">{item.verificationStatus === "pending" ? "Under review" : item.verificationStatus}</Badge>}
                                         </HStack>
+                                        <Text fontSize="xs" color="brand.gray.600">{item.rentAmount.toLocaleString()} {item.rentDuration}</Text>
                                     </VStack>
 
                                     <VStack align="stretch" spacing={1} textAlign="right">
+                                        <Menu>
+                                            <MenuButton size="sm" as={Button} rightIcon={<ChevronDownIcon />}>
+                                                Actions
+                                            </MenuButton>
+                                            <MenuList>
+                                                <MenuItem>View details</MenuItem>
+                                                <MenuItem>Share link</MenuItem>
+                                                <MenuItem onClick={()=> editProperty(item)}>edit</MenuItem>
+                                                <MenuItem onClick={()=> deleteMyProperty(item._id)}>Delete</MenuItem>
+                                            </MenuList>
+                                        </Menu>
                                         <Text fontSize="xs" color="brand.gray.500">
                                             {item.approved ? 'Approved' : 'Pending Approval'}
                                         </Text>
                                         <Text fontSize="xs" color="brand.gray.500">
-                                            2 new inquiries
+                                            {item.inquiries.length} new inquiries
+                                        </Text>
+                                        <Text fontSize="xs" color="red.500">
+                                            1 new dispute
                                         </Text>
                                     </VStack>
                                 </HStack>
@@ -792,7 +843,7 @@ export default function Dashboard({ onNavigate, user }) {
                                         fontSize="2xl"
                                         h="56px"
                                         w="48px"
-                                    />  
+                                    />
                                 </PinInput>
                             </HStack>
                             {/* <Input

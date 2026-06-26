@@ -31,14 +31,14 @@ import {
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 
-export default function ListPropertyStep3({ formData, setFormData, onBack, onNext }) {
+export default function UpdatePropertyStep3({ updatedFormdata, setUpdatedFormdata, onBack, onNext }) {
   const currentStep = 3;
   const totalSteps = 4;
   const draftKey = 'listingFormData';
 
   const [formError, setFormError] = useState('');
 
-  const rentAmount = formData.annualRent ?? formData.rentAmount ?? '';
+  const rentAmount = updatedFormdata.annualRent ?? updatedFormdata.rentAmount ?? '';
 
   const isStepThreeValid = () =>
     rentAmount && String(rentAmount).trim() !== '';
@@ -47,7 +47,7 @@ export default function ListPropertyStep3({ formData, setFormData, onBack, onNex
     if (formError && isStepThreeValid()) {
       setFormError('');
     }
-  }, [formData, formError]);
+  }, [updatedFormdata, formError]);
 
   const handleContinue = (event) => {
     if (!isStepThreeValid()) {
@@ -57,14 +57,14 @@ export default function ListPropertyStep3({ formData, setFormData, onBack, onNex
     }
 
     const draft = {
-      ...formData,
+      ...updatedFormdata,
       annualRent: rentAmount,
       rentAmount,
     };
 
     sessionStorage.setItem(draftKey, JSON.stringify(draft));
     localStorage.setItem(draftKey, JSON.stringify(draft));
-    setFormData(draft);
+    setUpdatedFormdata(draft);
 
     if (onNext) {
       onNext(draft);
@@ -179,9 +179,9 @@ export default function ListPropertyStep3({ formData, setFormData, onBack, onNex
                   placeholder="2,500,000"
                   type="number"
                   size="lg"
-                  value={rentAmount}
+                  value={rentAmount || ""}
                   onChange={(e) => {
-                    setFormData(prev => ({ ...prev, annualRent: e.target.value, rentAmount: e.target.value }));
+                    setUpdatedFormdata(prev => ({ ...prev, annualRent: e.target.value, rentAmount: e.target.value }));
                     if (formError) setFormError('');
                   }}
                   _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
@@ -189,8 +189,8 @@ export default function ListPropertyStep3({ formData, setFormData, onBack, onNex
               <Select
                 maxW="150px"
                 size="lg"
-                value={formData.rentDuration}
-                onChange={(e) => setFormData(prev => ({ ...prev, rentDuration: e.target.value }))}
+                value={updatedFormdata.rentDuration || ""}
+                onChange={(e) => setUpdatedFormdata(prev => ({ ...prev, rentDuration: e.target.value }))}
                 _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
               >
                 <option>yearly</option>
@@ -230,8 +230,8 @@ export default function ListPropertyStep3({ formData, setFormData, onBack, onNex
                   placeholder="500,000"
                   type="number"
                   size="lg"
-                  value={formData.cautionDeposit}
-                  onChange={(e) => setFormData(prev => ({ ...prev, cautionDeposit: e.target.value }))}
+                  value={updatedFormdata.cautionDeposit || ""}
+                  onChange={(e) => setUpdatedFormdata(prev => ({ ...prev, cautionDeposit: e.target.value }))}
                   _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
                 />
               </HStack>
@@ -246,8 +246,8 @@ export default function ListPropertyStep3({ formData, setFormData, onBack, onNex
               </FormLabel>
               <Select
                 size="lg"
-                value={formData.negotiable ? 'yes' : 'no'}
-                onChange={(e) => setFormData(prev => ({
+                value={updatedFormdata.negotiable ? 'yes' : 'no'}
+                onChange={(e) => setUpdatedFormdata(prev => ({
                   ...prev,
                   negotiable: e.target.value === 'yes',
                 }))}
@@ -271,8 +271,8 @@ export default function ListPropertyStep3({ formData, setFormData, onBack, onNex
                 </FormLabel>
                 <Select
                   size="lg"
-                  value={formData.leasePeriod}
-                  onChange={(e) => setFormData(prev => ({ ...prev, leasePeriod: e.target.value }))}
+                  value={updatedFormdata.leasePeriod || ""}
+                  onChange={(e) => setUpdatedFormdata(prev => ({ ...prev, leasePeriod: e.target.value }))}
                   _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
                 >
                   <option>1 Year</option>
@@ -292,15 +292,15 @@ export default function ListPropertyStep3({ formData, setFormData, onBack, onNex
                     placeholder="0"
                     type="number"
                     size="lg"
-                    value={formData.serviceCharge}
-                    onChange={(e) => setFormData(prev => ({ ...prev, serviceCharge: e.target.value }))}
+                    value={updatedFormdata.serviceCharge || ""}
+                    onChange={(e) => setUpdatedFormdata(prev => ({ ...prev, serviceCharge: e.target.value }))}
                     _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
                   />
                   <Select
                     maxW="150px"
                     size="lg"
-                    value={formData.serviceChargePeriod}
-                    onChange={(e) => setFormData(prev => ({ ...prev, serviceChargePeriod: e.target.value }))}
+                    value={updatedFormdata.serviceChargePeriod || ""}
+                    onChange={(e) => setUpdatedFormdata(prev => ({ ...prev, serviceChargePeriod: e.target.value }))}
                     _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
                   >
                     <option>monthly</option>
@@ -329,7 +329,7 @@ export default function ListPropertyStep3({ formData, setFormData, onBack, onNex
             <VStack spacing={3} align="stretch">
               <HStack justify="space-between">
                 <Text fontSize="sm" color="brand.gray.600">Annual Rent</Text>
-                <Text fontSize="sm" fontWeight="600">₦{formData.annualRent ? parseFloat(formData.annualRent).toLocaleString() : '0'}</Text>
+                <Text fontSize="sm" fontWeight="600">₦{updatedFormdata.annualRent ? parseFloat(updatedFormdata.annualRent).toLocaleString() : '0'}</Text>
               </HStack>
 
               <HStack justify="space-between">
@@ -337,7 +337,7 @@ export default function ListPropertyStep3({ formData, setFormData, onBack, onNex
                   <Text fontSize="sm" color="brand.gray.600">LazyHomes Service Fee (5%)</Text>
                   <Text fontSize="xs" color="brand.gray.500">Paid by renter</Text>
                 </VStack>
-                <Text fontSize="sm" fontWeight="600">₦{formData.serviceFee ? parseFloat(formData.serviceFee).toLocaleString() : '0'}</Text>
+                <Text fontSize="sm" fontWeight="600">₦{updatedFormdata.serviceFee ? parseFloat(updatedFormdata.serviceFee).toLocaleString() : '0'}</Text>
               </HStack>
 
               <HStack justify="space-between">
@@ -345,7 +345,7 @@ export default function ListPropertyStep3({ formData, setFormData, onBack, onNex
                   <Text fontSize="sm" color="brand.gray.600">Inspection Fee</Text>
                   <Text fontSize="xs" color="brand.gray.500">Refunded to renter if they rent</Text>
                 </VStack>
-                <Text fontSize="sm" fontWeight="600">₦{formData.inspectionFee ? parseFloat(formData.inspectionFee).toLocaleString() : '0'}</Text>
+                <Text fontSize="sm" fontWeight="600">₦{updatedFormdata.inspectionFee ? parseFloat(updatedFormdata.inspectionFee).toLocaleString() : '0'}</Text>
               </HStack>
 
               <Divider />
@@ -355,12 +355,12 @@ export default function ListPropertyStep3({ formData, setFormData, onBack, onNex
                   You Receive
                 </Text>
                 <Text fontSize="xl" fontWeight="bold" color="brand.success">
-                  ₦{formData.annualRent ? parseFloat(formData.annualRent).toLocaleString() : '0'}
+                  ₦{updatedFormdata.annualRent ? parseFloat(updatedFormdata.annualRent).toLocaleString() : '0'}
                 </Text>
               </HStack>
 
               <Text fontSize="xs" color="brand.gray.600" textAlign="center">
-                {formData.cautionDeposit ? `Plus caution deposit (₦${parseFloat(formData.cautionDeposit).toLocaleString()}) if applicable` : 'Caution deposit optional'}
+                {updatedFormdata.cautionDeposit ? `Plus caution deposit (₦${parseFloat(updatedFormdata.cautionDeposit).toLocaleString()}) if applicable` : 'Caution deposit optional'}
               </Text>
             </VStack>
           </VStack>
@@ -384,8 +384,8 @@ export default function ListPropertyStep3({ formData, setFormData, onBack, onNex
               <Switch
                 colorScheme="teal"
                 size="lg"
-                isChecked={formData.negotiable}
-                onChange={(e) => setFormData(prev => ({ ...prev, negotiable: e.target.checked }))}
+                isChecked={updatedFormdata.negotiable}
+                onChange={(e) => setUpdatedFormdata(prev => ({ ...prev, negotiable: e.target.checked }))}
               />
             </HStack>
 
@@ -401,8 +401,8 @@ export default function ListPropertyStep3({ formData, setFormData, onBack, onNex
               <Switch
                 colorScheme="teal"
                 size="lg"
-                isChecked={formData.flexibleMoveIn}
-                onChange={(e) => setFormData(prev => ({ ...prev, flexibleMoveIn: e.target.checked }))}
+                isChecked={updatedFormdata.flexibleMoveIn}
+                onChange={(e) => setUpdatedFormdata(prev => ({ ...prev, flexibleMoveIn: e.target.checked }))}
               />
             </HStack>
 
@@ -418,8 +418,8 @@ export default function ListPropertyStep3({ formData, setFormData, onBack, onNex
               <Switch
                 colorScheme="teal"
                 size="lg"
-                isChecked={formData.partPayment}
-                onChange={(e) => setFormData(prev => ({ ...prev, partPayment: e.target.checked }))}
+                isChecked={updatedFormdata.partPayment}
+                onChange={(e) => setUpdatedFormdata(prev => ({ ...prev, partPayment: e.target.checked }))}
               />
             </HStack>
           </VStack>

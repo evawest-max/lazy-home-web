@@ -1,4 +1,4 @@
-import { Box, ChakraProvider } from '@chakra-ui/react';
+import { Box, ChakraProvider, useToast } from '@chakra-ui/react';
 import theme from './theme'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 // import ScreenRouter from './components/ScreenRouter';
@@ -27,12 +27,177 @@ import ChangePassword from './components/changePassword';
 import EditProfile from './components/Edit profile';
 import SupportChat from './components/support chat';
 import { createProperty } from '../../api';
+import UpdateProperty from './components/UpdateProperty/updateProperty';
+
+const LISTING_DRAFT_KEY = 'listingFormData';
+
+const createEmptyListingFormData = () => ({
+  title: '',
+  description: '',
+  propertyType: '',
+  bedrooms: '',
+  bathrooms: '',
+  toilet: '',
+  rentAmount: '',
+  annualRent: '',
+  rentDuration: 'yearly',
+  negotiable: false,
+  cautionDeposit: '',
+  minimumLeasePeriod: 1,
+  serviceCharge: '',
+  serviceChargePeriod: 'yearly',
+  state: '',
+  city: '',
+  address: '',
+  landmarks: '',
+  mapsLink: '',
+  size: '',
+  amenities: [],
+  tenantPreference: 'any',
+  availableFrom: '',
+  photos: [],
+  video: '',
+  media: {
+    images: [],
+    videos: [],
+  },
+  landlordDetails: {
+    fullName: '',
+    phone: '',
+    bankName: '',
+    accountNumber: '',
+    backupBankName: '',
+    backupAccountNumber: '',
+  },
+  backupBankName: '',
+  backupAccountNumber: '',
+  termsAccepted: false,
+  escrowAccepted: false,
+  policyAccepted: false,
+  partPayment: false,
+  flexibleMoveIn: false,
+  serviceFee: '',
+  inspectionFee: '',
+});
+
+const normalizeListingDraft = (draft = {}) => {
+  const storedMedia = draft.media ?? {};
+  const photos = Array.isArray(draft.photos)
+    ? draft.photos
+    : Array.isArray(storedMedia.images)
+      ? storedMedia.images
+      : [];
+  const video = Array.isArray(draft.video)
+    ? draft.video[0] ?? ''
+    : draft.video || (Array.isArray(storedMedia.videos) ? storedMedia.videos[0] ?? '' : '');
+  const addressValue = typeof draft.address === 'string'
+    ? draft.address
+    : draft.address?.streetAddress ?? '';
+  const stateValue = draft.state ?? draft.address?.state ?? '';
+  const cityValue = draft.city ?? draft.address?.area ?? draft.address?.lga ?? '';
+  const landmarksValue = draft.landmarks ?? draft.address?.landmark ?? '';
+  const annualRentValue = draft.annualRent ?? draft.rentAmount ?? '';
+  const rentAmountValue = draft.rentAmount ?? draft.annualRent ?? '';
+  const landlordDetails = {
+    ...createEmptyListingFormData().landlordDetails,
+    ...(draft.landlordDetails ?? {}),
+  };
+
+  return {
+    ...createEmptyListingFormData(),
+    ...draft,
+    annualRent: annualRentValue,
+    rentAmount: rentAmountValue,
+    state: stateValue,
+    city: cityValue,
+    address: addressValue,
+    landmarks: landmarksValue,
+    photos,
+    video,
+    media: {
+      images: photos,
+      videos: video ? [video] : [],
+    },
+    landlordDetails,
+    backupBankName: draft.backupBankName ?? landlordDetails.backupBankName ?? '',
+    backupAccountNumber: draft.backupAccountNumber ?? landlordDetails.backupAccountNumber ?? '',
+    termsAccepted: draft.termsAccepted ?? false,
+    escrowAccepted: draft.escrowAccepted ?? false,
+    policyAccepted: draft.policyAccepted ?? false,
+    partPayment: draft.partPayment ?? false,
+    flexibleMoveIn: draft.flexibleMoveIn ?? false,
+  };
+};
+
+const loadSavedListingDraft = () => {
+  const storageSources = [localStorage.getItem(LISTING_DRAFT_KEY), sessionStorage.getItem(LISTING_DRAFT_KEY)];
+
+  for (const savedDraft of storageSources) {
+    if (!savedDraft) {
+      continue;
+    }
+
+    try {
+      return JSON.parse(savedDraft);
+    } catch (error) {
+      console.error('Error parsing saved listing draft:', error);
+    }
+  }
+
+  return null;
+};
+
+const persistListingDraft = (draft) => {
+  const normalizedDraft = normalizeListingDraft(draft);
+  const serializedDraft = JSON.stringify(normalizedDraft);
+
+  localStorage.setItem(LISTING_DRAFT_KEY, serializedDraft);
+  sessionStorage.setItem(LISTING_DRAFT_KEY, serializedDraft);
+
+  return normalizedDraft;
+};
+
+const createMediaPayload = (items, fallbackType) =>
+  items
+    .filter(Boolean)
+    .map((item, index) => {
+      if (item instanceof File) {
+        return {
+          name: item.name,
+          type: item.type,
+          size: item.size,
+          url: URL.createObjectURL(item),
+        };
+      }
+
+      if (typeof item === 'string') {
+        return {
+          name: `${fallbackType}-${index + 1}`,
+          type: fallbackType,
+          size: 0,
+          url: item,
+        };
+      }
+
+      if (typeof item === 'object' && item.url) {
+        return item;
+      }
+
+      return {
+        name: `${fallbackType}-${index + 1}`,
+        type: fallbackType,
+        size: 0,
+        url: String(item),
+      };
+    });
 
 
 export default function App() {
   const [user, setUser] = useState(null);
   const [notifications, setNotifications] = useState([]);
+  const [updatedFormdata, setUpdatedFormdata]= useState(null)
   const [isLoading, setIsLoading] = useState(true);
+  const toast = useToast();
   const login = (userData) => {
     setUser(userData);
     localStorage.setItem('user', JSON.stringify(userData));
@@ -91,136 +256,89 @@ export default function App() {
     setIsLoading(false);
   }, []);
 
-  const [formData, setFormData] = useState({
-    title: sessionStorage.getItem('listingFormData') ? JSON.parse(sessionStorage.getItem('listingFormData')).title : '',
-    propertyType: sessionStorage.getItem('listingFormData') ? JSON.parse(sessionStorage.getItem('listingFormData')).propertyType : '',
-    bedrooms: sessionStorage.getItem('listingFormData') ? JSON.parse(sessionStorage.getItem('listingFormData')).bedrooms : '',
-    bathrooms: sessionStorage.getItem('listingFormData') ? JSON.parse(sessionStorage.getItem('listingFormData')).bathrooms : '',
-    size: sessionStorage.getItem('listingFormData') ? JSON.parse(sessionStorage.getItem('listingFormData')).size : '',
-    description: sessionStorage.getItem('listingFormData') ? JSON.parse(sessionStorage.getItem('listingFormData')).description : '',
-    amenities: ['24hr Power'],
-    state: sessionStorage.getItem('listingFormData') ? JSON.parse(sessionStorage.getItem('listingFormData')).state : '',
-    city: sessionStorage.getItem('listingFormData') ? JSON.parse(sessionStorage.getItem('listingFormData')).city : '',
-    address: sessionStorage.getItem('listingFormData') ? JSON.parse(sessionStorage.getItem('listingFormData')).address : '',
-    landmarks: sessionStorage.getItem('listingFormData') ? JSON.parse(sessionStorage.getItem('listingFormData')).landmarks : '',
-    photos: [],
-    video: "",
-    annualRent: sessionStorage.getItem('listingFormData') ? JSON.parse(sessionStorage.getItem('listingFormData')).annualRent : '',
-    cautionDeposit: sessionStorage.getItem('listingFormData') ? JSON.parse(sessionStorage.getItem('listingFormData')).cautionDeposit : '',
-    leasePeriod: sessionStorage.getItem('listingFormData') ? JSON.parse(sessionStorage.getItem('listingFormData')).leasePeriod : '1 Year',
-    serviceCharge: sessionStorage.getItem('listingFormData') ? JSON.parse(sessionStorage.getItem('listingFormData')).serviceCharge : '',
-    serviceChargePeriod: sessionStorage.getItem('listingFormData') ? JSON.parse(sessionStorage.getItem('listingFormData')).serviceChargePeriod : 'Per Year',
-    negotiable: sessionStorage.getItem('listingFormData') ? JSON.parse(sessionStorage.getItem('listingFormData')).negotiable : false,
-    flexibleMoveIn: sessionStorage.getItem('listingFormData') ? JSON.parse(sessionStorage.getItem('listingFormData')).flexibleMoveIn : true,
-    partPayment: sessionStorage.getItem('listingFormData') ? JSON.parse(sessionStorage.getItem('listingFormData')).partPayment : false,
-    accountName: sessionStorage.getItem('listingFormData') ? JSON.parse(sessionStorage.getItem('listingFormData')).accountName : '',
-    bankName: sessionStorage.getItem('listingFormData') ? JSON.parse(sessionStorage.getItem('listingFormData')).bankName : '',
-    accountNumber: sessionStorage.getItem('listingFormData') ? JSON.parse(sessionStorage.getItem('listingFormData')).accountNumber : '',
-    backupBankName: sessionStorage.getItem('listingFormData') ? JSON.parse(sessionStorage.getItem('listingFormData')).backupBankName : '',
-    backupAccountNumber: sessionStorage.getItem('listingFormData') ? JSON.parse(sessionStorage.getItem('listingFormData')).backupAccountNumber : '',
-    termsAccepted: sessionStorage.getItem('listingFormData') ? JSON.parse(sessionStorage.getItem('listingFormData')).termsAccepted : false,
-    escrowAccepted: sessionStorage.getItem('listingFormData') ? JSON.parse(sessionStorage.getItem('listingFormData')).escrowAccepted : false,
-    policyAccepted: sessionStorage.getItem('listingFormData') ? JSON.parse(sessionStorage.getItem('listingFormData')).policyAccepted : false,
-  });
+  const [formData, setFormData] = useState(() => normalizeListingDraft(loadSavedListingDraft() ?? {}));
 
-  const handleListingSubmit = () => {
-    if (!formData.termsAccepted || !formData.escrowAccepted || !formData.policyAccepted) {
+  const handleListingSubmit = async (event) => {
+    setIsLoading(true);
+    const normalizedFormData = persistListingDraft(formData);
+
+    if (!normalizedFormData.termsAccepted || !normalizedFormData.escrowAccepted || !normalizedFormData.policyAccepted) {
       alert('Please accept all terms and policies before submitting your listing.');
       return;
-    } else if (formData.photos.length === 0) {
+    } else if (normalizedFormData.media.images.length === 0) {
       alert('Please upload at least one photo of the property.');
       return;
-    } else if (!formData.accountName || !formData.bankName || !formData.accountNumber) {
+    } else if (!normalizedFormData.landlordDetails.fullName || !normalizedFormData.landlordDetails.bankName || !normalizedFormData.landlordDetails.accountNumber) {
       alert('Please provide your bank account details for payment processing.');
       return;
-    } else if (!formData.title || !formData.propertyType || !formData.bedrooms || !formData.bathrooms || !formData.size || !formData.description || !formData.state || !formData.city || !formData.address) {
+    } else if (!normalizedFormData.title || !normalizedFormData.propertyType || !normalizedFormData.bedrooms || !normalizedFormData.bathrooms || !normalizedFormData.size || !normalizedFormData.description || !normalizedFormData.state || !normalizedFormData.city) {
       alert('Please fill in all required property details before submitting your listing.');
       return;
-    } else if (!formData.annualRent || !formData.cautionDeposit || !formData.serviceCharge) {
+    } else if (!(normalizedFormData.rentAmount || normalizedFormData.annualRent) || !normalizedFormData.cautionDeposit) {
       alert('Please provide complete pricing information for your listing.');
       return;
-    } else if (formData.leasePeriod === '' || formData.serviceChargePeriod === '') {
-      alert('Please specify the lease period and service charge period for your listing.');
-      return;
-    } else if (formData.leasePeriod === 'Select' || formData.serviceChargePeriod === 'Select') {
-      alert('Please select valid options for lease period and service charge period.');
-      return;
-    } else if (formData.leasePeriod === 'Custom' && !formData.customLeasePeriod) {
-      alert('Please specify the custom lease period for your listing.');
-      return;
-    } else if (formData.serviceChargePeriod === 'Custom' && !formData.customServiceChargePeriod) {
-      alert('Please specify the custom service charge period for your listing.');
-      return;
-    } else if (formData.photos.length > 10) {
-      alert('Please upload no more than 10 photos of the property.');
+    } else if (normalizedFormData.media.images.length > 19) {
+      alert('Please upload no more than 20 photos of the property.');
       return;
     }
-    //else if (formData.video && !formData.video.startsWith('http')) {
-    //   alert('Please provide a valid URL for the property video tour.');
-    //   return;
-    // } 
+    else if (formData.media.videos.length > 0) {
+      const video = formData.media.videos[0];
+      if (video instanceof File) {
+        if (!video.type.startsWith('video/')) {
+          alert('Please upload a valid video file.');
+          return;
+        }
+        if (video.size > 50 * 1024 * 1024) {
+          alert('Video file size must be less than 50MB.');
+          return;
+        }
+      } else if (typeof video === 'string') {
+        // Optionally, validate video URL format here
+      } else {
+        alert('Invalid video format. Please upload a video file or provide a valid URL.');
+        return;
+      }
+    }
+    console.log(formData)
 
 
+    const formPayload = formData
+    formPayload.images = formData._photoFiles || [];
+    formPayload.video = formData._videoFile || null;
+    delete formPayload._photoFiles;
+    delete formPayload._videoFile;
+    delete formPayload.media;
+    delete formPayload.photos;
 
-    const finalData = {
-      ...formData,
-      photos: formData.photos.map((file, index) => ({
-        name: file.name,
-        type: file.type,
-        size: file.size,
-        url: URL.createObjectURL(file)
-      }))
-    };
-    console.log('Final listing data:', finalData);
     try {
-      const data = createProperty(finalData)
-      console.log(data)
+      const res = await createProperty(formPayload)
+      console.log('Create property response:', res);
+      toast({
+        title: 'Property listing created successfully!',
+        description: res?.data?.message || 'Your property listing has been submitted for verification.',
+        status: 'success',
+        duration: 5000,
+        isClosable: true,
+      })
+      // localStorage.removeItem(LISTING_DRAFT_KEY);
+      // sessionStorage.removeItem(LISTING_DRAFT_KEY);
+      // setFormData(createEmptyListingFormData());
+      setIsLoading(false);
+
+
+
     } catch (error) {
-      console.log(error)
+      console.log(error);
+      toast({
+        title: 'Failed to submit listing.',
+        description: error?.response?.data?.message || "An error occurred while submitting your listing. Please try again.",
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      })
+      setIsLoading(false);
     }
-    alert('Listing submitted successfully! Check console for data.');
-    setFormData({
-      title: '',
-      propertyType: '',
-      bedrooms: '',
-      bathrooms: '',
-      size: '',
-      description: '',
-      amenities: ['24hr Power'],
-      state: '',
-      city: '',
-      address: {},
-      landmarks: '',
-      media: {
-        images: [{ ipfsHash: "String", url: "String" }],
-        videos: [{ ipfsHash: "String", url: "String" }]
-      },
-      listedBy: {},
-      landlordDetails: {
-        fullName: "String",
-        phone: "String",
-        bankName: "String",
-        accountNumber: "String"
-      },
-      verificationStatus: "pending",
-      listingStatus: "available",
-      rejectionReason: "",
-      coordinates: {
-        latitude: ["0"],
-        longitude: ["0"]
-      },
-      cautionDeposit: 0,
-      serviceCharge: 0,
-      negotiable: false,
-      accountName: '',
-      bankName: '',
-      accountNumber: '',
-      backupBankName: '',
-      backupAccountNumber: '',
-      termsAndPolicyAccepted: false,
-      // escrowAccepted: false,
-      // policyAccepted: false,
-    });
+
   };
 
   return (
@@ -243,11 +361,11 @@ export default function App() {
             <Route path="/inspection-feedback/:id" element={user ? <InspectionFeedback /> : <Navigate to="/login" />} />
             <Route path="/secure-payment/:id" element={user ? <PaymentBreakdown /> : <Navigate to="/login" />} />
             <Route path="/book-inspection/:id" element={user ? <BookInspection /> : <Navigate to="/login" />} />
-            <Route path="/dashboard" element={user ? <Dashboard user={user} /> : <Navigate to="/login" />} />
-            <Route path="/create-listing/steps" element={user ? <ListProperty formData={formData} setFormData={setFormData} initialStep={1} onSubmit={handleListingSubmit} /> : <Navigate to="/login" />} />
-            {/* <Route path="/create-listing/step-2" element={ user ? <ListProperty formData={formData} setFormData={setFormData} initialStep={2} onSubmit={handleListingSubmit} /> : <Navigate to="/login" />} />
-            <Route path="/create-listing/step-3" element={ user ? <ListProperty formData={formData} setFormData={setFormData} initialStep={3} onSubmit={handleListingSubmit} /> : <Navigate to="/login" />} />
-            <Route path="/create-listing/step-4" element={ user ? <ListProperty formData={formData} setFormData={setFormData} initialStep={4} onSubmit={handleListingSubmit} /> : <Navigate to="/login" />} /> */}
+            <Route path="/dashboard" element={user ? <Dashboard user={user} setUpdatedFormdata={setUpdatedFormdata} /> : <Navigate to="/login" />} />
+            <Route path="/create-listing/steps" element={user ? <ListProperty formData={formData} setFormData={setFormData} initialStep={1} onSubmit={handleListingSubmit} isLoading={isLoading} setIsLoading={setIsLoading} /> : <Navigate to="/login" />} />
+            <Route path="/update-listing/steps" element={ user ? <UpdateProperty updatedFormdata={updatedFormdata} setUpdatedFormdata={setUpdatedFormdata} initialStep={1}  /> : <Navigate to="/login" />} />
+            {/* <Route path="/create-listing/step-3" element={ user ? <ListProperty formData={formData} setFormData={setFormData} initialStep={3} onSubmit={handleListingSubmit} /> : <Navigate to="/login" />} /> */}
+            {/* <Route path="/create-listing/step-4" element={ user ? <ListProperty formData={formData} setFormData={setFormData} initialStep={4} onSubmit={handleListingSubmit} /> : <Navigate to="/login" />} />  */}
             <Route path="/profile" element={user ? <Profile onLogout={logout} user={user} /> : <Navigate to="/login" />} />
             <Route path="/verify_ID" element={user ? <IdentityVerification /> : <Navigate to="/login" />} />
             <Route path="/edit-profile" element={user ? <EditProfile user={user} /> : <Navigate to="/login" />} />
