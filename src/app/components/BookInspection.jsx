@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
     Box,
     VStack,
@@ -13,15 +13,16 @@ import {
     Textarea,
     Image,
     Badge,
-    Grid,
+    Spinner,
 } from '@chakra-ui/react';
 import { ArrowLeft, Calendar, Clock, MapPin, ShieldCheck, AlertCircle, Phone, Mail } from 'lucide-react';
-import { mockProperties } from './mockData';
 import { Link, useParams } from 'react-router-dom';
+import { getSingleProperty } from '../../../api';
 
 export default function BookInspection() {
     const { id } = useParams();
-    const property = mockProperties.find((p) => p.id === parseInt(id)); // Replace with actual data fetching logic based on ID
+    const [property, setProperty] = useState(null);
+    const [loading, setLoading] = useState(true);
 
     const [preferredDate, setPreferredDate] = useState('');
     const [preferredTime, setPreferredTime] = useState('');
@@ -31,6 +32,57 @@ export default function BookInspection() {
     const [phone, setPhone] = useState('');
     const [email, setEmail] = useState('');
     const [specialRequests, setSpecialRequests] = useState('');
+
+    const imageUrl = useMemo(() => {
+        const rawImages = property?.media?.images || property?.images || property?.gallery || [];
+
+        if (Array.isArray(rawImages)) {
+            const firstImage = rawImages
+                .map((item) => {
+                    if (typeof item === 'string') return item;
+                    return item?.url || item?.secure_url || item?.src || '';
+                })
+                .find(Boolean);
+
+            return firstImage || 'https://placehold.co/200x140/00695C/ffffff?text=Property';
+        }
+
+        if (typeof rawImages === 'string') return rawImages;
+
+        return 'https://placehold.co/200x140/00695C/ffffff?text=Property';
+    }, [property]);
+
+    useEffect(() => {
+        let isMounted = true;
+
+        const fetchProperty = async () => {
+            try {
+                setLoading(true);
+                const response = await getSingleProperty(id);
+                const payload = response?.data?.data?.property
+                    || response?.data?.property
+                    || response?.data?.data
+                    || response?.data;
+
+                if (isMounted) {
+                    setProperty(payload || null);
+                }
+            } catch (error) {
+                console.error('Failed to fetch property:', error);
+                if (isMounted) {
+                    setProperty(null);
+                }
+            } finally {
+                if (isMounted) setLoading(false);
+            }
+        };
+
+        fetchProperty();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [id]);
 
     const handlePay = () => {
         if (!preferredDate || !preferredTime || !visitors || !fullName || !phone || !email) {
@@ -51,11 +103,40 @@ export default function BookInspection() {
         console.log('Booking data:', data);
         alert('Payment successful! Your inspection has been booked.');
     };
+    if (loading) {
+        return (
+            <Box minH="100vh" bg="brand.background" display="flex" justifyContent="center" alignItems="center">
+                <VStack spacing={4} p={8} bg="white" borderRadius="xl" boxShadow="lg">
+                    <Spinner size="xl" color="brand.primary" thickness="4px" />
+                    <Text fontSize="lg" fontWeight="600" color="brand.gray.700">
+                        Loading inspection details...
+                    </Text>
+                </VStack>
+            </Box>
+        );
+    }
+
+    if (!property) {
+        return (
+            <Box minH="100vh" bg="brand.background" display="flex" justifyContent="center" alignItems="center">
+                <VStack spacing={4} p={8} bg="white" borderRadius="xl" boxShadow="lg">
+                    <Text fontSize="lg" fontWeight="600" color="brand.gray.700">
+                        Property not found.
+                    </Text>
+                </VStack>
+            </Box>
+        );
+    }
+
+    const title = property?.title || property?.propertyType || 'Property';
+    const location = property?.address?.area || property?.address?.city || property?.location?.area || property?.location?.city || 'Location coming soon';
+    const verificationStatus = property?.verificationStatus || 'Verified';
+
     return (
         <Box minH="100vh" bg="brand.background" pb="120px">
             <Box bg="brand.primary" px={6} pt={12} pb={8}>
                 <HStack mb={6}>
-                    <Link to={`/property/${property.id}`}>
+                    <Link to={`/property/${id}`}>
                         <IconButton
                             icon={<ArrowLeft size={20} />}
                             variant="ghost"
@@ -98,7 +179,7 @@ export default function BookInspection() {
                     <VStack align="stretch" spacing={4}>
                         <HStack spacing={3}>
                             <Image
-                                src={property.image}
+                                src={imageUrl}
                                 alt="Property"
                                 borderRadius="lg"
                                 h="80px"
@@ -107,14 +188,14 @@ export default function BookInspection() {
                             />
                             <VStack align="start" flex={1} spacing={1}>
                                 <Text fontSize="md" fontWeight="600" color="brand.gray.800">
-                                    {property.title}
+                                    {title}
                                 </Text>
                                 <HStack spacing={1} color="brand.gray.600">
                                     <MapPin size={14} />
-                                    <Text fontSize="xs">{property.location}</Text>
+                                    <Text fontSize="xs">{location}</Text>
                                 </HStack>
                                 <Badge variant="verified" fontSize="xs">
-                                    <ShieldCheck size={10} /> {property.verified}
+                                    <ShieldCheck size={10} /> {verificationStatus}
                                 </Badge>
                             </VStack>
                         </HStack>

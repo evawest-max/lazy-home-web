@@ -6,6 +6,7 @@ import {
   Button,
   FormControl,
   FormLabel,
+  Input,
   Select,
   RangeSlider,
   RangeSliderTrack,
@@ -26,8 +27,9 @@ import {
 } from '@chakra-ui/react';
 import { SlidersHorizontal, X, CheckCircle, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
+import { advancedPropertySearch } from '../../../api';
 
-export default function FilterSearch({ setProperties }) {
+export default function FilterSearch({ setProperties, fetchProperties, setFilterPayload }) {
   const { isOpen, onOpen, onClose } = useDisclosure();
 
   const [priceRange, setPriceRange] = useState([500000, 5000000]);
@@ -35,39 +37,43 @@ export default function FilterSearch({ setProperties }) {
   const [locationFilter, setLocationFilter] = useState('');
   const [bedrooms, setBedrooms] = useState('');
   const [bathrooms, setBathrooms] = useState('');
+  const [toilets, setToilets] = useState('');
+  const [customAmenity, setCustomAmenity] = useState('');
   const [sortBy, setSortBy] = useState('');
   const [selectedAmenities, setSelectedAmenities] = useState([
     'verified',
   ]);
 
+  const handleAddAmenity = () => {
+    const trimmed = customAmenity.trim();
+
+    if (!trimmed) return;
+
+    setSelectedAmenities((prev) =>
+      prev.includes(trimmed) ? prev : [...prev, trimmed]
+    );
+    setCustomAmenity('');
+  };
+
   const handleShowProperties = async () => {
     const payload = {
-      propertyType,
-      location: locationFilter,
-      priceRange,
+      // keyword: '',
+      state: locationFilter,
+      area: locationFilter || '',
+      minPrice: priceRange[0],
+      maxPrice: priceRange[1],
       bedrooms,
-      bathrooms,
+      propertyType,
+      toilets,
       amenities: selectedAmenities,
-      sortBy,
     };
 
+    setFilterPayload(payload);
+
     try {
-      const response = await fetch('/api/properties/filter', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        throw new Error('Server responded with an error');
-      }
-
-      const result = await response.json();
-      if (result?.properties) {
-        setProperties(result.properties);
-      }
+      const response = await advancedPropertySearch(payload);
+      const result = response?.data?.data || [];
+      setProperties(result);
     } catch (error) {
       console.error('Filter request failed:', error);
       alert('Unable to load filtered properties. Please try again later.');
@@ -270,6 +276,24 @@ const toggleAmenity = (id) => {
                       </Select>
                     </FormControl>
                   </Grid>
+
+                  <FormControl>
+                    <FormLabel color="brand.gray.700" fontSize="sm" fontWeight="600">
+                      Toilets
+                    </FormLabel>
+                    <Select
+                      placeholder="Any"
+                      size="lg"
+                      value={toilets}
+                      onChange={(e) => setToilets(e.target.value)}
+                      _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
+                    >
+                      <option value="1">1</option>
+                      <option value="2">2</option>
+                      <option value="3">3</option>
+                      <option value="4">4</option>
+                    </Select>
+                  </FormControl>
                 </VStack>
               </Box>
 
@@ -285,6 +309,28 @@ const toggleAmenity = (id) => {
                       </Badge>
                     )}
                   </HStack>
+
+                  <FormControl>
+                    <FormLabel color="brand.gray.700" fontSize="sm" fontWeight="600">
+                      Add Amenity
+                    </FormLabel>
+                    <HStack>
+                      <Input
+                        placeholder="e.g. Smart Home"
+                        value={customAmenity}
+                        onChange={(e) => setCustomAmenity(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddAmenity();
+                          }
+                        }}
+                      />
+                      <Button size="sm" onClick={handleAddAmenity}>
+                        Add
+                      </Button>
+                    </HStack>
+                  </FormControl>
 
                   <Grid templateColumns="repeat(2, 1fr)" gap={3}>
                     {amenities.map((amenity) => {
@@ -322,6 +368,18 @@ const toggleAmenity = (id) => {
                       );
                     })}
                   </Grid>
+
+                  {selectedAmenities.filter((item) => !amenities.some((amenity) => amenity.id === item)).length > 0 && (
+                    <HStack spacing={2} wrap="wrap">
+                      {selectedAmenities
+                        .filter((item) => !amenities.some((amenity) => amenity.id === item))
+                        .map((item) => (
+                          <Badge key={item} bg="brand.background" color="brand.primary" px={2} py={1}>
+                            {item}
+                          </Badge>
+                        ))}
+                    </HStack>
+                  )}
                 </VStack>
               </Box>
 
@@ -355,7 +413,19 @@ const toggleAmenity = (id) => {
                   flex={1}
                   onClick={() => {
                     setPriceRange([500000, 5000000]);
+                    setPropertyType('');
+                    setLocationFilter('');
+                    setAreaFilter('');
+                    setBedrooms('');
+                    setBathrooms('');
+                    setToilets('');
+                    setSortBy('');
                     setSelectedAmenities(['verified']);
+                    setCustomAmenity('');
+                    if (typeof fetchProperties === 'function') {
+                      fetchProperties(1);
+                    }
+                    setFilterPayload({});
                   }}
                 >
                   Reset All

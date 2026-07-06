@@ -146,13 +146,19 @@ export const updateProperty = (
   );
 
 export const deleteProperty = (id) =>
-  API.delete(`/api/v1/properties/${id}`);
+  API.delete(`/api/v1/properties/delete/${id}`);
 
 export const getAllProperties = () =>
   API.get("/api/v1/properties");
 
+export const getFeaturedProperties = () =>
+  API.get("/api/v1/properties/featured");
+
 export const getSingleProperty = (id) =>
   API.get(`/api/v1/properties/${id}`);
+
+export const increaseViewAndStoreHistory = (id) =>
+  API.get(`/api/v1/properties/viewsAndHistory/${id}`);
 
 export const getUserProperties = () =>
   API.get("/api/v1/properties/user/my-properties");
@@ -176,15 +182,8 @@ export const uploadPropertyMedia = (
 // ================= PROPERTY SEARCH ====================
 // ======================================================
 
-export const advancedPropertySearch = (
-  params
-) =>
-  API.get(
-    "/api/v1/properties/search/advanced",
-    {
-      params,
-    }
-  );
+export const advancedPropertySearch = (params) =>
+  API.get("/api/v1/properties/search/advanced", { params });
 
 export const nearbyProperties = (
   lng,
@@ -216,28 +215,50 @@ export const saveProperty = (id) =>
 export const getAnalyticsDashboard =
   () =>
     API.get(
-      "/api/v1/properties/analytics/dashboard"
+      `/api/v1/properties/analytics/dashboard`
     );
 
 // ======================================================
 // ==================== PAYMENTS ========================
 // ======================================================
 
-export const initializeEscrowPayment = (
-  propertyId
+// export const initializeEscrowPayment = (
+//   propertyId
+// ) =>
+//   API.post(
+//     "/api/v1/payments/initialize",
+//     {
+//       propertyId,
+//     }
+//   );
+export const initializeFundwallet = (
+  amount
 ) =>
   API.post(
-    "/api/v1/payments/initialize",
+    "/api/v1/wallet/fund",
     {
-      propertyId,
+      amount: amount,
     }
   );
 
-export const verifyEscrowPayment = (
-  reference
+export const getwallet = (
 ) =>
   API.get(
-    `/api/v1/payments/verify/${reference}`
+    `/api/v1/wallet/get-wallet`
+  );
+
+export const getwalletTransactions = (
+  data
+) =>
+  API.get(
+    `/api/v1/wallet/transactions`, data
+  );
+
+  export const payRent = (
+  data
+) =>
+  API.post(
+    "/api/v1/escrow/pay-rent", data
   );
 
 export const confirmInspection = (

@@ -35,6 +35,7 @@ const createEmptyListingFormData = () => ({
   title: '',
   description: '',
   propertyType: '',
+  ownershipType: '',
   bedrooms: '',
   bathrooms: '',
   toilet: '',
@@ -108,6 +109,7 @@ const normalizeListingDraft = (draft = {}) => {
     ...draft,
     annualRent: annualRentValue,
     rentAmount: rentAmountValue,
+
     state: stateValue,
     city: cityValue,
     address: addressValue,
@@ -302,9 +304,13 @@ export default function App() {
     console.log(formData)
 
 
-    const formPayload = formData
-    formPayload.images = formData._photoFiles || [];
-    formPayload.video = formData._videoFile || null;
+    const formPayload = {
+      ...normalizedFormData,
+      ownershipType: normalizedFormData.ownershipType || formData.ownershipType || '',
+      images: formData._photoFiles || [],
+      video: formData._videoFile || null,
+    };
+
     delete formPayload._photoFiles;
     delete formPayload._videoFile;
     delete formPayload.media;

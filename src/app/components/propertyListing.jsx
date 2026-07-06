@@ -13,36 +13,36 @@ import {
     Heading,
     Flex,
     Button,
+    Spinner,
 } from '@chakra-ui/react';
-import { Search, MapPin, SlidersHorizontal, Home, User, FileText, ShieldCheck } from 'lucide-react';
+import { Search, MapPin, ShieldCheck } from 'lucide-react';
 import PropertyCard from './PropertyCard';
-import TrustBanner from './TrustBanner';
-import TestimonialCard from './TestimonialCard';
-import BeforeAfter from './BeforeAfter';
 import Navbar from './Navbar';
-import { mockProperties } from './mockData';
 import FilterSearch from './FilterSearch';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { advancedPropertySearch, getAllProperties } from '../../../api';
 
 
 export default function PropertyListing() {
-    const [properties, setProperties] = useState(mockProperties);
+    const [properties, setProperties] = useState([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [searchText, setSearchText] = useState('');
     const [locationFilter, setLocationFilter] = useState('');
-    const itemsPerPage = 6;
+    const [areaFilter, setAreaFilter] = useState('');
+    const [minPrice, setMinPrice] = useState('');
+    const [maxPrice, setMaxPrice] = useState('');
+    const [bedrooms, setBedrooms] = useState('');
+    const [propertyType, setPropertyType] = useState('');
+    const [furnished, setFurnished] = useState('');
+    const [amenities, setAmenities] = useState([]);
+    const [totalPages, setTotalPages] = useState(1);
+    const [loading, setLoading] = useState(true);
+    const [isFiltered, setIsFiltered] = useState(false);
+    const [filterPayload, setFilterPayload] = useState({});
+    const itemsPerPage = 10;
 
-    // Filter properties based on search text and location
-    const filteredProperties = properties.filter((p) => {
-        const matchesApproval = p.approved;
-        const matchesSearch = searchText === '' || 
-            p.title.toLowerCase().includes(searchText.toLowerCase()) ||
-            p.location.toLowerCase().includes(searchText.toLowerCase());
-        const matchesLocation = locationFilter === '' || p.location.includes(locationFilter);
-        return matchesApproval && matchesSearch && matchesLocation;
-    });
+    const filteredProperties = properties
 
-    const totalPages = Math.ceil(filteredProperties.length / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
     const paginatedProperties = filteredProperties.slice(startIndex, endIndex);
@@ -57,13 +57,107 @@ export default function PropertyListing() {
 
     const handleSearchChange = (e) => {
         setSearchText(e.target.value);
+        if (e.target.value === '') {
+            setIsFiltered(false);
+            
+        }else {
+            setIsFiltered(true);
+            setCurrentPage(1);
+        }
         setCurrentPage(1);
     };
 
-    const handleLocationChange = (e) => {
+    const handleLocationChange = async (e) => {
         setLocationFilter(e.target.value);
+        if (e.target.value == "" || e.target.value == null || e.target.value == undefined || e.target.value == "All Locations" ) {
+            fetchProperties(1);
+            // setFilterPayload((prev) => ({ ...prev, state: e.target.value }));
+        }
+        setFilterPayload((prev) => ({ ...prev, area: e.target.value }));
+        const res = await advancedPropertySearch({
+            page: currentPage,
+            limit: itemsPerPage,
+            area: e.target.value,
+            state: e.target.value,
+        });
+        setProperties(res?.data?.data || []);
+        console.log('Fetched properties:', res);
         setCurrentPage(1);
     };
+
+
+    const fetchProperties = async (page = currentPage) => {
+        try {
+            setLoading(true);
+            const response = isFiltered
+                ? await advancedPropertySearch({
+                    page,
+                    limit: itemsPerPage,
+                    keyword: searchText,
+                    // state: locationFilter,
+                    // area: areaFilter,
+                    // ...filterPayload
+                })
+                : await getAllProperties({ page, limit: itemsPerPage });
+
+            setProperties(response?.data?.data?.properties || []);
+            setTotalPages(response?.data?.data?.pages || 1);
+            
+        } catch (error) {
+            console.error('Failed to fetch properties:', error);
+            setProperties([]);
+            setTotalPages(1);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (!isFiltered) {
+            fetchProperties(currentPage);
+        }
+    }, [currentPage]);
+
+    if (loading) {
+        return (
+            <Box
+                minH="100vh"
+                bg="brand.background"
+                display="flex"
+                justifyContent="center"
+                alignItems="center"
+            >
+                <VStack spacing={4} p={8} bg="white" borderRadius="xl" boxShadow="lg">
+                    <Spinner size="xl" color="brand.primary" thickness="4px" />
+                    <Text fontSize="lg" fontWeight="600" color="brand.gray.700">
+                        Loading properties...
+                    </Text>
+                </VStack>
+            </Box>
+        );
+    }
+
+    if (!properties) {
+        return (
+            <Box
+                minH="100vh"
+                bg="brand.background"
+                display="flex"
+                justifyContent="center"
+                alignItems="center"
+            >
+                <VStack spacing={4} p={8} bg="white" borderRadius="xl" boxShadow="lg">
+                    <Icon as={AlertCircle} w={10} h={10} color="red.500" />
+                    <Text fontSize="lg" fontWeight="600" color="brand.gray.700">
+                        Properties not found.
+                    </Text>
+                </VStack>
+            </Box>
+        );
+    }
+
+
+
 
     return (
         <Box minH="100vh" bg="brand.background" pb="80px">
@@ -71,8 +165,8 @@ export default function PropertyListing() {
                 <Box bg="brand.primary" px={6} pt={12} pb={8}>
                     <VStack spacing={4} align="stretch">
                         <Text fontSize="2xl" fontWeight="bold" color="white">
-                LazyHomes
-              </Text>
+                            LazyHomes
+                        </Text>
 
                         <HStack spacing={2} justify="center" bg="whiteAlpha.200" py={2} px={3} borderRadius="full">
                             <ShieldCheck size={16} color="white" />
@@ -89,11 +183,20 @@ export default function PropertyListing() {
                             <InputLeftElement pointerEvents="none">
                                 <Search color="gray" size={20} />
                             </InputLeftElement>
+
                             <Input
                                 bg="white"
                                 placeholder="Search properties..."
                                 value={searchText}
                                 onChange={handleSearchChange}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        setIsFiltered(true);
+                                        setCurrentPage(1);
+                                        fetchProperties(1);
+                                    }
+                                }}
                                 _placeholder={{ color: 'brand.gray.500' }}
                             />
                         </InputGroup>
@@ -112,14 +215,15 @@ export default function PropertyListing() {
                                 <option value="Victoria Island, Lagos">Victoria Island, Lagos</option>
                                 <option value="Ikoyi, Lagos">Ikoyi, Lagos</option>
                                 <option value="Surulere, Lagos">Surulere, Lagos</option>
+                                <option value="Port Harcourt, Rivers State">Port Harcourt, Rivers State</option>
                             </Select>
-                            <FilterSearch setProperties={setProperties}  />
+                            <FilterSearch setProperties={setProperties} fetchProperties={fetchProperties} setFilterPayload={setFilterPayload} />
                         </HStack>
                     </VStack>
                 </Box>
 
 
-                <VStack spacing={4} px={6} align="stretch"mb={6}>
+                <VStack spacing={4} px={6} align="stretch" mb={6}>
                     <HStack justify="space-between" align="center">
                         <Text fontSize="lg" fontWeight="600" color="brand.gray.800">
                             Featured Properties
@@ -129,19 +233,16 @@ export default function PropertyListing() {
                         </Badge>
                     </HStack>
 
-                    <Grid templateColumns={{sm:"repeat(1, 1fr)", md: "repeat(2, 1fr)"}} gap={4}>
-                        {paginatedProperties.map((property) => (
-                            <PropertyCard key={property.id} property={property} />
+                    <Grid templateColumns={{ sm: "repeat(1, 1fr)", md: "repeat(2, 1fr)" }} gap={4}>
+                        {properties.map((property) => (
+                            <PropertyCard key={property._id} property={property} />
                         ))}
                     </Grid>
 
+
+
                     <HStack justify="center" spacing={2} mt={6}>
-                        <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={handlePrevPage}
-                            isDisabled={currentPage === 1}
-                        >
+                        <Button size="sm" variant="outline" onClick={handlePrevPage} isDisabled={currentPage === 1}>
                             Previous
                         </Button>
                         {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
@@ -154,12 +255,7 @@ export default function PropertyListing() {
                                 {page}
                             </Button>
                         ))}
-                        <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={handleNextPage}
-                            isDisabled={currentPage === totalPages}
-                        >
+                        <Button size="sm" variant="outline" onClick={handleNextPage} isDisabled={currentPage === totalPages}>
                             Next
                         </Button>
                     </HStack>

@@ -82,6 +82,7 @@ export default function ListProperty({ formData, setFormData, onSubmit, initialS
   const requiredFields = [
     'title',
     'propertyType',
+    'ownershipType',
     'bedrooms',
     'bathrooms',
     'description',
@@ -270,6 +271,22 @@ export default function ListProperty({ formData, setFormData, onSubmit, initialS
                     <option>Shop</option>
                     <option>Warehouse</option>
                     <option>Land</option>
+                  </Select>
+                </FormControl>
+
+                <FormControl isRequired>
+                  <FormLabel color="brand.gray.700" fontSize="sm" fontWeight="600">
+                    I am
+                  </FormLabel>
+                  <Select
+                    placeholder="Select role"
+                    size="lg"
+                    value={formData.ownershipType || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, ownershipType: e.target.value }))}
+                    _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
+                  >
+                    <option value="owner">Owner</option>
+                    <option value="agent">Agent</option>
                   </Select>
                 </FormControl>
 

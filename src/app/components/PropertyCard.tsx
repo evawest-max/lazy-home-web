@@ -1,21 +1,17 @@
 import { Box, HStack, VStack, Text, Badge, Image } from '@chakra-ui/react';
 import { MapPin, ShieldCheck } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { increaseViewAndStoreHistory } from '../../../api';
 
-interface PropertyCardProps {
-  property: {
-    id: number;
-    title: string;
-    price: number;
-    location: string;
-    bedrooms: number;
-    bathrooms: number;
-    verified: boolean;
-    image: string;
+export default function PropertyCard({ property }: { property: any }) {
+  const handleIncreaseViewAndStoreHistory = (id: string | number) => {
+    try {
+      const res = increaseViewAndStoreHistory(id);
+      console.log(res);
+    } catch (error) {
+      console.log(error);
+    }
   };
-}
-
-export default function PropertyCard({ property }: PropertyCardProps) {
   return (
     <Box
       bg="white"
@@ -29,16 +25,17 @@ export default function PropertyCard({ property }: PropertyCardProps) {
       borderColor="brand.gray.200"
     >
       <Box position="relative">
-        <Link to={`/property/${property.id}`}>
-        <Image
-          src={property.image}
-          alt={property.title}
-          h="200px"
-          w="100%"
-          objectFit="cover"
-        />
+        <Link onClick={()=> handleIncreaseViewAndStoreHistory(property._id)} to={`/property/${property._id}`} state={property}>
+          <Image
+            src={property.media.images[0]?.url || '/placeholder.jpg'} // use first image or fallback
+            alt={property.title || property.propertyType}
+            h="200px"
+            w="100%"
+            objectFit="cover"
+          />
         </Link>
-        {property.verified && (
+
+        {property.verificationStatus === "verified" && (
           <Badge
             variant="verified"
             position="absolute"
@@ -53,6 +50,7 @@ export default function PropertyCard({ property }: PropertyCardProps) {
             Verified
           </Badge>
         )}
+
         <Badge
           bg="brand.primary"
           color="white"
@@ -69,16 +67,18 @@ export default function PropertyCard({ property }: PropertyCardProps) {
 
       <VStack align="stretch" p={4} spacing={3}>
         <Text fontSize="xl" fontWeight="bold" color="brand.primary">
-          ₦{property.price.toLocaleString()}/year
+          ₦{property.rentAmount}/year
         </Text>
 
         <Text fontSize="md" fontWeight="600" color="brand.gray.800" noOfLines={2}>
-          {property.title}
+          {property.title || property.propertyType}
         </Text>
 
         <HStack spacing={1} color="brand.gray.600">
           <MapPin size={16} />
-          <Text fontSize="sm">{property.location}</Text>
+          <Text fontSize="sm">
+            {property.address?.area}, {property.address?.state}
+          </Text>
         </HStack>
 
         <HStack spacing={2}>

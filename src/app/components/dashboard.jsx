@@ -32,6 +32,7 @@ import {
     useDisclosure,
     PinInput,
     PinInputField,
+    Spinner,
 } from '@chakra-ui/react';
 import {
     Search,
@@ -57,7 +58,7 @@ import FilterSearch from './FilterSearch';
 import { mockInspections, mockProperties } from './mockData';
 import { Link, useNavigate } from 'react-router-dom';
 import Navbar from './Navbar';
-import { deleteProperty, getUserProperties } from '../../../api';
+import { deleteProperty, getAnalyticsDashboard, getUserProperties } from '../../../api';
 
 
 export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
@@ -67,7 +68,8 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
     const [listingsPage, setListingsPage] = useState(1);
     const [transactionsPage, setTransactionsPage] = useState(1);
     const [myProperties, setMyProperties] = useState([])
-    const [myPropertiesExtraData, setMyPropertiesExtraData] = useState({})
+    const [allData, setAllData] = useState({})
+    const [loading, setLoading] = useState(true);
 
     const itemsPerPage = 4;
     const { isOpen: isPinOpen, onOpen: onOpenPin, onClose: onClosePin } = useDisclosure();
@@ -88,12 +90,15 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
     useEffect(() => {
         const fetchProperties = async () => {
             try {
-                const response = await getUserProperties();
-                console.log(response);
-                setMyProperties(response.data.data);
-                setMyPropertiesExtraData(response.data.extra)
+                const analyticsResponse = await getAnalyticsDashboard();
+                console.log(analyticsResponse);
+                setMyProperties(analyticsResponse.data.data.propertiesWithInquiries);
+                setAllData(analyticsResponse.data.data);
+                setLoading(false)
             } catch (error) {
                 console.error("Failed to fetch properties:", error);
+                setMyProperties([]);
+                setLoading(false)
             }
         };
 
@@ -119,18 +124,56 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
         alert(`Transaction initiated. Please check your email to complete the ${actionLabel}.`);
     };
 
-    const deleteMyProperty= (id)=>{
+    const deleteMyProperty = (id) => {
         try {
-            const response= deleteProperty(id)
+            const response = deleteProperty(id)
             console.log("item deleted", response)
         } catch (error) {
             console.log("not deleted", error)
         }
     }
 
-    const editProperty= (data)=>{
+    const editProperty = (data) => {
         setUpdatedFormdata(data);
         navigate("/update-listing/steps")
+    }
+
+    if (loading) {
+        return (
+            <Box
+                minH="100vh"
+                bg="brand.background"
+                display="flex"
+                justifyContent="center"
+                alignItems="center"
+            >
+                <VStack spacing={4} p={8} bg="white" borderRadius="xl" boxShadow="lg">
+                    <Spinner size="xl" color="brand.primary" thickness="4px" />
+                    <Text fontSize="lg" fontWeight="600" color="brand.gray.700">
+                        Loading my properties...
+                    </Text>
+                </VStack>
+            </Box>
+        );
+    }
+
+    if (!myProperties) {
+        return (
+            <Box
+                minH="100vh"
+                bg="brand.background"
+                display="flex"
+                justifyContent="center"
+                alignItems="center"
+            >
+                <VStack spacing={4} p={8} bg="white" borderRadius="xl" boxShadow="lg">
+                    <Icon as={AlertCircle} w={10} h={10} color="red.500" />
+                    <Text fontSize="lg" fontWeight="600" color="brand.gray.700">
+                        My properties not found.
+                    </Text>
+                </VStack>
+            </Box>
+        );
     }
 
     return (
@@ -333,7 +376,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                                                     Total Earnings
                                                 </StatLabel>
                                                 <StatNumber color="brand.primary" fontSize="xl">
-                                                    ₦{myPropertiesExtraData.totalRevenue}
+                                                    ₦{allData.totalRevenue}
                                                 </StatNumber>
                                                 <StatHelpText color="brand.success" fontSize="xs">
                                                     <TrendingUp size={12} style={{ display: 'inline' }} /> +15%
@@ -361,7 +404,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                                                     Total Properties listed
                                                 </StatLabel>
                                                 <StatNumber color="brand.primary" fontSize="xl">
-                                                    {myPropertiesExtraData.totalProperties}
+                                                    {allData.totalProperties}
                                                 </StatNumber>
                                                 <StatHelpText color="brand.success" fontSize="xs">
                                                     +2 this month
@@ -443,9 +486,9 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                                             </MenuButton>
                                             <MenuList>
                                                 <MenuItem>View details</MenuItem>
-                                                <MenuItem>Share link</MenuItem>
-                                                <MenuItem onClick={()=> editProperty(item)}>edit</MenuItem>
-                                                <MenuItem onClick={()=> deleteMyProperty(item._id)}>Delete</MenuItem>
+                                                <MenuItem>Share Property</MenuItem>
+                                                <MenuItem onClick={() => editProperty(item)}>Edit property</MenuItem>
+                                                <MenuItem onClick={() => deleteMyProperty(item._id)}>Delete Property</MenuItem>
                                             </MenuList>
                                         </Menu>
                                         <Text fontSize="xs" color="brand.gray.500">
@@ -455,7 +498,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                                             {item.inquiries.length} new inquiries
                                         </Text>
                                         <Text fontSize="xs" color="red.500">
-                                            1 new dispute
+                                            {allData.disputedProperties.reduce((count, prop) => prop._id === item._id ? count + 1 : count, 0)} new dispute
                                         </Text>
                                     </VStack>
                                 </HStack>

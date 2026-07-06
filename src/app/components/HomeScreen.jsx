@@ -21,12 +21,56 @@ import TrustBanner from './TrustBanner';
 import TestimonialCard from './TestimonialCard';
 import BeforeAfter from './BeforeAfter';
 import Navbar from './Navbar';
-import { mockProperties, testimonials } from './mockData';
+import { testimonials } from './mockData';
 import FilterSearch from './FilterSearch';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { getAllProperties } from '../../../api';
 
 export default function HomeScreen() {
-  const [properties, setProperties] = useState(mockProperties);
+  const [properties, setProperties] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchProperties = async () => {
+      try {
+        setLoading(true);
+        const response = await getAllProperties();
+        const items = response?.data?.data?.properties || response?.data?.properties || [];
+
+        const normalized = (Array.isArray(items) ? items : []).slice(0, 4).map((property) => ({
+          ...property,
+          _id: property._id || property.id,
+          title: property.title || property.propertyType || 'Property',
+          rentAmount: property.rentAmount ?? property.price ?? property.monthlyRent ?? property.annualRent ?? 0,
+          bedrooms: property.bedrooms ?? property.bedCount ?? property.rooms ?? 0,
+          bathrooms: property.bathrooms ?? property.bathCount ?? 0,
+          media: property.media || { images: property.images || property.gallery || [] },
+          address: property.address || property.location || { area: '', state: '' },
+        }));
+
+        if (isMounted) {
+          setProperties(normalized);
+        }
+      } catch (error) {
+        console.error('Failed to fetch properties:', error);
+        if (isMounted) {
+          setProperties([]);
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchProperties();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
   return (
     <Box minH="100vh" bg="brand.background" pb="80px">
       <VStack spacing={0} align="stretch">
@@ -128,11 +172,21 @@ export default function HomeScreen() {
             </Badge>
           </HStack>
 
-          <Grid templateColumns={{ sm: "repeat(1, 1fr)", md: "repeat(2, 1fr)" }} gap={4}>
-            {properties.map((property) => (
-              <PropertyCard key={property.id} property={property} />
-            ))}
-          </Grid>
+          {loading ? (
+            <Text fontSize="sm" color="brand.gray.600">
+              Loading featured properties...
+            </Text>
+          ) : properties.length > 0 ? (
+            <Grid templateColumns={{ sm: "repeat(1, 1fr)", md: "repeat(2, 1fr)" }} gap={4}>
+              {properties.map((property) => (
+                <PropertyCard key={property._id || property.id} property={property} />
+              ))}
+            </Grid>
+          ) : (
+            <Text fontSize="sm" color="brand.gray.600">
+              No featured properties available right now.
+            </Text>
+          )}
 
 
           <Button

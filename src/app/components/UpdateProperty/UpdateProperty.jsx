@@ -277,6 +277,22 @@ export default function UpdateProperty({ updatedFormdata, setUpdatedFormdata, on
                   </Select>
                 </FormControl>
 
+                <FormControl isRequired>
+                  <FormLabel color="brand.gray.700" fontSize="sm" fontWeight="600">
+                    I am
+                  </FormLabel>
+                  <Select
+                    placeholder="Select role"
+                    size="lg"
+                    value={updatedFormdata.ownershipType || ''}
+                    onChange={(e) => setUpdatedFormdata(prev => ({ ...prev, ownershipType: e.target.value }))}
+                    _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
+                  >
+                    <option value="owner">Owner</option>
+                    <option value="agent">Agent</option>
+                  </Select>
+                </FormControl>
+
                 <Grid templateColumns="repeat(2, 1fr)" gap={4}>
                   <FormControl isRequired>
                     <FormLabel color="brand.gray.700" fontSize="sm" fontWeight="600">
