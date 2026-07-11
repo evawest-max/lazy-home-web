@@ -131,16 +131,14 @@ export const createProperty = (formData) =>
   });
 
 export const updateProperty = (
-  id,
   formData
 ) =>
-  API.put(
-    `/api/v1/properties/${id}`,
+  API.post(
+    `/api/v1/properties/update-property`,
     formData,
     {
       headers: {
-        "Content-Type":
-          "multipart/form-data",
+        "Content-Type": "multipart/form-data",
       },
     }
   );
@@ -254,11 +252,24 @@ export const getwalletTransactions = (
     `/api/v1/wallet/transactions`, data
   );
 
-  export const payRent = (
+export const payRent = (
   data
 ) =>
   API.post(
     "/api/v1/escrow/pay-rent", data
+  );
+
+export const getAllEscrowPayments = ({ page = 1, limit = 10 }) =>
+  API.get("/api/v1/escrow/payments", {
+    params: { page, limit }
+  });
+
+
+
+export const getSingleEscrowPayment = (
+) =>
+  API.get(
+    "/api/v1/escrow/payments/:id", data
   );
 
 export const confirmInspection = (
@@ -272,17 +283,17 @@ export const confirmInspection = (
 // =================== TRANSACTIONS =====================
 // ======================================================
 
-export const getUserTransactions =
-  () =>
-    API.get(
-      "/api/v1/transactions/my-transactions"
-    );
+// export const getUserTransactions =
+//   () =>
+//     API.get(
+//       "/api/v1/transactions/my-transactions"
+//     );
 
 export const getSingleTransaction = (
   id
 ) =>
   API.get(
-    `/api/v1/transactions/${id}`
+    `/api/v1/wallet/${id}/single-transaction`
   );
 
 // ======================================================

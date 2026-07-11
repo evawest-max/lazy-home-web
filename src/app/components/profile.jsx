@@ -196,7 +196,29 @@ export default function Profile({ onLogout, user }) {
                     </VStack>
                 </Box>
 
-               
+                <HStack spacing={4} justify="center" mb={2}>
+                    <Link to="/wallet" style={{ color: '#0F766E', fontWeight: 'bold' }}>
+                        <Box bg="white"
+                            p={6}
+                            borderRadius="2xl"
+                            boxShadow="xl"
+                            textAlign="center"
+                            mb={8}>
+                            <Text fontWeight="bold" >View Wallet</Text>
+                            {/* View wallet transactions and history <Link to="/wallet" style={{ color: '#0F766E', fontWeight: 'bold' }}>here</Link> */}
+                        </Box>
+                    </Link>
+                    {/* <Box bg="white"
+                    p={6}
+                    borderRadius="2xl"
+                    boxShadow="xl"
+                    textAlign="center"
+                    mb={8}>
+                    View your escrow transactions and history <Link to="/escrow" style={{ color: '#0F766E', fontWeight: 'bold' }}>here</Link>
+                </Box> */}
+                </HStack>
+
+
                 <Modal isOpen={isOpen} onClose={onClose} isCentered>
                     <ModalOverlay />
                     <ModalContent borderRadius="2xl" overflow="hidden">
@@ -253,10 +275,10 @@ export default function Profile({ onLogout, user }) {
                         {actions.map((item, index) => {
                             const targetPath =
                                 item.label === "Edit Profile" ? "/edit-profile" :
-                                item.label === "Security" ? "/security" :
-                                item.label === "Settings" ? "/settings" :
-                                item.label === "Help & Support" ? "/Support" :
-                                null;
+                                    item.label === "Security" ? "/security" :
+                                        item.label === "Settings" ? "/settings" :
+                                            item.label === "Help & Support" ? "/Support" :
+                                                null;
 
                             const content = (
                                 <Flex
@@ -269,8 +291,8 @@ export default function Profile({ onLogout, user }) {
                                     _hover={{ bg: "gray.100" }}
                                     onClick={
                                         item.label === "Logout" ? handleLogout :
-                                        item.label === "Verification Status" ? onOpen :
-                                        undefined
+                                            item.label === "Verification Status" ? onOpen :
+                                                undefined
                                     }
                                 >
                                     <HStack>

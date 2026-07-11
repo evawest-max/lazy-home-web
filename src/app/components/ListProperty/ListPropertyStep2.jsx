@@ -47,12 +47,12 @@ export default function ListPropertyStep2({ formData, setFormData, onBack, onNex
   useEffect(() => {
     return () => {
       uploadedPhotos.forEach((url) => {
-        if (url.startsWith("blob:")) {
+        if (typeof url === 'string' && url.startsWith("blob:")) {
           URL.revokeObjectURL(url);
         }
       });
 
-      if (videoUrl && videoUrl.startsWith("blob:")) {
+      if (typeof videoUrl === 'string' && videoUrl.startsWith("blob:")) {
         URL.revokeObjectURL(videoUrl);
       }
     };

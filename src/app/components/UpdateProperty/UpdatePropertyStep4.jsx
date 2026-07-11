@@ -17,6 +17,7 @@ import {
     AlertTitle,
     AlertDescription,
     Spinner,
+    useToast,
 } from '@chakra-ui/react';
 import {
     ArrowLeft,
@@ -28,37 +29,25 @@ import {
     CreditCard,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { updateProperty } from '../../../../api';
 
-export default function UpdatePropertyStep4({ updatedFormdata, setUpdatedFormdata, onBack, onSubmit, isLoading, setIsLoading }) {
+function UpdatePropertyStep4({ updatedFormdata, setUpdatedFormdata, onBack, onSubmit }) {
     const currentStep = 4;
     const totalSteps = 4;
     const landlordDetails = updatedFormdata?.landlordDetails ?? {};
     const draftKey = 'listingFormData';
+    const toast= useToast()
+    const navigate= useNavigate()
 
     const [accountVerified, setAccountVerified] = useState(false);
     const [formError, setFormError] = useState('');
+    const [isLoading, setIsLoading] = useState(false)
 
-    const requiredFields = ['fullName', 'bankName', 'accountNumber'];
-    const requiredCheckboxes = ['termsAccepted', 'escrowAccepted', 'policyAccepted'];
-
-    const isStepFourValid = () => {
-        const fieldsValid = requiredFields.every(
-            (field) => landlordDetails[field] && String(landlordDetails[field]).trim() !== ''
-        ) && String(landlordDetails.accountNumber ?? '').length === 10;
-
-        const checkboxesValid = requiredCheckboxes.every(
-            (checkbox) => updatedFormdata?.[checkbox] === true
-        );
-
-        return fieldsValid && checkboxesValid;
-    };
-
+    // No required validation for step 4
     useEffect(() => {
-        if (formError && isStepFourValid()) {
-            setFormError('');
-        }
-    }, [updatedFormdata, formError]);
+        if (formError) setFormError('');
+    }, [updatedFormdata]);
 
     useEffect(() => {
         const isVerified = String(landlordDetails.accountNumber ?? '').length === 10 && landlordDetails.bankName && landlordDetails.fullName;
@@ -71,31 +60,90 @@ export default function UpdatePropertyStep4({ updatedFormdata, setUpdatedFormdat
         }
     }, [landlordDetails.accountNumber, landlordDetails.bankName, landlordDetails.fullName]);
 
-    const handleSubmit = () => {
-        console.log('loading data', isLoading);
-        setIsLoading(true);
-        if (!isStepFourValid()) {
-            setFormError('Please fill in all required fields and accept all terms before submitting.');
-            return;
-        }
+    const handleSubmit = async () => {
+    setIsLoading(true);
 
+    try {
         const draft = {
-            ...updatedFormdata,
+        ...updatedFormdata,
             landlordDetails: {
-                ...landlordDetails,
-                backupBankName: updatedFormdata.backupBankName ?? landlordDetails.backupBankName ?? '',
-                backupAccountNumber: updatedFormdata.backupAccountNumber ?? landlordDetails.backupAccountNumber ?? '',
+            ...landlordDetails,
+                backupBankName: updatedFormdata.backupBankName?? landlordDetails.backupBankName?? '',
+                backupAccountNumber: updatedFormdata.backupAccountNumber?? landlordDetails.backupAccountNumber?? '',
             },
         };
 
-        sessionStorage.setItem(draftKey, JSON.stringify(draft));
-        localStorage.setItem(draftKey, JSON.stringify(draft));
-        setUpdatedFormdata(draft);
+        const formData = new FormData();
+
+        // 1. Append actual File objects
+        draft._photoFiles?.forEach(file => formData.append("_photoFiles", file));
+        draft._videoFiles?.forEach(file => formData.append("_videoFiles", file));
+
+        // 2. Recursive flattener - skips files, converts everything else to primitives
+        const flatten = (obj, prefix = '') => {
+            Object.entries(obj).forEach(([key, val]) => {
+                if (val === undefined || val === null) return;
+                if (key === '_photoFiles' || key === '_videoFiles') return; // already handled
+
+                const formKey = prefix? `${prefix}[${key}]` : key;
+
+                if (val instanceof Date) {
+                    formData.append(formKey, val.toISOString());
+                } else if (Array.isArray(val)) {
+                    // Handle empty arrays explicitly
+                    if (val.length === 0) {
+                        formData.append(formKey, '[]'); // so backend knows it's empty array
+                    } else {
+                        val.forEach((item, i) => {
+                            if (typeof item === 'object' && item!== null) {
+                                flatten(item, `${formKey}[${i}]`);
+                            } else {
+                                formData.append(`${formKey}[${i}]`, item);
+                            }
+                        });
+                    }
+                } else if (typeof val === 'object' &&!(val instanceof File)) {
+                    flatten(val, formKey);
+                } else {
+                    formData.append(formKey, val);
+                }
+            });
+        };
+
+        const { _photoFiles, _videoFiles,...dataToFlatten } = draft;
+        flatten(dataToFlatten);
+
+        // console.log("Sending:", Object.fromEntries(formData));
+
+        const res = await updateProperty(formData);
+        // console.log(res)
+        setIsLoading(false)
+        toast({
+          title: 'property update.',
+          description: res?.data?.message,
+          status: 'success',
+          duration: 5000,
+          isClosable: true,
+        })
+        setTimeout(() => {
+            navigate("/dashboard")
+        }, 5000);
+    } catch (error) {
+        console.error(error);
+        toast({
+          title: 'Property update',
+          description: error.response?.data?.message,
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        })
         
-        if (onSubmit) {
-            onSubmit(draft);
-        }
-    };
+    } finally {
+        setIsLoading(false);
+    }
+};
+
+
 
     return (
         <Box minH="100vh" bg="brand.background" pb="120px">
@@ -193,7 +241,7 @@ export default function UpdatePropertyStep4({ updatedFormdata, setUpdatedFormdat
                             </Alert>
                         )}
 
-                        <FormControl isRequired isInvalid={formError && !landlordDetails.fullName}>
+                        <FormControl isInvalid={false}>
                             <FormLabel color="brand.gray.700" fontSize="sm" fontWeight="600">
                                 Account Holder Name
                             </FormLabel>
@@ -219,7 +267,7 @@ export default function UpdatePropertyStep4({ updatedFormdata, setUpdatedFormdat
                             </Text>
                         </FormControl>
 
-                        <FormControl isRequired isInvalid={formError && !landlordDetails.bankName}>
+                        <FormControl isInvalid={false}>
                             <FormLabel color="brand.gray.700" fontSize="sm" fontWeight="600">
                                 Bank Name
                             </FormLabel>
@@ -262,7 +310,7 @@ export default function UpdatePropertyStep4({ updatedFormdata, setUpdatedFormdat
                             <FormErrorMessage>Required</FormErrorMessage>
                         </FormControl>
 
-                        <FormControl isRequired isInvalid={formError && (!landlordDetails.accountNumber || landlordDetails.accountNumber.length !== 10)}>
+                        <FormControl isInvalid={false}>
                             <FormLabel color="brand.gray.700" fontSize="sm" fontWeight="600">
                                 Account Number
                             </FormLabel>
@@ -537,16 +585,16 @@ export default function UpdatePropertyStep4({ updatedFormdata, setUpdatedFormdat
                     >
                         Back
                     </Button>
-                    { !isLoading && (
+                    {!isLoading && (
                         <Button
                             w="100%"
                             variant="primary"
                             size="lg"
                             onClick={handleSubmit}
                         >
-                        Submit Listing for Verification
-                    </Button>)}
-                    { isLoading && (
+                            Submit updated Listing for Verification
+                        </Button>)}
+                    {isLoading && (
                         <Spinner size="lg" color="brand.primary" />
                     )}
                 </VStack>
@@ -554,3 +602,5 @@ export default function UpdatePropertyStep4({ updatedFormdata, setUpdatedFormdat
         </Box>
     );
 }
+
+export default UpdatePropertyStep4;

@@ -8,11 +8,19 @@ import {
   Divider,
   Image,
   Spinner,
+  useToast,
+  AlertDialog,
+  AlertDialogOverlay,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogBody,
+  AlertDialogFooter,
+  useDisclosure,
 } from '@chakra-ui/react';
 import { ArrowLeft, ShieldCheck, Lock, ChevronLeft, ChevronRight } from 'lucide-react';
 import RefundGuarantee from './RefundGuarantee';
-import { Link, useParams } from 'react-router-dom';
-import { useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { getSingleProperty, initializeFundwallet, payRent } from '../../../api';
 
 const formatCurrency = (value) => {
@@ -25,6 +33,11 @@ export default function PaymentBreakdown() {
   const [property, setProperty] = useState(null);
   const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [confirming, setConfirming] = useState(false);
+  const { isOpen: isConfirmOpen, onOpen: onConfirmOpen, onClose: onConfirmClose } = useDisclosure();
+  const cancelRef = useRef(null);
+  const toast = useToast();
+  const navigate = useNavigate()
 
   const imageUrls = useMemo(() => {
     const rawImages = property?.media?.images || property?.images || property?.gallery || [];
@@ -86,16 +99,42 @@ export default function PaymentBreakdown() {
     return () => clearInterval(interval);
   }, [imageUrls.length]);
   const payRentAmount = async (id) => {
+    setConfirming(true);
+
     try {
-      const response = await payRent({propertyId: id});
+      const response = await payRent({ propertyId: id });
       console.log('Pay rent response:', response);
       const { data } = response;
-      if (data && data.data && data.data.authorization_url) {
-        window.location.href = data.data.authorization_url;
-      }
+      toast({
+        title: 'Escrow payment confirmed',
+        description: response.data.message + ' Redirecting to dashboard.',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+      // if (data && data.data && data.data.authorization_url) {
+      //   window.location.href = data.data.authorization_url;
+      // }
+      setTimeout(() => {
+        navigate("/dashboard", {state:{parameter: 1}})
+      }, 3000);
     } catch (error) {
-      console.error('Failed to initialize fund wallet:', error);
+      // console.log('Failed to initialize fund wallet:', error?.response?.data?.message);
+      toast({
+        title: 'Payment failed',
+        description: error?.response?.data?.message,
+        status: 'error',
+        duration: 4000,
+        isClosable: true,
+      });
+    } finally {
+      setConfirming(false);
+      onConfirmClose();
     }
+  };
+
+  const openConfirmDialog = () => {
+    onConfirmOpen();
   };
 
   if (loading) {
@@ -431,10 +470,46 @@ export default function PaymentBreakdown() {
             variant="primary"
             size="lg"
             leftIcon={<Lock size={18} />}
-            onClick={() => payRentAmount(id)}
+            onClick={openConfirmDialog}
+            isLoading={confirming}
           >
-            Proceed to Secure Payment
+            Pay to Escrow
           </Button>
+          <AlertDialog
+            isOpen={isConfirmOpen}
+            leastDestructiveRef={cancelRef}
+            onClose={onConfirmClose}
+            isCentered
+          >
+            <AlertDialogOverlay>
+              <AlertDialogContent>
+                <AlertDialogHeader fontSize="lg" fontWeight="bold">
+                  Confirm Escrow Payment
+                </AlertDialogHeader>
+
+                <AlertDialogBody>
+                  Are you sure you want to pay this amount into escrow for this property? This action will reserve this property for you and alert the agent or landloard. 
+                  <Text color="red">
+                    Note: only release fund after you have inspected and recieved the keys.
+                  </Text>
+                </AlertDialogBody>
+
+                <AlertDialogFooter>
+                  <Button ref={cancelRef} onClick={onConfirmClose}>
+                    Cancel
+                  </Button>
+                  <Button
+                    colorScheme="teal"
+                    ml={3}
+                    onClick={() => payRentAmount(id)}
+                    isLoading={confirming}
+                  >
+                    Confirm
+                  </Button>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialogOverlay>
+          </AlertDialog>
         </VStack>
       </Box>
     </Box>

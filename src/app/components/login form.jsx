@@ -35,7 +35,6 @@ export default function SignInForm({onLogin}) {
         setLoading(true);
         try {
             const res = await loginUser({ email, password });
-            console.log('login success', res);
             if (res?.data?.data?.accessToken) {
                 localStorage.setItem('token', res.data.data.accessToken);
                 if (res?.data?.data?.user) {
@@ -45,8 +44,8 @@ export default function SignInForm({onLogin}) {
             onLogin(res.data.data.user);
         } catch (err) {
             const message = err?.response?.data?.message  || 'Login failed' ;
-            console.error('login error', err?.response || err);
-            setErrorMessage(message + (err?.response?.data?.message === "Email not verified. Please check your inbox for the verification email." ? " Or click the button below to resend the verification email." : 'Login failed. Please check your credentials and try again.'));
+            console.log('login error', err);
+            setErrorMessage(err?.response?.data?.message === "Email not verified. Please check your inbox for the verification email." ? " Click the button below to resend the verification email." : message);
             setShowResendVerification(
                 message === 'Email not verified. Please check your inbox for the verification email.'
             );

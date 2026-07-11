@@ -49,7 +49,7 @@ export default function OTPVerification({ phone }) {
     setLoading(true);
     setStatusMessage('');
     try {
-      await verifyOTP(otp);
+      await verifyOTP({otp, phone});
       setStatusType('success');
       setStatusMessage('OTP verified successfully.');
       toast({ title: 'Verified', description: 'Your phone number has been verified.', status: 'success', duration: 5000, isClosable: true });

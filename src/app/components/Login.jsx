@@ -1,4 +1,4 @@
-import { Box, Button, VStack, Text, Heading, HStack, Divider } from '@chakra-ui/react';
+import { Box, Button, VStack, Text, Heading, HStack, Divider, Toast } from '@chakra-ui/react';
 import { Mail, Phone, Chrome, ShieldCheck, RefreshCw, Lock, Home, Search, FileText, User } from 'lucide-react';
 import { Link, useLocation,} from 'react-router-dom';
 import Navbar from './Navbar';
@@ -12,25 +12,19 @@ export default function Login({ onLogin }) {
 
   const handleGoogleSuccess = async (credentialResponse) => {
     console.log(credentialResponse);
-    // Send the token to your backend
-    // const { data } = await googleSignIn(credentialResponse.credential);
-    // localStorage.setItem("token", data.token);
     try {
       const idToken = credentialResponse.credential;
       const { data } = await googleSignIn(idToken); // call backend
-      console.log(data);
       localStorage.setItem('token', data.accessToken);
-
       onLogin(data.user);
-      // window.location.href = '/dashboard';
     } catch (err) {
-      console.error(err);
-      console.log('Google sign-in failed.');
+      console.log(err)
+      alert(err?.data?.message);
     }
   };
 
   const handleGoogleError = () => {
-    console.log('Google Login Failed');
+    console.log('Google Login Failed or email not verified');
   };
   return (
     <Box minH="100vh" bg="brand.background" px={6} py={12}>

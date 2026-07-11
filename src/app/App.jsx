@@ -28,6 +28,7 @@ import EditProfile from './components/Edit profile';
 import SupportChat from './components/support chat';
 import { createProperty } from '../../api';
 import UpdateProperty from './components/UpdateProperty/updateProperty';
+import Wallet from './components/Wallet';
 
 const LISTING_DRAFT_KEY = 'listingFormData';
 
@@ -330,6 +331,9 @@ export default function App() {
       // sessionStorage.removeItem(LISTING_DRAFT_KEY);
       // setFormData(createEmptyListingFormData());
       setIsLoading(false);
+       setTimeout(() => {
+            navigate("/dashboard")
+        }, 5000);
 
 
 
@@ -373,6 +377,7 @@ export default function App() {
             {/* <Route path="/create-listing/step-3" element={ user ? <ListProperty formData={formData} setFormData={setFormData} initialStep={3} onSubmit={handleListingSubmit} /> : <Navigate to="/login" />} /> */}
             {/* <Route path="/create-listing/step-4" element={ user ? <ListProperty formData={formData} setFormData={setFormData} initialStep={4} onSubmit={handleListingSubmit} /> : <Navigate to="/login" />} />  */}
             <Route path="/profile" element={user ? <Profile onLogout={logout} user={user} /> : <Navigate to="/login" />} />
+            <Route path="/wallet" element={user ? <Wallet user={user} /> : <Navigate to="/login" />} />
             <Route path="/verify_ID" element={user ? <IdentityVerification /> : <Navigate to="/login" />} />
             <Route path="/edit-profile" element={user ? <EditProfile user={user} /> : <Navigate to="/login" />} />
             <Route path="/change-password" element={user ? <ChangePassword /> : <Navigate to="/login" />} />

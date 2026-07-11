@@ -27,51 +27,72 @@ import { Link } from 'react-router-dom';
 export default function UpdatePropertyStep2({ updatedFormdata, setUpdatedFormdata, onBack, onNext }) {
   const currentStep = 2;
   const totalSteps = 4;
-
   const draftKey = 'listingFormData';
 
-  const [uploadedPhotos, setUploadedPhotos] = useState(
-    updatedFormdata.photos || [] || updatedFormdata.media?.images
+  const [uploadedPhotos, setUploadedPhotos] = useState([]);
+  const [videoUrl, setVideoUrl] = useState(
+    updatedFormdata.video || updatedFormdata.media?.videos?.[0] || ""
   );
-
-  const [videoUrl, setVideoUrl] = useState(updatedFormdata.video || updatedFormdata.media?.videos?.[0] || "");
 
   const photoInputRef = useRef(null);
   const videoInputRef = useRef(null);
 
   // ✅ Cleanup object URLs to prevent memory leaks
   useEffect(() => {
-    console.log(uploadedPhotos)
     return () => {
-      // uploadedPhotos.forEach((url) => {
-      //   if (url.startsWith("blob:")) {
-      //     URL.revokeObjectURL(url);
-      //   }
-      // });
-      setUploadedPhotos(FormData.images||[].map(file => ({
-        url: URL.createObjectURL(file),
-        name: file.name
-      })));
-
-      if (videoUrl && videoUrl.startsWith("blob:")) {
+      uploadedPhotos.forEach((url) => {
+        if (typeof url === 'string' && url.startsWith("blob:")) {
+          URL.revokeObjectURL(url);
+        }
+      });
+      if (typeof videoUrl === 'string' && videoUrl.startsWith("blob:")) {
         URL.revokeObjectURL(videoUrl);
       }
     };
   }, [uploadedPhotos, videoUrl]);
 
+  // ✅ Restore draft from localStorage on mount
+  useEffect(() => {
+    const savedDraft = localStorage.getItem(draftKey);
+    if (savedDraft) {
+      try {
+        const parsedDraft = JSON.parse(savedDraft);
+        setUpdatedFormdata((prev) => ({
+          ...prev,
+          ...parsedDraft,
+          _photoFiles: [],
+          _videoFiles: [],
+        }));
+        if (parsedDraft.photos) setUploadedPhotos(parsedDraft.photos);
+        if (parsedDraft.video) setVideoUrl(parsedDraft.video);
+        console.log("Draft restored:", parsedDraft);
+      } catch (err) {
+        console.error("Error parsing draft:", err);
+      }
+    }
+  }, []);
+
+  // ✅ Auto-save draft whenever updatedFormdata changes
+  useEffect(() => {
+    const serializableDraft = { ...updatedFormdata };
+    delete serializableDraft._photoFiles;
+    delete serializableDraft._videoFiles;
+    try {
+      localStorage.setItem(draftKey, JSON.stringify(serializableDraft));
+    } catch (err) {
+      console.error("Error auto-saving draft:", err);
+    }
+  }, [updatedFormdata]);
+
   const handlePhotoUpload = (event) => {
     const files = Array.from(event.target.files || []);
     if (files.length === 0) return;
-
     const newPreviews = files.map((file) => URL.createObjectURL(file));
-
     setUploadedPhotos((prev) => [...prev, ...newPreviews].slice(0, 20));
-
     setUpdatedFormdata((prev) => {
       const existingFiles = Array.isArray(prev._photoFiles) ? prev._photoFiles : [];
       const mergedFiles = [...existingFiles, ...files].slice(0, 20);
       const photos = [...(prev.photos ?? prev.media?.images ?? []), ...newPreviews].slice(0, 20);
-
       return {
         ...prev,
         _photoFiles: mergedFiles,
@@ -87,13 +108,11 @@ export default function UpdatePropertyStep2({ updatedFormdata, setUpdatedFormdat
   const handleVideoUpload = (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
-
     const newVideoUrl = URL.createObjectURL(file);
     setVideoUrl(newVideoUrl);
-
     setUpdatedFormdata((prev) => ({
       ...prev,
-      _videoFile: file,
+      _videoFiles: [file],
       video: newVideoUrl,
       media: {
         ...(prev.media ?? {}),
@@ -103,13 +122,12 @@ export default function UpdatePropertyStep2({ updatedFormdata, setUpdatedFormdat
   };
 
   const removePhoto = (index) => {
-    setUploadedPhotos((prev) =>
-      prev.filter((_, i) => i !== index)
-    );
+    setUploadedPhotos((prev) => prev.filter((_, i) => i !== index));
     setUpdatedFormdata((prev) => {
       const photos = [...(prev.photos ?? prev.media?.images ?? [])].filter((_, i) => i !== index);
-      const fileList = Array.isArray(prev._photoFiles) ? prev._photoFiles.filter((_, i) => i !== index) : [];
-
+      const fileList = Array.isArray(prev._photoFiles)
+        ? prev._photoFiles.filter((_, i) => i !== index)
+        : [];
       return {
         ...prev,
         _photoFiles: fileList,
@@ -117,26 +135,21 @@ export default function UpdatePropertyStep2({ updatedFormdata, setUpdatedFormdat
         media: {
           ...(prev.media ?? {}),
           images: photos,
+          videos: prev.media?.videos ?? [],
         },
       };
     });
-
   };
 
   const handleContinue = () => {
     const photos = Array.isArray(updatedFormdata.photos) ? updatedFormdata.photos : uploadedPhotos;
     const currentVideo = updatedFormdata.video || videoUrl || '';
-
-    // Collect actual File objects from refs/state
     const photoFiles = photoInputRef.current?.files ? Array.from(photoInputRef.current.files) : [];
     const videoFile = videoInputRef.current?.files?.[0] || null;
-
-    // keep File objects in memory under `_photoFiles` and `_videoFile`,
-    // but persist a serializable draft to storage (no File objects)
     const memoryDraft = {
       ...updatedFormdata,
       _photoFiles: photoFiles.length > 0 ? photoFiles : (updatedFormdata._photoFiles ?? []),
-      _videoFile: videoFile || (updatedFormdata._videoFile ?? null),
+      _videoFiles: videoFile ? [videoFile] : (updatedFormdata._videoFiles ?? []),
       photos,
       video: currentVideo,
       media: {
@@ -145,26 +158,17 @@ export default function UpdatePropertyStep2({ updatedFormdata, setUpdatedFormdat
         videos: currentVideo ? [currentVideo] : [],
       },
     };
-
-    console.log('Step2 handleContinue - photoFiles count:', memoryDraft._photoFiles?.length || 0);
-    console.log('Step2 handleContinue - videoFile:', memoryDraft._videoFile?.name || 'none');
-
-    const serializableDraft = { ...memoryDraft };
-    delete serializableDraft._photoFiles;
-    delete serializableDraft._videoFile;
+    setUpdatedFormdata(memoryDraft);
 
     try {
-      sessionStorage.setItem(draftKey, JSON.stringify(serializableDraft));
-      localStorage.setItem(draftKey, JSON.stringify(serializableDraft));
+      console.log("updated form data", updatedFormdata)
+      sessionStorage.setItem(draftKey, JSON.stringify(memoryDraft));
+      localStorage.setItem(draftKey, JSON.stringify(memoryDraft));
     } catch (err) {
       console.error('Error saving listing draft:', err);
     }
-
-    setUpdatedFormdata(memoryDraft);
-
     return true;
   };
-
 
 
   return (
@@ -196,7 +200,7 @@ export default function UpdatePropertyStep2({ updatedFormdata, setUpdatedFormdat
 
         <Box bg="white" borderRadius="xl" p={6} boxShadow="sm">
           <VStack align="stretch" spacing={5}>
-            <HStack spacing={3} justify="space-between" isRequired>
+            <HStack spacing={3} justify="space-between">
               <HStack spacing={3}>
                 <Box bg="brand.primary" p={2} borderRadius="full">
                   <ImageIcon size={20} color="white" />
@@ -457,7 +461,7 @@ export default function UpdatePropertyStep2({ updatedFormdata, setUpdatedFormdat
               }
             }}
           >
-            Continue to Pricing
+            Continue to update Pricing
           </Button>
         </Grid>
       </Box>

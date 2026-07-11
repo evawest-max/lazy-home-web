@@ -40,22 +40,12 @@ export default function UpdatePropertyStep3({ updatedFormdata, setUpdatedFormdat
 
   const rentAmount = updatedFormdata.annualRent ?? updatedFormdata.rentAmount ?? '';
 
-  const isStepThreeValid = () =>
-    rentAmount && String(rentAmount).trim() !== '';
-
+  // No required validation for step 3
   useEffect(() => {
-    if (formError && isStepThreeValid()) {
-      setFormError('');
-    }
-  }, [updatedFormdata, formError]);
+    if (formError) setFormError('');
+  }, [updatedFormdata]);
 
   const handleContinue = (event) => {
-    if (!isStepThreeValid()) {
-      event?.preventDefault?.();
-      setFormError('Please fill in all required fields before continuing.');
-      return false;
-    }
-
     const draft = {
       ...updatedFormdata,
       annualRent: rentAmount,
@@ -65,6 +55,7 @@ export default function UpdatePropertyStep3({ updatedFormdata, setUpdatedFormdat
     sessionStorage.setItem(draftKey, JSON.stringify(draft));
     localStorage.setItem(draftKey, JSON.stringify(draft));
     setUpdatedFormdata(draft);
+    console.log("bank section", updatedFormdata)
 
     if (onNext) {
       onNext(draft);
@@ -74,52 +65,6 @@ export default function UpdatePropertyStep3({ updatedFormdata, setUpdatedFormdat
 
   return (
     <Box minH="100vh" bg="brand.background" pb="120px">
-      {/* <Box bg="brand.primary" px={6} pt={12} pb={8}>
-        <HStack mb={6}>
-          <Link to="/dashboard">
-          <IconButton
-            icon={<ArrowLeft size={20} />}
-            variant="ghost"
-            color="white"
-            _hover={{ bg: 'whiteAlpha.200' }}
-            aria-label="Back"
-          />
-          </Link>
-          <Text fontSize="xl" fontWeight="bold" color="white" flex={1}>
-            List Your Property
-          </Text>
-        </HStack>
-
-        <VStack spacing={3} align="stretch">
-          <HStack justify="space-between">
-            <Text fontSize="sm" color="whiteAlpha.900">
-              Step {currentStep} of {totalSteps}
-            </Text>
-            <Text fontSize="sm" color="whiteAlpha.900">
-              {Math.round((currentStep / totalSteps) * 100)}% Complete
-            </Text>
-          </HStack>
-          <Progress
-            value={(currentStep / totalSteps) * 100}
-            size="sm"
-            colorScheme="green"
-            borderRadius="full"
-            bg="whiteAlpha.300"
-          />
-
-          <HStack spacing={2} justify="center" mt={2}>
-            {[1, 2, 3, 4].map((step) => (
-              <Box
-                key={step}
-                w="8px"
-                h="8px"
-                borderRadius="full"
-                bg={step <= currentStep ? 'white' : 'whiteAlpha.400'}
-              />
-            ))}
-          </HStack>
-        </VStack>
-      </Box> */}
 
       <VStack align="stretch" px={6} mt={-4} spacing={6}>
         <Box bg="white" borderRadius="xl" p={6} boxShadow="md" border="2px solid" borderColor="brand.success">
@@ -169,7 +114,7 @@ export default function UpdatePropertyStep3({ updatedFormdata, setUpdatedFormdat
             )}
 
 
-            <FormControl isRequired isInvalid={formError && !rentAmount}>
+            <FormControl isInvalid={false}>
               <FormLabel color="brand.gray.700" fontSize="sm" fontWeight="600">
                 Rent Amount
               </FormLabel>
@@ -198,7 +143,7 @@ export default function UpdatePropertyStep3({ updatedFormdata, setUpdatedFormdat
                 <option>weekly</option>
               </Select>
               </HStack>
-              <FormErrorMessage>Required</FormErrorMessage>
+              <FormErrorMessage />
             </FormControl>
 
 
@@ -508,7 +453,7 @@ export default function UpdatePropertyStep3({ updatedFormdata, setUpdatedFormdat
               handleContinue();
             }}
           >
-            Continue to Bank Details
+            Continue to update Bank Details
           </Button>
         </Grid>
       </Box>

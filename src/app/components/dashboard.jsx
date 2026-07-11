@@ -29,6 +29,7 @@ import {
     ModalBody,
     ModalFooter,
     ModalCloseButton,
+    useToast,
     useDisclosure,
     PinInput,
     PinInputField,
@@ -56,9 +57,9 @@ import TestimonialCard from './TestimonialCard';
 import BeforeAfter from './BeforeAfter';
 import FilterSearch from './FilterSearch';
 import { mockInspections, mockProperties } from './mockData';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Navbar from './Navbar';
-import { deleteProperty, getAnalyticsDashboard, getUserProperties } from '../../../api';
+import { deleteProperty, getAllEscrowPayments, getAnalyticsDashboard, getUserProperties } from '../../../api';
 
 
 export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
@@ -68,8 +69,20 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
     const [listingsPage, setListingsPage] = useState(1);
     const [transactionsPage, setTransactionsPage] = useState(1);
     const [myProperties, setMyProperties] = useState([])
+    const [escrowTransactions, setEscrowTransactions]= useState([])
+    const [transactionsTotalPages, setTransactionsTotalPages] = useState(1);
+    const [transactionsLoading, setTransactionsLoading] = useState(false);
     const [allData, setAllData] = useState({})
     const [loading, setLoading] = useState(true);
+    const { isOpen: isReleaseOpen, onOpen: onOpenRelease, onClose: onCloseRelease } = useDisclosure();
+    const [releaseCode, setReleaseCode] = useState('');
+    const [selectedEscrowAction, setSelectedEscrowAction] = useState(null);
+    const [releasing, setReleasing] = useState(false);
+    const location = useLocation();
+
+    const { parameter } = location.state || {};
+    const tab = parameter
+    console.log("user tab",tab)
 
     const itemsPerPage = 4;
     const { isOpen: isPinOpen, onOpen: onOpenPin, onClose: onClosePin } = useDisclosure();
@@ -82,28 +95,68 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
     const paginatedListings = myProperties.slice(listingsStartIndex, listingsEndIndex);
 
     // Pagination calculations for transactions
-    const transactionsTotalPages = Math.ceil(mockInspections.length / itemsPerPage);
-    const transactionsStartIndex = (transactionsPage - 1) * itemsPerPage;
-    const transactionsEndIndex = transactionsStartIndex + itemsPerPage;
-    const paginatedTransactions = mockInspections.slice(transactionsStartIndex, transactionsEndIndex);
+    // transactions pagination handled by API; UI buttons use `transactionsTotalPages`
 
     useEffect(() => {
+        if (tab==1){
+            setActiveTab(1)
+        }
+        else if (tab == 2){
+            setActiveTab(2)
+        }else{
+            setActiveTab(0)
+        }
         const fetchProperties = async () => {
             try {
                 const analyticsResponse = await getAnalyticsDashboard();
-                console.log(analyticsResponse);
-                setMyProperties(analyticsResponse.data.data.propertiesWithInquiries);
-                setAllData(analyticsResponse.data.data);
-                setLoading(false)
+                setMyProperties(analyticsResponse.data.data.propertiesWithInquiries || []);
+                setAllData(analyticsResponse.data.data || {});
+                setLoading(false);
             } catch (error) {
                 console.error("Failed to fetch properties:", error);
                 setMyProperties([]);
-                setLoading(false)
+                setLoading(false);
             }
         };
 
         fetchProperties();
     }, []);
+
+    // Fetch escrow transactions for the current transactionsPage
+    useEffect(() => {
+        let mounted = true;
+        const fetchEscrowPage = async (page = 1) => {
+            setTransactionsLoading(true);
+            try {
+                const resp = await getAllEscrowPayments({ page, limit: itemsPerPage });
+                const data = resp?.data?.data || resp?.data || {};
+                const list = Array.isArray(data)
+                    ? data
+                    : Array.isArray(data.payments)
+                        ? data.payments
+                        : Array.isArray(data.items)
+                            ? data.items
+                            : Array.isArray(data.transactions)
+                                ? data.transactions
+                                : [];
+
+                const pagination = data.pagination || resp?.data?.pagination || data.meta || {};
+                const totalPages = pagination.pages || pagination.totalPages || pagination.pageCount || Math.ceil((pagination.total || list.length) / itemsPerPage) || 1;
+
+                if (!mounted) return;
+                setEscrowTransactions(list);
+                setTransactionsTotalPages(totalPages);
+            } catch (err) {
+                console.error('Failed to load escrow transactions', err);
+                if (mounted) setEscrowTransactions([]);
+            } finally {
+                if (mounted) setTransactionsLoading(false);
+            }
+        };
+
+        fetchEscrowPage(transactionsPage);
+        return () => { mounted = false; };
+    }, [transactionsPage]);
 
 
     const openPinModal = (action) => {
@@ -133,9 +186,34 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
         }
     }
 
+    const toast = useToast();
+
+    const handleEscrowAction = async (action, escrow) => {
+        // placeholder handlers - replace with real API calls as needed
+        console.log(`escrow action: ${action}`, escrow);
+        switch (action) {
+            case 'release':
+                setSelectedEscrowAction(escrow);
+                setReleaseCode('');
+                onOpenRelease();
+                return;
+            case 'refund':
+                toast({ title: 'Refund requested', status: 'info' });
+                break;
+            case 'dispute':
+                toast({ title: 'Dispute submitted', status: 'warning' });
+                break;
+            case 'inspected':
+                toast({ title: 'Inspection confirmed', status: 'success' });
+                break;
+            default:
+                toast({ title: 'Action triggered', status: 'info' });
+        }
+    };
+
     const editProperty = (data) => {
         setUpdatedFormdata(data);
-        navigate("/update-listing/steps")
+        navigate("/update-listing/steps", {state:{propertyId: data._id}})
     }
 
     if (loading) {
@@ -150,7 +228,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                 <VStack spacing={4} p={8} bg="white" borderRadius="xl" boxShadow="lg">
                     <Spinner size="xl" color="brand.primary" thickness="4px" />
                     <Text fontSize="lg" fontWeight="600" color="brand.gray.700">
-                        Loading my properties...
+                        Loading my Dashboard
                     </Text>
                 </VStack>
             </Box>
@@ -534,180 +612,102 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                             </Button>
                         </HStack>
 
-                        {/* <VStack align="stretch" spacing={3}>
-                            <HStack
-                                p={4}
-                                bg="white"
-                                borderRadius="lg"
-                                spacing={4}
-                                boxShadow="sm"
-                                cursor="pointer"
-                                _hover={{ boxShadow: 'md' }}
-                            >
-                                <Box
-                                    bg="brand.primary"
-                                    w="60px"
-                                    h="60px"
-                                    borderRadius="lg"
-                                    display="flex"
-                                    alignItems="center"
-                                    justifyContent="center"
-                                >
-                                    <Home size={28} color="white" />
-                                </Box>
-
-                                <VStack align="start" flex={1} spacing={1}>
-                                    <Text fontWeight="600" fontSize="sm">
-                                        3 Bedroom Duplex
-                                    </Text>
-                                    <Text fontSize="xs" color="brand.gray.600">
-                                        Lekki Phase 1
-                                    </Text>
-                                    <HStack>
-                                        <Badge variant="verified" fontSize="xs">Active</Badge>
-                                        <Text fontSize="xs" color="brand.gray.600">₦2.5M/year</Text>
-                                    </HStack>
-                                </VStack>
-
-                                <Text fontSize="xs" color="brand.gray.500">
-                                    2d ago
-                                </Text>
-                            </HStack>
-
-                            <HStack
-                                p={4}
-                                bg="white"
-                                borderRadius="lg"
-                                spacing={4}
-                                boxShadow="sm"
-                                cursor="pointer"
-                                _hover={{ boxShadow: 'md' }}
-                            >
-                                <Box
-                                    bg="brand.accent"
-                                    w="60px"
-                                    h="60px"
-                                    borderRadius="lg"
-                                    display="flex"
-                                    alignItems="center"
-                                    justifyContent="center"
-                                >
-                                    <Home size={28} color="white" />
-                                </Box>
-
-                                <VStack align="start" flex={1} spacing={1}>
-                                    <Text fontWeight="600" fontSize="sm">
-                                        2 Bedroom Flat
-                                    </Text>
-                                    <Text fontSize="xs" color="brand.gray.600">
-                                        Victoria Island
-                                    </Text>
-                                    <HStack>
-                                        <Badge variant="underOffer" fontSize="xs">Under Offer</Badge>
-                                        <Text fontSize="xs" color="brand.gray.600">₦3.2M/year</Text>
-                                    </HStack>
-                                </VStack>
-
-                                <Text fontSize="xs" color="brand.gray.500">
-                                    5d ago
-                                </Text>
-                            </HStack>
-
-                            <HStack
-                                p={4}
-                                bg="white"
-                                borderRadius="lg"
-                                spacing={4}
-                                boxShadow="sm"
-                                cursor="pointer"
-                                _hover={{ boxShadow: 'md' }}
-                            >
-                                <Box
-                                    bg="brand.secondary"
-                                    w="60px"
-                                    h="60px"
-                                    borderRadius="lg"
-                                    display="flex"
-                                    alignItems="center"
-                                    justifyContent="center"
-                                >
-                                    <Home size={28} color="white" />
-                                </Box>
-
-                                <VStack align="start" flex={1} spacing={1}>
-                                    <Text fontWeight="600" fontSize="sm">
-                                        4 Bedroom House
-                                    </Text>
-                                    <Text fontSize="xs" color="brand.gray.600">
-                                        Ikoyi
-                                    </Text>
-                                    <HStack>
-                                        <Badge variant="verified" fontSize="xs">Active</Badge>
-                                        <Text fontSize="xs" color="brand.gray.600">₦5M/year</Text>
-                                    </HStack>
-                                </VStack>
-
-                                <Text fontSize="xs" color="brand.gray.500">
-                                    1w ago
-                                </Text>
-                            </HStack>
-                        </VStack> */}
+                       
                     </VStack>
                 )}
 
                 {activeTab === 1 && (
                     <VStack align="stretch" px={6} pt={6} spacing={4}>
                         <Text fontSize="lg" fontWeight="600" color="brand.gray.800">
-                            My Transactions
+                            Escrow Transactions
                         </Text>
 
                         <VStack align="stretch" spacing={3}>
                             <Grid templateColumns={{ sm: "repeat(2, 1fr)", md: "repeat(3, 1fr)" }} gap={4}>
-                                {paginatedTransactions.map((inspection) => (
-                                    <Box key={inspection.id} bg="white" p={4} borderRadius="lg" boxShadow="sm">
-                                        <VStack align="stretch" spacing={3}>
-                                            <HStack justify="space-between">
-                                                <Image src={mockProperties.find((prop) => prop.id === inspection.propertyId)?.image} alt="Property" boxSize="60px" borderRadius="lg" objectFit="cover" />
-                                                <VStack align="start" spacing={0}>
-                                                    <Text fontSize="sm" fontWeight="600">{inspection.title}</Text>
-                                                    <Text fontSize="xs" color="brand.gray.600">{mockProperties.find((prop) => prop.id === inspection.propertyId)?.title}</Text>
-                                                </VStack>
-                                                <Badge bg={inspection.status === 'Upcoming' ? 'red.500' : inspection.status === 'Pending' ? 'yellow.500' : 'green.500'} color="white" fontSize="xs">{inspection.status}</Badge>
-                                            </HStack>
-                                            {inspection.status === 'Upcoming' ? (
-                                                <Text fontSize="xs" color="brand.gray.600">Scheduled for {inspection.preferredDate}</Text>
-                                            ) : inspection.status === 'Pending' ? (
-                                                <Text fontSize="xs" color="brand.gray.600">Paid on {inspection.paymentDate}</Text>
-                                            ) : null}
+                                {escrowTransactions.map((escrow) => {
+                                    const id = escrow._id || escrow.id || escrow.transactionId || escrow.reference;
+                                    const title = escrow.title || escrow.description || 'Escrow Transaction';
+                                    const status = escrow.status || escrow.state || 'unknown';
+                                    const rawAmount = escrow.amount || escrow.payment?.amount || escrow.amountPaid || 0;
+                                    const amount = Number(rawAmount) || 0;
+                                    const created = new Date(escrow.createdAt || escrow.created_at || escrow.paymentDate || Date.now()).toLocaleString();
+                                    const payer = escrow.payer?.name || escrow.payerName || escrow.user?.name || escrow.initiator || 'N/A';
+                                    const property = myProperties.find((p) => p._id === escrow.propertyId || p.id === escrow.propertyId) || mockProperties.find((p) => p.id === escrow.propertyId) || {};
+                                    const propertyTitle = property.title || escrow.propertyTitle || 'Unknown property';
 
+                                    const formatCurrency = (v) => {
+                                        const n = Number(v) || 0;
+                                        return `₦${(n / 100).toLocaleString()}`;
+                                    };
 
-                                            {inspection.title === 'Inspection Scheduled' ? (
-                                                <Button size="sm" variant="primary" onClick={() => navigate(`/inspection-feedback/${mockProperties.find((prop) => prop.id === inspection.propertyId)?.id}`)}>
-                                                    Give Feedback
-                                                </Button>
-                                            ) : inspection.title === 'Payment in Escrow' ? (
-                                                <HStack spacing={2} justify="center">
-                                                    <Button size="sm" w="50%" variant="secondary" onClick={() => openPinModal('pay')}>
-                                                        Pay Landlord
-                                                    </Button>
-                                                    <Button size="sm" w="50%" variant="outline" onClick={() => openPinModal('refund')}>
-                                                        Request refund
-                                                    </Button>
+                                    return (
+                                        <Box key={id} bg="white" p={4} borderRadius="lg" boxShadow="sm">
+                                            <VStack align="stretch" spacing={3}>
+                                                <HStack justify="space-between">
+                                                    <HStack>
+                                                        <Box boxSize="60px" borderRadius="md" bg="brand.background" />
+                                                        <VStack align="start" spacing={0}>
+                                                            <Text fontSize="sm" fontWeight="600">{title}</Text>
+                                                            <Text fontSize="xs" color="brand.gray.600">{propertyTitle}</Text>
+                                                            <Text fontSize="xs" color="brand.gray.500">{payer}</Text>
+                                                        </VStack>
+                                                    </HStack>
+                                                    <VStack align="end">
+                                                        <Badge colorScheme={status.toLowerCase() === 'pending' ? 'yellow' : status.toLowerCase() === 'upcoming' ? 'red' : 'green'}>
+                                                            {status}
+                                                        </Badge>
+                                                        <Text fontWeight="700">{formatCurrency(amount)}</Text>
+                                                        <Text fontSize="xs" color="brand.gray.600">{created}</Text>
+                                                    </VStack>
                                                 </HStack>
-                                            ) : inspection.title === 'Rental Agreement' ? (
-                                                <Button
-                                                    size="sm"
-                                                    variant="secondary"
-                                                    as={Link}
-                                                    to={inspection.rentalAgreementUrl}
 
-                                                >
-                                                    Download Contract
-                                                </Button>
-                                            ) : null}
-                                        </VStack>
-                                    </Box>
-                                ))}
+                                                <HStack justify="space-between">
+                                                    <VStack align="start" spacing={0}>
+                                                        <Text fontSize="xs" color="brand.gray.600">Ref: {escrow.reference || escrow.txRef || id}</Text>
+                                                        {escrow.purpose && <Text fontSize="xs" color="brand.gray.600">Purpose: {escrow.purpose}</Text>}
+                                                        {escrow.payoutStatus && <Text fontSize="xs" color="brand.gray.600">Payout: {escrow.payoutStatus}</Text>}
+                                                        {escrow.landlordConfirmedHandover && <Text fontSize="xs" color="brand.gray.600">landlord has Confirmed Handover</Text>}
+                                                    </VStack>
+
+                                                    <HStack>
+                                                        <Menu>
+                                                            <MenuButton as={Button} size="sm" variant="outline">
+                                                                Actions
+                                                            </MenuButton>
+                                                            <MenuList>
+                                                                <MenuItem onClick={() => handleEscrowAction('inspected', escrow)}>I have inspected</MenuItem>
+                                                                <MenuItem onClick={() => handleEscrowAction('release', escrow)}>Release funds</MenuItem>
+                                                                <MenuItem onClick={() => handleEscrowAction('refund', escrow)}>Refund me</MenuItem>
+                                                                <MenuItem onClick={() => handleEscrowAction('dispute', escrow)}>Submit dispute</MenuItem>
+                                                            </MenuList>
+                                                        </Menu>
+
+                                                        {title.toLowerCase().includes('scheduled') && (
+                                                            <Button size="sm" variant="primary" onClick={() => navigate(`/escrow-feedback/${property.id || property._id}`)}>
+                                                                Give Feedback
+                                                            </Button>
+                                                        )}
+
+                                                        {title.toLowerCase().includes('payment') && (
+                                                            <HStack spacing={2}>
+                                                                <Button size="sm" w="110px" variant="secondary" onClick={() => openPinModal('pay')}>
+                                                                    Pay Landlord
+                                                                </Button>
+                                                                <Button size="sm" w="110px" variant="outline" onClick={() => openPinModal('refund')}>
+                                                                    Request refund
+                                                                </Button>
+                                                            </HStack>
+                                                        )}
+
+                                                        {title.toLowerCase().includes('rental') && escrow.rentalAgreementUrl && (
+                                                            <Button size="sm" variant="secondary" as={Link} to={escrow.rentalAgreementUrl}>Download Contract</Button>
+                                                        )}
+                                                    </HStack>
+                                                </HStack>
+                                            </VStack>
+                                        </Box>
+                                    );
+                                })}
                             </Grid>
 
                             <HStack justify="center" spacing={2} mt={4}>
@@ -739,55 +739,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                                 </Button>
                             </HStack>
                         </VStack>
-                        {/* <VStack align="stretch" spacing={3}>
-                            <Box bg="white" p={4} borderRadius="lg" boxShadow="sm">
-                                <VStack align="stretch" spacing={3}>
-                                    <HStack justify="space-between">
-                                        <VStack align="start" spacing={0}>
-                                            <Text fontSize="sm" fontWeight="600">Inspection Scheduled</Text>
-                                            <Text fontSize="xs" color="brand.gray.600">3 Bedroom Duplex, Lekki</Text>
-                                        </VStack>
-                                        <Badge bg="brand.accent" color="white" fontSize="xs">Upcoming</Badge>
-                                    </HStack>
-                                    <Text fontSize="xs" color="brand.gray.600">Today, 2:00 PM</Text>
-                                    <Button
-                                        size="sm"
-                                        variant="primary"
-                                        onClick={() => onNavigate?.('inspection')}
-                                    >
-                                        Give Feedback
-                                    </Button>
-                                </VStack>
-                            </Box>
-
-                            <Box bg="white" p={4} borderRadius="lg" boxShadow="sm">
-                                <VStack align="stretch" spacing={3}>
-                                    <HStack justify="space-between">
-                                        <VStack align="start" spacing={0}>
-                                            <Text fontSize="sm" fontWeight="600">Payment in Escrow</Text>
-                                            <Text fontSize="xs" color="brand.gray.600">2 Bedroom Flat, VI</Text>
-                                        </VStack>
-                                        <Badge bg="brand.warning" color="white" fontSize="xs">Pending</Badge>
-                                    </HStack>
-                                    <Text fontSize="xs" color="brand.gray.600">₦3.2M held safely</Text>
-                                    <Button size="sm" variant="secondary">View Details</Button>
-                                </VStack>
-                            </Box>
-
-                            <Box bg="white" p={4} borderRadius="lg" boxShadow="sm">
-                                <VStack align="stretch" spacing={3}>
-                                    <HStack justify="space-between">
-                                        <VStack align="start" spacing={0}>
-                                            <Text fontSize="sm" fontWeight="600">Rental Agreement</Text>
-                                            <Text fontSize="xs" color="brand.gray.600">4 Bedroom House, Ikoyi</Text>
-                                        </VStack>
-                                        <Badge bg="brand.success" color="white" fontSize="xs">Completed</Badge>
-                                    </HStack>
-                                    <Text fontSize="xs" color="brand.gray.600">Signed 2 weeks ago</Text>
-                                    <Button size="sm" variant="secondary">Download Contract</Button>
-                                </VStack>
-                            </Box>
-                        </VStack> */}
+                        
                     </VStack>
                 )}
 
@@ -906,6 +858,60 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                             onClick={handlePinSubmit}
                         >
                             Confirm PIN
+                        </Button>
+                    </ModalFooter>
+                </ModalContent>
+            </Modal>
+
+            <Modal isOpen={isReleaseOpen} onClose={() => { onCloseRelease(); setSelectedEscrowAction(null); setReleaseCode(''); }} isCentered>
+                <ModalOverlay />
+                <ModalContent borderRadius="2xl" overflow="hidden">
+                    <ModalHeader>Release Funds</ModalHeader>
+                    <ModalCloseButton />
+                    <ModalBody pb={6}>
+                        <VStack spacing={4} align="stretch">
+                            <Text fontSize="sm" color="brand.gray.700">
+                                Enter the release code provided to you to release funds for this transaction.
+                            </Text>
+                            <Input
+                                placeholder="Enter release code"
+                                value={releaseCode}
+                                onChange={(e) => setReleaseCode(e.target.value)}
+                            />
+                            {selectedEscrowAction && (
+                                <Text fontSize="xs" color="brand.gray.600">Ref: {selectedEscrowAction.reference || selectedEscrowAction._id || selectedEscrowAction.id}</Text>
+                            )}
+                        </VStack>
+                    </ModalBody>
+                    <ModalFooter>
+                        <Button mr={3} variant="ghost" onClick={() => { onCloseRelease(); setSelectedEscrowAction(null); setReleaseCode(''); }}>
+                            Cancel
+                        </Button>
+                        <Button
+                            colorScheme="teal"
+                            isLoading={releasing}
+                            onClick={async () => {
+                                if (!releaseCode || releaseCode.trim().length === 0) {
+                                    toast({ title: 'Enter release code', status: 'warning' });
+                                    return;
+                                }
+                                setReleasing(true);
+                                try {
+                                    // TODO: call real API to release funds with code and escrow id
+                                    console.log('Submitting release code', { releaseCode, escrow: selectedEscrowAction });
+                                    toast({ title: 'Release code submitted', status: 'success' });
+                                    onCloseRelease();
+                                    setSelectedEscrowAction(null);
+                                    setReleaseCode('');
+                                } catch (err) {
+                                    console.error('Failed to submit release code', err);
+                                    toast({ title: 'Failed to submit release code', status: 'error' });
+                                } finally {
+                                    setReleasing(false);
+                                }
+                            }}
+                        >
+                            Submit
                         </Button>
                     </ModalFooter>
                 </ModalContent>

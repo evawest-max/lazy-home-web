@@ -40,6 +40,7 @@ import UpdatePropertyStep3 from './UpdatePropertyStep3';
 import UpdatePropertyStep4 from './UpdatePropertyStep4';
 
 export default function UpdateProperty({ updatedFormdata, setUpdatedFormdata, onSubmit, initialStep = 1, isLoading, setIsLoading }) {
+  // console.log("this is the updated formdata",updatedFormdata)
   const navigate = useNavigate();
   const [activeStep, setActiveStep] = useState(Math.max(0, initialStep - 1));
   const totalSteps = 4;
@@ -79,21 +80,7 @@ export default function UpdateProperty({ updatedFormdata, setUpdatedFormdata, on
     }
   };
 
-  const requiredFields = [
-    'title',
-    'propertyType',
-    'bedrooms',
-    'bathrooms',
-    'description',
-    'state',
-    'city',
-    'address',
-  ];
-
-  const isStepOneValid = () =>
-    requiredFields.every(
-      (field) => updatedFormdata[field] && String(updatedFormdata[field]).trim() !== ''
-    );
+  // No fields are required — validation removed per request
 
   const persistDraft = () => {
     const draft = JSON.stringify(updatedFormdata);
@@ -102,18 +89,10 @@ export default function UpdateProperty({ updatedFormdata, setUpdatedFormdata, on
   };
 
   useEffect(() => {
-    if (formError && isStepOneValid()) {
-      setFormError('');
-    }
-  }, [updatedFormdata, formError]);
+    if (formError) setFormError('');
+  }, [updatedFormdata]);
 
   const handleContinue = (event) => {
-    if (!isStepOneValid()) {
-      event?.preventDefault?.();
-      setFormError('Please fill in all required fields before continuing.');
-      return;
-    }
-
     persistDraft();
     setActiveStep(1);
     initialStep === 2 && window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -141,7 +120,7 @@ export default function UpdateProperty({ updatedFormdata, setUpdatedFormdata, on
             onClick={() => navigate('/dashboard')}
           />
           <Text fontSize="xl" fontWeight="bold" color="white" flex={1}>
-            update your {updatedFormdata.title || "Property"}
+            Update your {updatedFormdata.title || "Property"}
           </Text>
         </HStack>
 
@@ -234,7 +213,7 @@ export default function UpdateProperty({ updatedFormdata, setUpdatedFormdata, on
                   </Alert>
                 )}
 
-                <FormControl isRequired isInvalid={formError && !updatedFormdata.title}>
+                <FormControl isInvalid={false}>
                   <FormLabel color="brand.gray.700" fontSize="sm" fontWeight="600">
                     Property Title
                   </FormLabel>
@@ -251,7 +230,7 @@ export default function UpdateProperty({ updatedFormdata, setUpdatedFormdata, on
                   <FormErrorMessage>Required</FormErrorMessage>
                 </FormControl>
 
-                <FormControl isRequired>
+                <FormControl>
                   <FormLabel color="brand.gray.700" fontSize="sm" fontWeight="600">
                     Property Type
                   </FormLabel>
@@ -277,7 +256,7 @@ export default function UpdateProperty({ updatedFormdata, setUpdatedFormdata, on
                   </Select>
                 </FormControl>
 
-                <FormControl isRequired>
+                <FormControl>
                   <FormLabel color="brand.gray.700" fontSize="sm" fontWeight="600">
                     I am
                   </FormLabel>
@@ -294,7 +273,7 @@ export default function UpdateProperty({ updatedFormdata, setUpdatedFormdata, on
                 </FormControl>
 
                 <Grid templateColumns="repeat(2, 1fr)" gap={4}>
-                  <FormControl isRequired>
+                  <FormControl>
                     <FormLabel color="brand.gray.700" fontSize="sm" fontWeight="600">
                       Bedrooms
                     </FormLabel>
@@ -315,7 +294,7 @@ export default function UpdateProperty({ updatedFormdata, setUpdatedFormdata, on
                     </Select>
                   </FormControl>
 
-                  <FormControl isRequired>
+                  <FormControl>
                     <FormLabel color="brand.gray.700" fontSize="sm" fontWeight="600">
                       Bathrooms
                     </FormLabel>
@@ -335,15 +314,15 @@ export default function UpdateProperty({ updatedFormdata, setUpdatedFormdata, on
                     </Select>
                   </FormControl>
 
-                  <FormControl isRequired>
+                  <FormControl>
                     <FormLabel color="brand.gray.700" fontSize="sm" fontWeight="600">
                       Toilet
                     </FormLabel>
                     <Select
                       placeholder="Select"
                       size="lg"
-                      value={updatedFormdata.toilet || ""}
-                      onChange={(e) => setUpdatedFormdata(prev => ({ ...prev, toilet: e.target.value }))}
+                      value={updatedFormdata.toilets || ""}
+                      onChange={(e) => setUpdatedFormdata(prev => ({ ...prev, toilets: e.target.value }))}
                       _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
                     >
                       <option>1</option>
@@ -370,7 +349,7 @@ export default function UpdateProperty({ updatedFormdata, setUpdatedFormdata, on
                   />
                 </FormControl>
 
-                <FormControl isRequired>
+                <FormControl>
                   <FormLabel color="brand.gray.700" fontSize="sm" fontWeight="600">
                     Property Description
                   </FormLabel>
@@ -478,14 +457,14 @@ export default function UpdateProperty({ updatedFormdata, setUpdatedFormdata, on
                   </Text>
                 </HStack>
 
-                <FormControl isRequired>
+                <FormControl>
                   <FormLabel color="brand.gray.700" fontSize="sm" fontWeight="600">
                     State
                   </FormLabel>
                   <Select
                     placeholder="Select state"
                     size="lg"
-                    value={updatedFormdata.state || ""}
+                    value={updatedFormdata.address.state || ""}
                     onChange={(e) => setUpdatedFormdata(prev => ({ ...prev, state: e.target.value }))}
                     _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
                   >
@@ -498,14 +477,14 @@ export default function UpdateProperty({ updatedFormdata, setUpdatedFormdata, on
                   </Select>
                 </FormControl>
 
-                <FormControl isRequired>
+                <FormControl>
                   <FormLabel color="brand.gray.700" fontSize="sm" fontWeight="600">
                     City/Area
                   </FormLabel>
                   <Input
                     placeholder="e.g. Lekki, Victoria Island, Ikoyi"
                     size="lg"
-                    value={updatedFormdata.city || ""}
+                    value={updatedFormdata.address.area || ""}
                     onChange={(e) => setUpdatedFormdata(prev => ({ ...prev, city: e.target.value }))}
                     _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
                   />
@@ -518,7 +497,7 @@ export default function UpdateProperty({ updatedFormdata, setUpdatedFormdata, on
                   <Input
                     placeholder="Full street address"
                     size="lg"
-                    value={updatedFormdata.address || ""}
+                    value={updatedFormdata.address.streetAddress || ""}
                     onChange={(e) => setUpdatedFormdata(prev => ({ ...prev, address: e.target.value }))}
                     _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
                   />
@@ -531,7 +510,7 @@ export default function UpdateProperty({ updatedFormdata, setUpdatedFormdata, on
                   <Input
                     placeholder="e.g. Near Shoprite, 5 mins from Elegushi Beach"
                     size="lg"
-                    value={updatedFormdata.landmarks || ""}
+                    value={updatedFormdata.address.landmark || ""}
                     onChange={(e) => setUpdatedFormdata(prev => ({ ...prev, landmarks: e.target.value }))}
                     _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
                   />
@@ -600,7 +579,7 @@ export default function UpdateProperty({ updatedFormdata, setUpdatedFormdata, on
                 size="lg"
                 onClick={handleContinue}
               >
-                Continue to Photos
+                Continue to update Photos
               </Button>
             </Grid>
           </Box>
