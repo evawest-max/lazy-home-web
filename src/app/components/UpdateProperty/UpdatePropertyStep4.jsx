@@ -30,19 +30,33 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { updateProperty } from '../../../../api';
+import { getBankcodes, updateProperty, verifyBankAccount } from '../../../../api';
 
 function UpdatePropertyStep4({ updatedFormdata, setUpdatedFormdata, onBack, onSubmit }) {
     const currentStep = 4;
     const totalSteps = 4;
     const landlordDetails = updatedFormdata?.landlordDetails ?? {};
     const draftKey = 'listingFormData';
-    const toast= useToast()
-    const navigate= useNavigate()
+    const toast = useToast()
+    const navigate = useNavigate()
 
     const [accountVerified, setAccountVerified] = useState(false);
     const [formError, setFormError] = useState('');
     const [isLoading, setIsLoading] = useState(false)
+    const [banks, setBanks] = useState([]);
+
+    useEffect(() => {
+        const fetchBanks = async () => {
+            try {
+                const res = await getBankcodes()
+                setBanks(res.data.data);
+                console.log("this are the banks", res.data.data)
+            } catch (err) {
+                console.error("Error fetching banks:", err);
+            }
+        };
+        fetchBanks();
+    }, []);
 
     // No required validation for step 4
     useEffect(() => {
@@ -50,98 +64,127 @@ function UpdatePropertyStep4({ updatedFormdata, setUpdatedFormdata, onBack, onSu
     }, [updatedFormdata]);
 
     useEffect(() => {
-        const isVerified = String(landlordDetails.accountNumber ?? '').length === 10 && landlordDetails.bankName && landlordDetails.fullName;
 
-        if (isVerified) {
-            const timeoutId = setTimeout(() => setAccountVerified(true), 500);
-            return () => clearTimeout(timeoutId);
-        } else {
-            setAccountVerified(false);
-        }
-    }, [landlordDetails.accountNumber, landlordDetails.bankName, landlordDetails.fullName]);
+        if (landlordDetails.accountNumber.length !== 10 || !landlordDetails.bankCode) return;
+        const verifyDetails = async () => {
+
+            try {
+                const res = await verifyBankAccount(
+                    landlordDetails.accountNumber,
+                    landlordDetails.bankCode
+                );
+                console.log("Verification result:", res);
+
+                setUpdatedFormdata((prev) => ({
+                    ...prev,
+                    landlordDetails: {
+                        ...(prev.landlordDetails ?? {}),
+                        fullName: res.account_name,
+                        bankAccount: res.account_number,
+                    },
+                }));
+
+                // const isVerified =
+                //     String(landlordDetails.accountNumber ?? "").length === 10 &&
+                //     landlordDetails.bankCode;
+                // if (isVerified) {
+
+                // } else {
+                //     setAccountVerified(false);
+                // }
+                setAccountVerified(true);
+            } catch (error) {
+                console.error("Verification failed:", error);
+                setAccountVerified(false);
+            }
+        };
+
+        verifyDetails();
+    }, [landlordDetails.accountNumber, landlordDetails.bankCode]);
+
 
     const handleSubmit = async () => {
-    setIsLoading(true);
+        setIsLoading(true);
 
-    try {
-        const draft = {
-        ...updatedFormdata,
-            landlordDetails: {
-            ...landlordDetails,
-                backupBankName: updatedFormdata.backupBankName?? landlordDetails.backupBankName?? '',
-                backupAccountNumber: updatedFormdata.backupAccountNumber?? landlordDetails.backupAccountNumber?? '',
-            },
-        };
+        try {
+            const draft = {
+                ...updatedFormdata,
+                landlordDetails: {
+                    ...landlordDetails,
+                    backupBankName: updatedFormdata.backupBankName ?? landlordDetails.backupBankName ?? '',
+                    backupAccountNumber: updatedFormdata.backupAccountNumber ?? landlordDetails.backupAccountNumber ?? '',
+                },
+            };
 
-        const formData = new FormData();
+            const formData = new FormData();
 
-        // 1. Append actual File objects
-        draft._photoFiles?.forEach(file => formData.append("_photoFiles", file));
-        draft._videoFiles?.forEach(file => formData.append("_videoFiles", file));
+            // 1. Append actual File objects
+            draft._photoFiles?.forEach(file => formData.append("_photoFiles", file));
+            draft._videoFiles?.forEach(file => formData.append("_videoFiles", file));
 
-        // 2. Recursive flattener - skips files, converts everything else to primitives
-        const flatten = (obj, prefix = '') => {
-            Object.entries(obj).forEach(([key, val]) => {
-                if (val === undefined || val === null) return;
-                if (key === '_photoFiles' || key === '_videoFiles') return; // already handled
+            // 2. Recursive flattener - skips files, converts everything else to primitives
+            const flatten = (obj, prefix = '') => {
+                Object.entries(obj).forEach(([key, val]) => {
+                    if (val === undefined || val === null) return;
+                    if (key === '_photoFiles' || key === '_videoFiles') return; // already handled
 
-                const formKey = prefix? `${prefix}[${key}]` : key;
+                    const formKey = prefix ? `${prefix}[${key}]` : key;
 
-                if (val instanceof Date) {
-                    formData.append(formKey, val.toISOString());
-                } else if (Array.isArray(val)) {
-                    // Handle empty arrays explicitly
-                    if (val.length === 0) {
-                        formData.append(formKey, '[]'); // so backend knows it's empty array
+                    if (val instanceof Date) {
+                        formData.append(formKey, val.toISOString());
+                    } else if (Array.isArray(val)) {
+                        // Handle empty arrays explicitly
+                        if (val.length === 0) {
+                            formData.append(formKey, '[]'); // so backend knows it's empty array
+                        } else {
+                            val.forEach((item, i) => {
+                                if (typeof item === 'object' && item !== null) {
+                                    flatten(item, `${formKey}[${i}]`);
+                                } else {
+                                    formData.append(`${formKey}[${i}]`, item);
+                                }
+                            });
+                        }
+                    } else if (typeof val === 'object' && !(val instanceof File)) {
+                        flatten(val, formKey);
                     } else {
-                        val.forEach((item, i) => {
-                            if (typeof item === 'object' && item!== null) {
-                                flatten(item, `${formKey}[${i}]`);
-                            } else {
-                                formData.append(`${formKey}[${i}]`, item);
-                            }
-                        });
+                        formData.append(formKey, val);
                     }
-                } else if (typeof val === 'object' &&!(val instanceof File)) {
-                    flatten(val, formKey);
-                } else {
-                    formData.append(formKey, val);
-                }
-            });
-        };
+                });
+            };
 
-        const { _photoFiles, _videoFiles,...dataToFlatten } = draft;
-        flatten(dataToFlatten);
+            const { _photoFiles, _videoFiles, ...dataToFlatten } = draft;
+            flatten(dataToFlatten);
 
-        // console.log("Sending:", Object.fromEntries(formData));
+            // console.log("Sending:", Object.fromEntries(formData));
 
-        const res = await updateProperty(formData);
-        // console.log(res)
-        setIsLoading(false)
-        toast({
-          title: 'property update.',
-          description: res?.data?.message,
-          status: 'success',
-          duration: 5000,
-          isClosable: true,
-        })
-        setTimeout(() => {
-            navigate("/dashboard")
-        }, 5000);
-    } catch (error) {
-        console.error(error);
-        toast({
-          title: 'Property update',
-          description: error.response?.data?.message,
-          status: 'error',
-          duration: 5000,
-          isClosable: true,
-        })
-        
-    } finally {
-        setIsLoading(false);
-    }
-};
+            const res = await updateProperty(formData);
+            // console.log(res)
+            setIsLoading(false)
+            toast({
+                title: 'property update.',
+                description: res?.data?.message,
+                status: 'success',
+                duration: 5000,
+                isClosable: true,
+            })
+            setTimeout(() => {
+                navigate("/dashboard")
+            }, 5000);
+        } catch (error) {
+            console.error(error);
+            toast({
+                title: 'Property update',
+                description: error.response?.data?.message,
+                status: 'error',
+                duration: 5000,
+                isClosable: true,
+            })
+
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
 
 
@@ -274,38 +317,28 @@ function UpdatePropertyStep4({ updatedFormdata, setUpdatedFormdata, onBack, onSu
                             <Select
                                 placeholder="Select your bank"
                                 size="lg"
-                                value={landlordDetails.bankName ?? ''}
+                                value={landlordDetails.bankCode ?? ''}
                                 onChange={(e) => {
+                                    const selectedCode = e.target.value;
+                                    const selectedBank = banks.find(bank => bank.code === selectedCode);
                                     setUpdatedFormdata(prev => ({
                                         ...prev,
                                         landlordDetails: {
                                             ...(prev.landlordDetails ?? {}),
-                                            bankName: e.target.value,
+                                            bankName: selectedBank?.name,
+                                            bankCode: e.target.value,
                                         },
                                     }));
                                     if (formError) setFormError('');
                                 }}
                                 _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
                             >
-                                <option>Access Bank</option>
-                                <option>Guaranty Trust Bank (GTB)</option>
-                                <option>United Bank for Africa (UBA)</option>
-                                <option>First Bank of Nigeria</option>
-                                <option>Zenith Bank</option>
-                                <option>Ecobank Nigeria</option>
-                                <option>Fidelity Bank</option>
-                                <option>Union Bank</option>
-                                <option>Stanbic IBTC Bank</option>
-                                <option>Sterling Bank</option>
-                                <option>Wema Bank</option>
-                                <option>Keystone Bank</option>
-                                <option>FCMB</option>
-                                <option>Polaris Bank</option>
-                                <option>Kuda Bank</option>
-                                <option>ALAT by Wema</option>
-                                <option>VFD Microfinance Bank</option>
-                                <option>Opay</option>
-                                <option>PalmPay</option>
+                                {banks.map((bank) => (
+                                    <option key={bank.code} value={bank.code}>
+                                        {bank.name}
+                                    </option>
+                                ))}
+
                             </Select>
                             <FormErrorMessage>Required</FormErrorMessage>
                         </FormControl>
@@ -330,6 +363,7 @@ function UpdatePropertyStep4({ updatedFormdata, setUpdatedFormdata, onBack, onSu
                                         },
                                     }));
                                     if (formError) setFormError('');
+                                    console.log(value)
                                 }}
                                 _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
                             />
@@ -376,16 +410,29 @@ function UpdatePropertyStep4({ updatedFormdata, setUpdatedFormdata, onBack, onSu
                             <Select
                                 placeholder="Select backup bank"
                                 size="lg"
-                                value={updatedFormdata.backupBankName}
-                                onChange={(e) => setUpdatedFormdata(prev => ({ ...prev, backupBankName: e.target.value }))}
+                                value={landlordDetails.backupBankCode ?? ''} // ✅ matches option values
+                                onChange={(e) => {
+                                    const selectedCode = e.target.value;
+                                    const selectedBank = banks.find(bank => bank.code === selectedCode);
+
+                                    setUpdatedFormdata(prev => ({
+                                        ...prev,
+                                        landlordDetails: {
+                                            ...(prev.landlordDetails ?? {}),
+                                            backupBankName: selectedBank?.name || "",
+                                            backupBankCode: selectedCode,
+                                        },
+                                    }));
+                                }}
                                 _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
                             >
-                                <option>Access Bank</option>
-                                <option>Guaranty Trust Bank (GTB)</option>
-                                <option>United Bank for Africa (UBA)</option>
-                                <option>First Bank of Nigeria</option>
-                                <option>Zenith Bank</option>
+                                {banks.map((bank) => (
+                                    <option key={bank.code} value={bank.code}>
+                                        {bank.name}
+                                    </option>
+                                ))}
                             </Select>
+
                         </FormControl>
 
                         <FormControl>

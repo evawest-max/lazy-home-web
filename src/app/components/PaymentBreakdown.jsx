@@ -162,14 +162,14 @@ export default function PaymentBreakdown() {
     );
   }
 
-  const price = Number(property?.rentAmount ?? property?.price ?? property?.monthlyRent ?? property?.annualRent ?? 0);
+  const price = Number(property?.rentAmount ?? 0);
   const agencyFee = Math.floor(price * 0.1);
   const legalFee = Math.floor(price * 0.1);
   const safetyLevy = 15000;
-  const serviceFee = Math.floor(price * 0.02);
+  const serviceFee = Math.floor(price * 0.05);
   const processingFee = Math.min(Math.floor(price * 0.015) + (price < 2500 ? 0 : 100), 2000);
   const cautionDeposit = Math.floor(price * 0.1);
-  const totalAmount = price + agencyFee + legalFee + safetyLevy + serviceFee + processingFee + cautionDeposit;
+  const totalAmount = price + agencyFee + legalFee  + serviceFee + processingFee + cautionDeposit;
   const title = property?.title || property?.propertyType || 'Property';
   const location = property?.address?.area || property?.address?.city || property?.location?.area || property?.location?.city || 'Location coming soon';
 
@@ -276,10 +276,10 @@ export default function PaymentBreakdown() {
                 <Text fontWeight="600">{formatCurrency(legalFee)}</Text>
               </HStack>
 
-              <HStack justify="space-between">
+              {/* <HStack justify="space-between">
                 <Text color="brand.gray.600">Safety Levy</Text>
                 <Text fontWeight="600">{formatCurrency(safetyLevy)}</Text>
-              </HStack>
+              </HStack> */}
 
               <HStack justify="space-between">
                 <Text color="brand.gray.600">Service Fee (2%)</Text>

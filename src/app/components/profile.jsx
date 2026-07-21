@@ -86,16 +86,16 @@ export default function Profile({ onLogout, user }) {
 
     };
 
-    const statusValue = user?.IsVerified ? 'Verified' : 'Pending';
+    const statusValue = user?.isBankAccountVerified ? 'Verified' : 'Pending';
     const emailStatusValue = user?.isEmailVerified ? 'Verified' : 'Pending';
     const phoneStatusValue = user?.isPhoneVerified ? 'Verified' : 'Pending';
     const identityStatusValue = user?.verification?.verificationLevel;
     const verificationItems = [
         { label: 'Identity', status: identityStatusValue, icon: User, path: '/verify_ID' },
         { label: 'Phone number', status: phoneStatusValue, icon: Phone, path: '/otp' },
-        { label: 'Bank account', status: statusValue, icon: CreditCard, path: '/security' },
+        { label: 'Bank account', status: statusValue, icon: CreditCard, path: '/bank-verification' },
         { label: 'Email address', status: emailStatusValue, icon: Mail, path: '/settings' },
-        { label: 'Lazy Homes Teams', status: 'Verified', icon: Users, path: '/support' },
+        { label: 'Lazy Homes Terms', status: 'Verified', icon: Users, path: '/support' },
     ];
 
     // const user = {

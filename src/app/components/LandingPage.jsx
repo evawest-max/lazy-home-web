@@ -38,7 +38,7 @@ export default function LandingPage({user}) {
         <VStack spacing={6} textAlign="center">
 
           <Text fontSize="2xl" fontWeight="bold" color="white">
-                LazyHomes
+                SafeTenants
               </Text>
 
           <Text fontSize="lg" color="gray.200">
@@ -58,6 +58,7 @@ export default function LandingPage({user}) {
               <Text fontSize="sm" color="gray.200">✓ Full refund guarantee</Text>
               <Text fontSize="sm" color="gray.200">✓ Pay after approval</Text>
             </VStack>
+
 
             <Box bg="white" px={4} py={2} borderRadius="lg">
               <Text fontSize="xs" fontWeight="bold" color="brand.primary">

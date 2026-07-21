@@ -24,7 +24,7 @@ import Navbar from './Navbar';
 import { testimonials } from './mockData';
 import FilterSearch from './FilterSearch';
 import { useEffect, useState } from 'react';
-import { getAllProperties } from '../../../api';
+import { getAllProperties, getFeaturedProperties } from '../../../api';
 
 export default function HomeScreen() {
   const [properties, setProperties] = useState([]);
@@ -36,8 +36,9 @@ export default function HomeScreen() {
     const fetchProperties = async () => {
       try {
         setLoading(true);
-        const response = await getAllProperties();
+        const response = await getFeaturedProperties();
         const items = response?.data?.data?.properties || response?.data?.properties || [];
+        console.log(response)
 
         const normalized = (Array.isArray(items) ? items : []).slice(0, 4).map((property) => ({
           ...property,

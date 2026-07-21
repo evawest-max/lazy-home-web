@@ -1,4 +1,4 @@
-import { Box, ChakraProvider, useToast } from '@chakra-ui/react';
+import { Box, ChakraProvider, Spinner, useToast } from '@chakra-ui/react';
 import theme from './theme'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 // import ScreenRouter from './components/ScreenRouter';
@@ -29,6 +29,7 @@ import SupportChat from './components/support chat';
 import { createProperty } from '../../api';
 import UpdateProperty from './components/UpdateProperty/updateProperty';
 import Wallet from './components/Wallet';
+import BankVerificationForm from './components/Bank Verification Page';
 
 const LISTING_DRAFT_KEY = 'listingFormData';
 
@@ -197,8 +198,9 @@ const createMediaPayload = (items, fallbackType) =>
 
 export default function App() {
   const [user, setUser] = useState(null);
+  const [loadingUser, setLoadingUser] = useState(true);
   const [notifications, setNotifications] = useState([]);
-  const [updatedFormdata, setUpdatedFormdata]= useState(null)
+  const [updatedFormdata, setUpdatedFormdata] = useState(null)
   const [isLoading, setIsLoading] = useState(true);
   const toast = useToast();
   const login = (userData) => {
@@ -213,51 +215,52 @@ export default function App() {
     localStorage.removeItem('token');
   };
   useEffect(() => {
-    // Simulate checking for existing session
-    const savedUser = localStorage.getItem('user');
+    const savedUser = localStorage.getItem("user");
     if (savedUser) {
       try {
         setUser(JSON.parse(savedUser));
       } catch (error) {
-        console.error('Error parsing saved user:', error);
-        localStorage.removeItem('user');
+        console.error("Error parsing saved user:", error);
+        localStorage.removeItem("user");
       }
     }
-
-    // Load notifications from localStorage
-    const savedNotifications = localStorage.getItem('notifications');
-    if (savedNotifications) {
-      try {
-        setNotifications(JSON.parse(savedNotifications));
-      } catch (error) {
-        console.error('Error parsing saved notifications:', error);
-        localStorage.removeItem('notifications');
-      }
-    }
-
-    // Load pending and approved requests from localStorage
-    const savedPendingRequests = localStorage.getItem('pendingRequests');
-    if (savedPendingRequests) {
-      try {
-        setPendingRequests(JSON.parse(savedPendingRequests));
-      } catch (error) {
-        console.error('Error parsing saved pending requests:', error);
-        localStorage.removeItem('pendingRequests');
-      }
-    }
-
-    const savedApprovedRequests = localStorage.getItem('approvedRequests');
-    if (savedApprovedRequests) {
-      try {
-        setApprovedRequests(JSON.parse(savedApprovedRequests));
-      } catch (error) {
-        console.error('Error parsing saved approved requests:', error);
-        localStorage.removeItem('approvedRequests');
-      }
-    }
-
-    setIsLoading(false);
+    setLoadingUser(false);
   }, []);
+
+  // // Load notifications from localStorage
+  // const savedNotifications = localStorage.getItem('notifications');
+  // if (savedNotifications) {
+  //   try {
+  //     setNotifications(JSON.parse(savedNotifications));
+  //   } catch (error) {
+  //     console.error('Error parsing saved notifications:', error);
+  //     localStorage.removeItem('notifications');
+  //   }
+  // }
+
+  // // Load pending and approved requests from localStorage
+  // const savedPendingRequests = localStorage.getItem('pendingRequests');
+  // if (savedPendingRequests) {
+  //   try {
+  //     setPendingRequests(JSON.parse(savedPendingRequests));
+  //   } catch (error) {
+  //     console.error('Error parsing saved pending requests:', error);
+  //     localStorage.removeItem('pendingRequests');
+  //   }
+  // }
+
+  // const savedApprovedRequests = localStorage.getItem('approvedRequests');
+  // if (savedApprovedRequests) {
+  //   try {
+  //     setApprovedRequests(JSON.parse(savedApprovedRequests));
+  //   } catch (error) {
+  //     console.error('Error parsing saved approved requests:', error);
+  //     localStorage.removeItem('approvedRequests');
+  //   }
+  // }
+
+  //   setIsLoading(false);
+  // }, []);
 
   const [formData, setFormData] = useState(() => normalizeListingDraft(loadSavedListingDraft() ?? {}));
 
@@ -331,9 +334,9 @@ export default function App() {
       // sessionStorage.removeItem(LISTING_DRAFT_KEY);
       // setFormData(createEmptyListingFormData());
       setIsLoading(false);
-       setTimeout(() => {
-            navigate("/dashboard")
-        }, 5000);
+      setTimeout(() => {
+        navigate("/dashboard")
+      }, 5000);
 
 
 
@@ -369,15 +372,17 @@ export default function App() {
             <Route path="/property-listings" element={<PropertyListing />} />
             <Route path="/property/:id" element={<PropertyDetails />} />
             <Route path="/inspection-feedback/:id" element={user ? <InspectionFeedback /> : <Navigate to="/login" />} />
-            <Route path="/secure-payment/:id" element={user ? <PaymentBreakdown /> : <Navigate to="/login" />} />
+            <Route path="/secure-payment/:id" element={<PaymentBreakdown />} />
             <Route path="/book-inspection/:id" element={user ? <BookInspection /> : <Navigate to="/login" />} />
             <Route path="/dashboard" element={user ? <Dashboard user={user} setUpdatedFormdata={setUpdatedFormdata} /> : <Navigate to="/login" />} />
             <Route path="/create-listing/steps" element={user ? <ListProperty formData={formData} setFormData={setFormData} initialStep={1} onSubmit={handleListingSubmit} isLoading={isLoading} setIsLoading={setIsLoading} /> : <Navigate to="/login" />} />
-            <Route path="/update-listing/steps" element={ user ? <UpdateProperty updatedFormdata={updatedFormdata} setUpdatedFormdata={setUpdatedFormdata} initialStep={1}  /> : <Navigate to="/login" />} />
+            <Route path="/update-listing/steps" element={user ? <UpdateProperty updatedFormdata={updatedFormdata} setUpdatedFormdata={setUpdatedFormdata} initialStep={1} /> : <Navigate to="/login" />} />
             {/* <Route path="/create-listing/step-3" element={ user ? <ListProperty formData={formData} setFormData={setFormData} initialStep={3} onSubmit={handleListingSubmit} /> : <Navigate to="/login" />} /> */}
             {/* <Route path="/create-listing/step-4" element={ user ? <ListProperty formData={formData} setFormData={setFormData} initialStep={4} onSubmit={handleListingSubmit} /> : <Navigate to="/login" />} />  */}
-            <Route path="/profile" element={user ? <Profile onLogout={logout} user={user} /> : <Navigate to="/login" />} />
+            <Route path="/profile" element={ loadingUser ? (<Spinner />) : user ? (<Profile onLogout={logout} user={user} />  ) : (<Navigate to="/login" /> ) } />
+            {/* <Route path="/profile" element={!user ? <Navigate to="/login" /> : <Profile onLogout={logout} user={user} />} /> */}
             <Route path="/wallet" element={user ? <Wallet user={user} /> : <Navigate to="/login" />} />
+            <Route path="/bank-verification" element={user ? <BankVerificationForm user={user} /> : <Navigate to="/login" />} />
             <Route path="/verify_ID" element={user ? <IdentityVerification /> : <Navigate to="/login" />} />
             <Route path="/edit-profile" element={user ? <EditProfile user={user} /> : <Navigate to="/login" />} />
             <Route path="/change-password" element={user ? <ChangePassword /> : <Navigate to="/login" />} />

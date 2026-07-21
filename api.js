@@ -210,7 +210,7 @@ export const saveProperty = (id) =>
     `/api/v1/properties/${id}/save`
   );
 
-export const getAnalyticsDashboard =
+export const getAnalyticsDashboardAndProperties =
   () =>
     API.get(
       `/api/v1/properties/analytics/dashboard`
@@ -220,15 +220,24 @@ export const getAnalyticsDashboard =
 // ==================== PAYMENTS ========================
 // ======================================================
 
-// export const initializeEscrowPayment = (
-//   propertyId
-// ) =>
-//   API.post(
-//     "/api/v1/payments/initialize",
-//     {
-//       propertyId,
-//     }
-//   );
+export const getBankcodes = (
+) =>
+  API.get(
+    `/api/v1/payments/banks/codes`
+  );
+
+export const verifyBankAccount = (accountNumber, bankCode,
+) =>
+  API.post(
+    `/api/v1/payments/verify-bank-account`, { accountNumber, bankCode }
+  );
+
+export const verifyAndSaveBankAccount = (bankName, accountNumber, bankCode 
+) =>
+  API.post(
+    `/api/v1/payments/verify-save-bank-account`, {bankName, accountNumber, bankCode }
+  );
+
 export const initializeFundwallet = (
   amount
 ) =>
@@ -259,6 +268,27 @@ export const payRent = (
     "/api/v1/escrow/pay-rent", data
   );
 
+export const releaseKeys = (
+  id
+) =>
+  API.post(
+    `/api/v1/escrow/confirm-handover/${id}`
+  );
+
+export const confirmInspection = (
+  escrowId
+) =>
+  API.post(
+    `/api/v1/escrow/confirm-inspection`, { escrowId }
+  );
+
+export const releaseFunds = (
+  escrowId, releaseCode
+) =>
+  API.post(
+    "/api/v1/escrow/confirm-release", { escrowId, releaseCode }
+  );
+
 export const getAllEscrowPayments = ({ page = 1, limit = 10 }) =>
   API.get("/api/v1/escrow/payments", {
     params: { page, limit }
@@ -272,12 +302,7 @@ export const getSingleEscrowPayment = (
     "/api/v1/escrow/payments/:id", data
   );
 
-export const confirmInspection = (
-  transactionId
-) =>
-  API.post(
-    `/api/v1/payments/confirm-inspection/${transactionId}`
-  );
+
 
 // ======================================================
 // =================== TRANSACTIONS =====================

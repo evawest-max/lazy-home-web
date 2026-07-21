@@ -34,6 +34,7 @@ import {
     PinInput,
     PinInputField,
     Spinner,
+    Icon,
 } from '@chakra-ui/react';
 import {
     Search,
@@ -47,6 +48,7 @@ import {
     Building2,
     ClipboardList,
     Briefcase,
+    VerifiedIcon,
 } from 'lucide-react';
 import { Menu, MenuButton, MenuList, MenuItem } from '@chakra-ui/react';
 import { ChevronDownIcon } from '@chakra-ui/icons';
@@ -59,7 +61,8 @@ import FilterSearch from './FilterSearch';
 import { mockInspections, mockProperties } from './mockData';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Navbar from './Navbar';
-import { deleteProperty, getAllEscrowPayments, getAnalyticsDashboard, getUserProperties } from '../../../api';
+import { confirmInspection, deleteProperty, getAllEscrowPayments, getAnalyticsDashboardAndProperties, getUserProperties, releaseFunds, releaseKeys } from '../../../api';
+import { reference } from '@popperjs/core';
 
 
 export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
@@ -69,7 +72,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
     const [listingsPage, setListingsPage] = useState(1);
     const [transactionsPage, setTransactionsPage] = useState(1);
     const [myProperties, setMyProperties] = useState([])
-    const [escrowTransactions, setEscrowTransactions]= useState([])
+    const [escrowTransactions, setEscrowTransactions] = useState([])
     const [transactionsTotalPages, setTransactionsTotalPages] = useState(1);
     const [transactionsLoading, setTransactionsLoading] = useState(false);
     const [allData, setAllData] = useState({})
@@ -82,7 +85,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
 
     const { parameter } = location.state || {};
     const tab = parameter
-    console.log("user tab",tab)
+    console.log("user tab", tab)
 
     const itemsPerPage = 4;
     const { isOpen: isPinOpen, onOpen: onOpenPin, onClose: onClosePin } = useDisclosure();
@@ -98,19 +101,20 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
     // transactions pagination handled by API; UI buttons use `transactionsTotalPages`
 
     useEffect(() => {
-        if (tab==1){
+        if (tab == 1) {
             setActiveTab(1)
         }
-        else if (tab == 2){
+        else if (tab == 2) {
             setActiveTab(2)
-        }else{
+        } else {
             setActiveTab(0)
         }
         const fetchProperties = async () => {
             try {
-                const analyticsResponse = await getAnalyticsDashboard();
+                const analyticsResponse = await getAnalyticsDashboardAndProperties();
                 setMyProperties(analyticsResponse.data.data.propertiesWithInquiries || []);
                 setAllData(analyticsResponse.data.data || {});
+                console.log(analyticsResponse)
                 setLoading(false);
             } catch (error) {
                 console.error("Failed to fetch properties:", error);
@@ -204,6 +208,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                 toast({ title: 'Dispute submitted', status: 'warning' });
                 break;
             case 'inspected':
+                handleInspected(escrow)
                 toast({ title: 'Inspection confirmed', status: 'success' });
                 break;
             default:
@@ -213,7 +218,30 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
 
     const editProperty = (data) => {
         setUpdatedFormdata(data);
-        navigate("/update-listing/steps", {state:{propertyId: data._id}})
+        navigate("/update-listing/steps", { state: { propertyId: data._id } })
+    }
+
+    const handleReleasedKeys = (id) => {
+        try {
+            const res = releaseKeys(id);
+            console.log(res.data.message)
+            toast({ title: 'Release confirmation', discription: res.data.message, status: 'success' });
+        } catch (error) {
+            console.log(error?.response?.data?.message)
+            toast({ title: 'Release confirmation', discription: error.message, status: 'info' });
+        }
+    }
+
+    const handleInspected = async (escrow) => {
+        console.log("called inspect")
+        try {
+            const res = await confirmInspection(escrow._id);
+            console.log(res.response.data.message)
+            toast({ title: 'inspection confirmation', discription: res?.data?.message, status: 'success' });
+        } catch (error) {
+            console.log("this is the error response:",error?.response?.data?.message)
+            toast({ title: 'Release confirmation', discription: `${error?.response?.data?.message}`, status: 'info' });
+        }
     }
 
     if (loading) {
@@ -542,19 +570,27 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
 
                                     <VStack align="start" flex={1} spacing={1}>
                                         <Text fontWeight="600" fontSize="sm">
-                                            {item.title}
+                                            {item.title} {item.verificationStatus == "fully_verified" && (
+                                                <Badge
+                                                    colorScheme="green"
+                                                    variant="default"
+                                                    borderRadius="full"
+                                                    p={0.5}
+                                                >
+                                                    <Icon as={VerifiedIcon} boxSize={3.5} />
+                                                </Badge>
+                                            )}
                                         </Text>
                                         <Text fontSize="xs" color="brand.gray.600">
                                             {item.address.area}, {item.address.state}
                                         </Text>
                                         <HStack>
-                                            {item.rentPaid && item.verified && item.approved ? (
+                                            {/* <Badge variant="verified" fontSize="xs">Rent Paid</Badge> */}
+                                            {item.listingStatus == "rented" ? (
                                                 <Badge variant="verified" fontSize="xs">Rent Paid</Badge>
-                                            ) : item.verified && item.approved ? (
-                                                <Badge variant="verified" fontSize="xs">Active</Badge>
-                                            ) : <Badge variant="unverified" fontSize="xs">{item.verificationStatus === "pending" ? "Under review" : item.verificationStatus}</Badge>}
+                                            ) : (<Text fontSize="xs" color="brand.gray.600">{item.listingStatus}</Text>)}
                                         </HStack>
-                                        <Text fontSize="xs" color="brand.gray.600">{item.rentAmount.toLocaleString()} {item.rentDuration}</Text>
+                                        <Text fontSize="xs" color="brand.gray.600">₦{item.rentAmount.toLocaleString()} {item.rentDuration}</Text>
                                     </VStack>
 
                                     <VStack align="stretch" spacing={1} textAlign="right">
@@ -563,10 +599,14 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                                                 Actions
                                             </MenuButton>
                                             <MenuList>
+                                                {item.listingStatus == "under_offer" && (
+                                                    <MenuItem onClick={() => handleReleasedKeys(item._id)}>I have released keys</MenuItem>
+                                                )}
                                                 <MenuItem>View details</MenuItem>
                                                 <MenuItem>Share Property</MenuItem>
                                                 <MenuItem onClick={() => editProperty(item)}>Edit property</MenuItem>
                                                 <MenuItem onClick={() => deleteMyProperty(item._id)}>Delete Property</MenuItem>
+
                                             </MenuList>
                                         </Menu>
                                         <Text fontSize="xs" color="brand.gray.500">
@@ -612,7 +652,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                             </Button>
                         </HStack>
 
-                       
+
                     </VStack>
                 )}
 
@@ -626,14 +666,14 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                             <Grid templateColumns={{ sm: "repeat(2, 1fr)", md: "repeat(3, 1fr)" }} gap={4}>
                                 {escrowTransactions.map((escrow) => {
                                     const id = escrow._id || escrow.id || escrow.transactionId || escrow.reference;
-                                    const title = escrow.title || escrow.description || 'Escrow Transaction';
+                                    const title = 'Escrow Transaction';
                                     const status = escrow.status || escrow.state || 'unknown';
                                     const rawAmount = escrow.amount || escrow.payment?.amount || escrow.amountPaid || 0;
                                     const amount = Number(rawAmount) || 0;
                                     const created = new Date(escrow.createdAt || escrow.created_at || escrow.paymentDate || Date.now()).toLocaleString();
                                     const payer = escrow.payer?.name || escrow.payerName || escrow.user?.name || escrow.initiator || 'N/A';
                                     const property = myProperties.find((p) => p._id === escrow.propertyId || p.id === escrow.propertyId) || mockProperties.find((p) => p.id === escrow.propertyId) || {};
-                                    const propertyTitle = property.title || escrow.propertyTitle || 'Unknown property';
+                                    const propertyTitle = escrow.title || escrow.propertyTitle || 'Unknown property';
 
                                     const formatCurrency = (v) => {
                                         const n = Number(v) || 0;
@@ -645,11 +685,20 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                                             <VStack align="stretch" spacing={3}>
                                                 <HStack justify="space-between">
                                                     <HStack>
-                                                        <Box boxSize="60px" borderRadius="md" bg="brand.background" />
+                                                        <Box boxSize="60px" borderRadius="md" bg="brand.background" >
+                                                            <Image
+                                                                src={escrow?.images?.[0]?.url || "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTpjDOEMVVmUKWc44itg3SRb8byRB3wlGPCqOL5ETrLKnTGSvGBBNWdOoSY&s=10"}
+                                                                objectFit="cover"
+                                                                alt="Escrow property image"
+                                                                h="100%"
+                                                                w="100%"
+                                                            />
+
+                                                        </Box>
                                                         <VStack align="start" spacing={0}>
                                                             <Text fontSize="sm" fontWeight="600">{title}</Text>
                                                             <Text fontSize="xs" color="brand.gray.600">{propertyTitle}</Text>
-                                                            <Text fontSize="xs" color="brand.gray.500">{payer}</Text>
+                                                            {/* <Text fontSize="xs" color="brand.gray.500">{payer}</Text> */}
                                                         </VStack>
                                                     </HStack>
                                                     <VStack align="end">
@@ -675,8 +724,8 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                                                                 Actions
                                                             </MenuButton>
                                                             <MenuList>
-                                                                <MenuItem onClick={() => handleEscrowAction('inspected', escrow)}>I have inspected</MenuItem>
-                                                                <MenuItem onClick={() => handleEscrowAction('release', escrow)}>Release funds</MenuItem>
+                                                                {escrow.landlordConfirmedHandover && <MenuItem onClick={() => handleEscrowAction('inspected', escrow)}>I have inspected</MenuItem>}
+                                                                {escrow.landlordConfirmedHandover && escrow.tenantConfirmedInspection && <MenuItem onClick={() => handleEscrowAction('release', escrow)}>Release funds</MenuItem>}
                                                                 <MenuItem onClick={() => handleEscrowAction('refund', escrow)}>Refund me</MenuItem>
                                                                 <MenuItem onClick={() => handleEscrowAction('dispute', escrow)}>Submit dispute</MenuItem>
                                                             </MenuList>
@@ -739,7 +788,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                                 </Button>
                             </HStack>
                         </VStack>
-                        
+
                     </VStack>
                 )}
 
@@ -871,7 +920,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                     <ModalBody pb={6}>
                         <VStack spacing={4} align="stretch">
                             <Text fontSize="sm" color="brand.gray.700">
-                                Enter the release code provided to you to release funds for this transaction.
+                                <Text fontWeight="bold" >Ensure you have inspected the property first.</Text> Enter the release code provided to you to release funds for this transaction.
                             </Text>
                             <Input
                                 placeholder="Enter release code"
@@ -897,15 +946,18 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                                 }
                                 setReleasing(true);
                                 try {
+                                    console.log(selectedEscrowAction)
                                     // TODO: call real API to release funds with code and escrow id
-                                    console.log('Submitting release code', { releaseCode, escrow: selectedEscrowAction });
+                                    const res = releaseFunds(selectedEscrowAction._id, releaseCode )
+
+                                    console.log('Submitting release code', res.response);
                                     toast({ title: 'Release code submitted', status: 'success' });
                                     onCloseRelease();
                                     setSelectedEscrowAction(null);
                                     setReleaseCode('');
                                 } catch (err) {
-                                    console.error('Failed to submit release code', err);
-                                    toast({ title: 'Failed to submit release code', status: 'error' });
+                                    console.error('Failed to submit release code', err.response);
+                                    toast({ title: `${err.response.data.message}`, status: 'error' });
                                 } finally {
                                     setReleasing(false);
                                 }

@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { getBankcodes, verifyBankAccount } from '../../../../api';
 
 export default function ListPropertyStep4({ formData, setFormData, onBack, onSubmit, isLoading, setIsLoading }) {
     const currentStep = 4;
@@ -38,6 +39,7 @@ export default function ListPropertyStep4({ formData, setFormData, onBack, onSub
 
     const [accountVerified, setAccountVerified] = useState(false);
     const [formError, setFormError] = useState('');
+    const [banks, setBanks] = useState([]);
 
     const requiredFields = ['fullName', 'bankName', 'accountNumber'];
     const requiredCheckboxes = ['termsAccepted', 'escrowAccepted', 'policyAccepted'];
@@ -54,6 +56,19 @@ export default function ListPropertyStep4({ formData, setFormData, onBack, onSub
         return fieldsValid && checkboxesValid;
     };
 
+     useEffect(() => {
+            const fetchBanks = async () => {
+                try {
+                    const res = await getBankcodes()
+                    setBanks(res.data.data);
+                    console.log("this are the banks", res.data.data)
+                } catch (err) {
+                    console.error("Error fetching banks:", err);
+                }
+            };
+            fetchBanks();
+        }, []);
+
     useEffect(() => {
         if (formError && isStepFourValid()) {
             setFormError('');
@@ -61,15 +76,41 @@ export default function ListPropertyStep4({ formData, setFormData, onBack, onSub
     }, [formData, formError]);
 
     useEffect(() => {
-        const isVerified = String(landlordDetails.accountNumber ?? '').length === 10 && landlordDetails.bankName && landlordDetails.fullName;
-
-        if (isVerified) {
-            const timeoutId = setTimeout(() => setAccountVerified(true), 500);
-            return () => clearTimeout(timeoutId);
-        } else {
-            setAccountVerified(false);
-        }
-    }, [landlordDetails.accountNumber, landlordDetails.bankName, landlordDetails.fullName]);
+            const isVerified =
+                String(landlordDetails.accountNumber ?? "").length === 10 &&
+                landlordDetails.bankCode;
+    
+            const verifyDetails = async () => {
+                 if (landlordDetails.accountNumber.length !== 10 || !landlordDetails.bankCode) return;
+                if (isVerified) {
+                    try {
+                        const res = await verifyBankAccount(
+                            landlordDetails.accountNumber,
+                            landlordDetails.bankCode
+                        );
+                        console.log("Verification result:", res);
+    
+                        setUpdatedFormdata((prev) => ({
+                            ...prev,
+                            landlordDetails: {
+                                ...(prev.landlordDetails ?? {}),
+                                fullName: res.account_name,
+                                bankAccount: res.account_number,
+                            },
+                        }));
+    
+                        setAccountVerified(true);
+                    } catch (error) {
+                        console.error("Verification failed:", error);
+                        setAccountVerified(false);
+                    }
+                } else {
+                    setAccountVerified(false);
+                }
+            };
+    
+            verifyDetails();
+        }, [landlordDetails.accountNumber, landlordDetails.bankCode]);
 
     const handleSubmit = () => {
         console.log('loading data', isLoading);
@@ -226,38 +267,27 @@ export default function ListPropertyStep4({ formData, setFormData, onBack, onSub
                             <Select
                                 placeholder="Select your bank"
                                 size="lg"
-                                value={landlordDetails.bankName ?? ''}
+                                value={landlordDetails.bankCode ?? ''}
                                 onChange={(e) => {
+                                    const selectedCode = e.target.value;
+                                    const selectedBank = banks.find(bank => bank.code === selectedCode);
                                     setFormData(prev => ({
                                         ...prev,
                                         landlordDetails: {
                                             ...(prev.landlordDetails ?? {}),
-                                            bankName: e.target.value,
+                                            bankName: selectedBank?.name,
+                                            bankCode: e.target.value,
                                         },
                                     }));
                                     if (formError) setFormError('');
                                 }}
                                 _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
                             >
-                                <option>Access Bank</option>
-                                <option>Guaranty Trust Bank (GTB)</option>
-                                <option>United Bank for Africa (UBA)</option>
-                                <option>First Bank of Nigeria</option>
-                                <option>Zenith Bank</option>
-                                <option>Ecobank Nigeria</option>
-                                <option>Fidelity Bank</option>
-                                <option>Union Bank</option>
-                                <option>Stanbic IBTC Bank</option>
-                                <option>Sterling Bank</option>
-                                <option>Wema Bank</option>
-                                <option>Keystone Bank</option>
-                                <option>FCMB</option>
-                                <option>Polaris Bank</option>
-                                <option>Kuda Bank</option>
-                                <option>ALAT by Wema</option>
-                                <option>VFD Microfinance Bank</option>
-                                <option>Opay</option>
-                                <option>PalmPay</option>
+                                 {banks.map((bank) => (
+                                    <option key={bank.code} value={bank.code}>
+                                        {bank.name}
+                                    </option>
+                                ))}
                             </Select>
                             <FormErrorMessage>Required</FormErrorMessage>
                         </FormControl>
@@ -328,15 +358,23 @@ export default function ListPropertyStep4({ formData, setFormData, onBack, onSub
                             <Select
                                 placeholder="Select backup bank"
                                 size="lg"
-                                value={formData.backupBankName}
-                                onChange={(e) => setFormData(prev => ({ ...prev, backupBankName: e.target.value }))}
+                                value={formData.backupBankName ?? ''}
+                                onChange={(e) => {
+                                    const selectedCode = e.target.value;
+                                    const selectedBank = banks.find(bank => bank.code === selectedCode);
+                                    setFormdata(prev => ({
+                                        ...prev,
+                                        backupBankName: selectedBank?.name,
+                                        backupBankCode: e.target.value
+                                    }))
+                                }}
                                 _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
                             >
-                                <option>Access Bank</option>
-                                <option>Guaranty Trust Bank (GTB)</option>
-                                <option>United Bank for Africa (UBA)</option>
-                                <option>First Bank of Nigeria</option>
-                                <option>Zenith Bank</option>
+                                {banks.map((bank) => (
+                                    <option key={bank.code} value={bank.code}>
+                                        {bank.name}
+                                    </option>
+                                ))}
                             </Select>
                         </FormControl>
 
