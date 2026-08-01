@@ -385,8 +385,8 @@ export default function App() {
             <Route path="/bank-verification" element={user ? <BankVerificationForm user={user} /> : <Navigate to="/login" />} />
             <Route path="/verify_ID" element={user ? <IdentityVerification /> : <Navigate to="/login" />} />
             <Route path="/edit-profile" element={user ? <EditProfile user={user} /> : <Navigate to="/login" />} />
-            <Route path="/change-password" element={user ? <ChangePassword /> : <Navigate to="/login" />} />
-            <Route path="/security" element={user ? <ChangePassword /> : <Navigate to="/login" />} />
+            <Route path="/change-password" element={user ? <ChangePassword user={user} /> : <Navigate to="/login" />} />
+            <Route path="/security" element={user ? <ChangePassword user={user}/> : <Navigate to="/login" />} />
             <Route path="/settings" element={user ? <ListProperty /> : <Navigate to="/login" />} />
             <Route path="/support" element={user ? <SupportChat /> : <Navigate to="/login" />} />
             {/* Add more routes here */}

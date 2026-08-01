@@ -156,7 +156,7 @@ export default function Wallet() {
             const { data } = response;
             toast({ title: data.message, status: 'success' });
             setTransactions((prev) => [newTx, ...prev]);
-            setBalance((b) => b + value);
+            setBalance((b) => b + value/100);
             setFundAmount('');
             closeFund();
             if (data && data.data && data.data.authorization_url) {

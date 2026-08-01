@@ -226,7 +226,7 @@ export default function PropertyListing() {
                 <VStack spacing={4} px={6} align="stretch" mb={6}>
                     <HStack justify="space-between" align="center">
                         <Text fontSize="lg" fontWeight="600" color="brand.gray.800">
-                            Featured Properties
+                            All Properties
                         </Text>
                         <Badge bg="brand.success" color="white" fontSize="xs" px={3} py={1}>
                             All Escrow Protected

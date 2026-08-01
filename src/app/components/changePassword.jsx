@@ -16,13 +16,17 @@ import {
     Progress,
     FormHelperText,
     Spinner,
+    useToast,
+    Image,
 } from '@chakra-ui/react';
 import { useState } from 'react';
 import { Eye, EyeOff, Check, X } from 'lucide-react';
-import { changePassword } from '../../../api';
+import { changePassword, setupTwoFactor, verifyTwoFactor } from '../../../api';
 import Navbar from './Navbar';
+import { PinInput, PinInputField} from "@chakra-ui/react";
 
-export default function ChangePassword() {
+export default function ChangePassword({user}) {
+    console.log(user)
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -32,6 +36,9 @@ export default function ChangePassword() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    const [barcode, setBarcode] = useState(null)
+    const [token, setToken] = useState("")
+    const toast = useToast()
 
     // Password strength validation
     const getPasswordStrength = (password) => {
@@ -101,6 +108,51 @@ export default function ChangePassword() {
             setError(message);
         } finally {
             setLoading(false);
+        }
+    }
+
+    async function enable2fa() {
+        setLoading(true);
+        try {
+            const res = await setupTwoFactor()
+            setBarcode(res.data.data)
+            setLoading(false)
+            console.log(res)
+        } catch (error) {
+            toast({
+                title: '2FA verification',
+                description: error.data.message,
+                status: 'error',
+                duration: 3000,
+                isClosable: true,
+            });
+            setLoading(false)
+            console.log(error)
+        }
+    }
+
+    async function handleVerify2fa() {
+        console.log(token)
+        try {
+            const res = await verifyTwoFactor(token)
+            toast({
+                title: '2FA verification',
+                description: res.data.message || "activated",
+                status: 'success',
+                duration: 3000,
+                isClosable: true,
+            });
+
+            console.log(res)
+        } catch (error) {
+            toast({
+                title: '2FA verification',
+                description: error.data.message || "error occured",
+                status: 'error',
+                duration: 3000,
+                isClosable: true,
+            });
+            // console.log(error.data.message)
         }
     }
 
@@ -290,6 +342,89 @@ export default function ChangePassword() {
                         </VStack>
                     </form>
                 </Box>
+
+                {user.twoFactorEnabled === false ? <Button
+                    type="submit"
+                    w="100%"
+                    bg="brand.primary"
+                    color="white"
+                    size="lg"
+                    fontSize="md"
+                    fontWeight="600"
+                    _hover={{ bg: 'brand.primary', opacity: 0.9 }}
+                    isDisabled={barcode}
+                    isLoading={loading}
+                    spinner={<Spinner size="sm" color="white" />}
+                    onClick={() => enable2fa()}
+                >
+                    Enable 2FA
+                </Button>:
+                <Text textAlign="center"> 2FA Enabled</Text>
+                }
+                {barcode && (<VStack>
+                    <Image src={barcode.qrCode || ""} placeholder="Barcode" />
+                    <FormControl isRequired>
+                        <FormLabel fontWeight="600" color="brand.primary">
+                            Scan code and enter token
+                        </FormLabel>
+                        <InputGroup size="md">
+                            <HStack mx="auto" alignSelf="center" >
+                                <PinInput
+                                    otp
+                                    value={token}
+                                    onChange={(value) => setToken(value)}
+                                    focusBorderColor="teal.500"
+                                >
+                                    <PinInputField boxSize={16} />
+                                    <PinInputField boxSize={16} />
+                                    <PinInputField boxSize={16} />
+                                    <PinInputField boxSize={16} />
+                                    <PinInputField boxSize={16} />
+                                    <PinInputField boxSize={16} />
+                                </PinInput>
+                            </HStack>
+                            {/* <InputRightElement>
+                            {confirmPassword && (
+                                passwordsMatch ? (
+                                    <Check size={18} color="green" />
+                                ) : (
+                                    <X size={18} color="red" />
+                                )
+                            )}
+                            {!confirmPassword && (
+                                <IconButton
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                    icon={showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                    _hover={{ bg: 'transparent' }}
+                                />
+                            )}
+                        </InputRightElement> */}
+                        </InputGroup>
+                        {!token && (
+                            <FormHelperText color="red.500" fontSize="xs">
+                                Please enter token
+                            </FormHelperText>
+                        )}
+                    </FormControl>
+                    <Button
+                        type="submit"
+                        w="100%"
+                        bg="brand.primary"
+                        color="white"
+                        size="lg"
+                        fontSize="md"
+                        fontWeight="600"
+                        _hover={{ bg: 'brand.primary', opacity: 0.9 }}
+                        isDisabled={loading || token.length != 6}
+                        isLoading={loading}
+                        spinner={<Spinner size="sm" color="white" />}
+                        onClick={() => handleVerify2fa()}
+                    >
+                        Verify 2FA
+                    </Button>
+                </VStack>)}
 
                 {/* Info Box */}
                 <Box

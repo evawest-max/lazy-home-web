@@ -88,6 +88,12 @@ export const changePassword = (
 export const googleSignIn = (idToken) =>
   API.post("/api/v1/auth/google-login", { token: idToken });
 
+export const setupTwoFactor = (idToken) =>
+  API.post("/api/v1/twofactor/setup");
+
+export const verifyTwoFactor = (idToken) =>
+  API.post("/api/v1/twofactor/verify", { token: idToken });
+
 // ======================================================
 // ====================== USER ==========================
 // ======================================================
@@ -226,17 +232,6 @@ export const getBankcodes = (
     `/api/v1/payments/banks/codes`
   );
 
-export const verifyBankAccount = (accountNumber, bankCode,
-) =>
-  API.post(
-    `/api/v1/payments/verify-bank-account`, { accountNumber, bankCode }
-  );
-
-export const verifyAndSaveBankAccount = (bankName, accountNumber, bankCode 
-) =>
-  API.post(
-    `/api/v1/payments/verify-save-bank-account`, {bankName, accountNumber, bankCode }
-  );
 
 export const initializeFundwallet = (
   amount
@@ -283,10 +278,17 @@ export const confirmInspection = (
   );
 
 export const releaseFunds = (
-  escrowId, releaseCode
+  escrowId, releaseCode, otp
 ) =>
   API.post(
-    "/api/v1/escrow/confirm-release", { escrowId, releaseCode }
+    "/api/v1/escrow/confirm-release", { escrowId, releaseCode, otp }
+  );
+
+export const adminFinalizeTransferController = (
+  transferCode, otp,
+) =>
+  API.post(
+    "/api/v1/escrow/confirm-release", { transferCode, otp, }
   );
 
 export const getAllEscrowPayments = ({ page = 1, limit = 10 }) =>
@@ -300,6 +302,29 @@ export const getSingleEscrowPayment = (
 ) =>
   API.get(
     "/api/v1/escrow/payments/:id", data
+  );
+
+
+// ======================================================
+// =================== bank verification =====================
+// ======================================================
+
+export const getActiveSettlementAccount = (
+) =>
+  API.get(
+    `/api/v1/settlementAccount/settlement-account/active`
+  );
+
+export const verifyBankAccount = (accountNumber, bankCode,
+) =>
+  API.post(
+    `/api/v1/settlementAccount/settlement-account/resolve`, { accountNumber, bankCode }
+  );
+
+export const confirmAccount = (verificationToken
+) =>
+  API.post(
+    `/api/v1/settlementAccount/settlement-account/confirm`, { verificationToken }
   );
 
 

@@ -81,6 +81,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
     const [releaseCode, setReleaseCode] = useState('');
     const [selectedEscrowAction, setSelectedEscrowAction] = useState(null);
     const [releasing, setReleasing] = useState(false);
+    const [authCode, setAuthCode] = useState("");
     const location = useLocation();
 
     const { parameter } = location.state || {};
@@ -221,13 +222,13 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
         navigate("/update-listing/steps", { state: { propertyId: data._id } })
     }
 
-    const handleReleasedKeys = (id) => {
+    const handleReleasedKeys = async (id) => {
         try {
-            const res = releaseKeys(id);
-            console.log(res.data.message)
+            const res = await releaseKeys(id);
+            console.log(res)
             toast({ title: 'Release confirmation', discription: res.data.message, status: 'success' });
         } catch (error) {
-            console.log(error?.response?.data?.message)
+            console.log(error)
             toast({ title: 'Release confirmation', discription: error.message, status: 'info' });
         }
     }
@@ -239,7 +240,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
             console.log(res.response.data.message)
             toast({ title: 'inspection confirmation', discription: res?.data?.message, status: 'success' });
         } catch (error) {
-            console.log("this is the error response:",error?.response?.data?.message)
+            console.log("this is the error response:", error?.response?.data?.message)
             toast({ title: 'Release confirmation', discription: `${error?.response?.data?.message}`, status: 'info' });
         }
     }
@@ -920,13 +921,31 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                     <ModalBody pb={6}>
                         <VStack spacing={4} align="stretch">
                             <Text fontSize="sm" color="brand.gray.700">
-                                <Text fontWeight="bold" >Ensure you have inspected the property first.</Text> Enter the release code provided to you to release funds for this transaction.
+                                <Text fontWeight="bold" >Ensure you have inspected the property first.</Text> Enter the release code provided to you and 2FA code to release funds for this transaction.
                             </Text>
                             <Input
                                 placeholder="Enter release code"
                                 value={releaseCode}
                                 onChange={(e) => setReleaseCode(e.target.value)}
                             />
+
+                            <Text fontSize="sm" color="brand.gray.700">Enter google authenticator code</Text>
+                            <HStack>
+                                <PinInput
+                                    otp
+                                    value={authCode}
+                                    onChange={(value) => setAuthCode(value)}
+                                    focusBorderColor="teal.500"
+                                >
+                                    <PinInputField />
+                                    <PinInputField />
+                                    <PinInputField />
+                                    <PinInputField />
+                                    <PinInputField />
+                                    <PinInputField />
+                                </PinInput>
+                            </HStack>
+
                             {selectedEscrowAction && (
                                 <Text fontSize="xs" color="brand.gray.600">Ref: {selectedEscrowAction.reference || selectedEscrowAction._id || selectedEscrowAction.id}</Text>
                             )}
@@ -944,19 +963,23 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                                     toast({ title: 'Enter release code', status: 'warning' });
                                     return;
                                 }
+                                if (!authCode || authCode.trim().length < 6) {
+                                    toast({ title: 'Enter authenticator code', status: 'warning' });
+                                    return;
+                                }
                                 setReleasing(true);
                                 try {
-                                    console.log(selectedEscrowAction)
+                                    console.log(selectedEscrowAction, "authcode is:", authCode)
                                     // TODO: call real API to release funds with code and escrow id
-                                    const res = releaseFunds(selectedEscrowAction._id, releaseCode )
+                                    const res = await releaseFunds(selectedEscrowAction._id, releaseCode, authCode)
 
-                                    console.log('Submitting release code', res.response);
+                                    console.log('Submitting release code', res);
                                     toast({ title: 'Release code submitted', status: 'success' });
                                     onCloseRelease();
                                     setSelectedEscrowAction(null);
                                     setReleaseCode('');
                                 } catch (err) {
-                                    console.error('Failed to submit release code', err.response);
+                                    console.log('Failed to submit release code', err);
                                     toast({ title: `${err.response.data.message}`, status: 'error' });
                                 } finally {
                                     setReleasing(false);
