@@ -44,6 +44,8 @@ function UpdatePropertyStep4({ updatedFormdata, setUpdatedFormdata, onBack, onSu
     const [formError, setFormError] = useState('');
     const [isLoading, setIsLoading] = useState(false)
     const [banks, setBanks] = useState([]);
+    const [isVerifying, setIsVerifying] = useState(false);
+    const [fullName, setFullName] = useState(landlordDetails.fullName ?? '');
 
     useEffect(() => {
         const fetchBanks = async () => {
@@ -63,44 +65,48 @@ function UpdatePropertyStep4({ updatedFormdata, setUpdatedFormdata, onBack, onSu
         if (formError) setFormError('');
     }, [updatedFormdata]);
 
-    useEffect(() => {
+    // useEffect(() => {
+    //     console.log("Verifying bank account:", landlordDetails.accountNumber, landlordDetails.bankCode);
+    //     const accountNumber = landlordDetails.accountNumber ?? '';
+    //     if (accountNumber.length !== 10 || !landlordDetails.bankCode) return;
+    //     const verifyDetails = async () => {
 
-        if (landlordDetails.accountNumber.length !== 10 || !landlordDetails.bankCode) return;
-        const verifyDetails = async () => {
+    //         try {
+    //             const res = await verifyBankAccount(
+    //                 accountNumber,
+    //                 landlordDetails.bankCode
+    //             );
+    //             console.log("Verification result:", res);
+    //             const verification = res?.data?.data ?? {};
+    //             const verifiedName = verification.accountName || verification.account_name || landlordDetails.fullName;
+    //             const verifiedAccountNumber = verification.accountNumber || verification.account_number || landlordDetails.accountNumber;
 
-            try {
-                const res = await verifyBankAccount(
-                    landlordDetails.accountNumber,
-                    landlordDetails.bankCode
-                );
-                console.log("Verification result:", res);
+    //             setUpdatedFormdata((prev) => ({
+    //                 ...prev,
+    //                 landlordDetails: {
+    //                     ...(prev.landlordDetails ?? {}),
+    //                     fullName: verifiedName,
+    //                     bankAccount: verifiedAccountNumber,
+    //                 },
+    //             }));
 
-                setUpdatedFormdata((prev) => ({
-                    ...prev,
-                    landlordDetails: {
-                        ...(prev.landlordDetails ?? {}),
-                        fullName: res.account_name,
-                        bankAccount: res.account_number,
-                    },
-                }));
+    //             // const isVerified =
+    //             //     String(landlordDetails.accountNumber ?? "").length === 10 &&
+    //             //     landlordDetails.bankCode;
+    //             // if (isVerified) {
 
-                // const isVerified =
-                //     String(landlordDetails.accountNumber ?? "").length === 10 &&
-                //     landlordDetails.bankCode;
-                // if (isVerified) {
+    //             // } else {
+    //             //     setAccountVerified(false);
+    //             // }
+    //             setAccountVerified(true);
+    //         } catch (error) {
+    //             console.error("Verification failed:", error);
+    //             setAccountVerified(false);
+    //         }
+    //     };
 
-                // } else {
-                //     setAccountVerified(false);
-                // }
-                setAccountVerified(true);
-            } catch (error) {
-                console.error("Verification failed:", error);
-                setAccountVerified(false);
-            }
-        };
-
-        verifyDetails();
-    }, [landlordDetails.accountNumber, landlordDetails.bankCode]);
+    //     verifyDetails();
+    // }, [landlordDetails.accountNumber, landlordDetails.bankCode]);
 
 
     const handleSubmit = async () => {
@@ -111,8 +117,8 @@ function UpdatePropertyStep4({ updatedFormdata, setUpdatedFormdata, onBack, onSu
                 ...updatedFormdata,
                 landlordDetails: {
                     ...landlordDetails,
-                    backupBankName: updatedFormdata.backupBankName ?? landlordDetails.backupBankName ?? '',
-                    backupAccountNumber: updatedFormdata.backupAccountNumber ?? landlordDetails.backupAccountNumber ?? '',
+                    landlordEmail: updatedFormdata.landlordEmail ?? landlordDetails.landlordEmail ?? '',
+                    landlordPhoneNumber: updatedFormdata.landlordPhoneNumber ?? landlordDetails.landlordPhoneNumber ?? '',
                 },
             };
 
@@ -185,6 +191,58 @@ function UpdatePropertyStep4({ updatedFormdata, setUpdatedFormdata, onBack, onSu
             setIsLoading(false);
         }
     };
+
+    const verifyAccountDetails = async () => {
+        const accountNumber = String(landlordDetails.accountNumber ?? '');
+
+        if (!landlordDetails.bankCode || accountNumber.length !== 10) {
+            toast({ title: 'Enter a valid bank and 10-digit account number', status: 'warning', duration: 3000 });
+            return;
+        }
+        // console.log(formData,'Verifying account:', accountNumber, landlordDetails.bankCode);
+        // return
+        setIsVerifying(true);
+
+        try {
+            const res = await verifyBankAccount(accountNumber, landlordDetails.bankCode);
+            console.log("Verification result:", res);
+            const verification = res?.data?.data ?? {};
+            const verifiedName = verification.accountName || verification.account_name || landlordDetails.fullName;
+            const verifiedAccountNumber = verification.accountNumber || verification.account_number || landlordDetails.accountNumber;
+            // const verifiedBankName = verification.bankName || verification.bank_name || landlordDetails.bankName;
+            const verifiedBankCode = verification.bankCode || verification.bank_code || landlordDetails.bankCode;
+
+            setUpdatedFormdata((prev) => ({
+                ...prev,
+                landlordDetails: {
+                    ...(prev.landlordDetails ?? {}),
+                    fullName: verifiedName,
+                    accountNumber: verifiedAccountNumber,
+                    // bankName: verifiedBankName,
+                    bankCode: verifiedBankCode,
+                },
+            }));
+            sessionStorage.setItem(draftKey, JSON.stringify(updatedFormdata));
+            localStorage.setItem(draftKey, JSON.stringify(updatedFormdata));
+
+            // const isVerified =
+            //     String(landlordDetails.accountNumber ?? "").length === 10 &&
+            //     landlordDetails.bankCode;
+            // if (isVerified) {
+
+            // } else {
+            //     setAccountVerified(false);
+            // }
+            setAccountVerified(true);
+            toast({ title: 'Account verified', status: 'success', duration: 3000 });
+        } catch (err) {
+            console.error('Verification failed:', err);
+            setAccountVerified(false);
+            toast({ title: 'Verification failed', description: 'Please check the account details and try again.', status: 'error', duration: 4000 });
+        } finally {
+            setIsVerifying(false);
+        }
+    }
 
 
 
@@ -370,6 +428,10 @@ function UpdatePropertyStep4({ updatedFormdata, setUpdatedFormdata, onBack, onSu
                             <FormErrorMessage>Required (10 digits)</FormErrorMessage>
                         </FormControl>
 
+                        <Button onClick={verifyAccountDetails} isLoading={isVerifying}>
+                            Verify account
+                        </Button>
+
                         {accountVerified && (
                             <Box bg="brand.background" p={4} borderRadius="lg">
                                 <HStack spacing={3}>
@@ -395,59 +457,46 @@ function UpdatePropertyStep4({ updatedFormdata, setUpdatedFormdata, onBack, onSu
                                 <CreditCard size={20} color="white" />
                             </Box>
                             <Text fontSize="lg" fontWeight="bold" color="brand.gray.800">
-                                Alternative Payment Method (Optional)
+                                Landlord contact details
                             </Text>
                         </HStack>
 
                         <Text fontSize="sm" color="brand.gray.600">
-                            Provide a backup account in case primary account has issues
+                            Provide accurate contact details for the landLord  so we can reach them if needed.<br />
+                            This information will not be shared with renters. (Only fill if listing for a landlord)
                         </Text>
 
                         <FormControl>
                             <FormLabel color="brand.gray.700" fontSize="sm" fontWeight="600">
-                                Backup Bank Name
+                                Landlord's email address
                             </FormLabel>
-                            <Select
-                                placeholder="Select backup bank"
+                            <Input
+                                placeholder="example@gmail.com"
+                                type="email"
                                 size="lg"
-                                value={landlordDetails.backupBankCode ?? ''} // ✅ matches option values
+                                value={updatedFormdata.landlordEmail ?? ''}
                                 onChange={(e) => {
-                                    const selectedCode = e.target.value;
-                                    const selectedBank = banks.find(bank => bank.code === selectedCode);
-
-                                    setUpdatedFormdata(prev => ({
-                                        ...prev,
-                                        landlordDetails: {
-                                            ...(prev.landlordDetails ?? {}),
-                                            backupBankName: selectedBank?.name || "",
-                                            backupBankCode: selectedCode,
-                                        },
-                                    }));
+                                    setUpdatedFormdata(prev => ({ ...prev, landlordEmail: e.target.value }));
                                 }}
                                 _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
-                            >
-                                {banks.map((bank) => (
-                                    <option key={bank.code} value={bank.code}>
-                                        {bank.name}
-                                    </option>
-                                ))}
-                            </Select>
+                            />
+
 
                         </FormControl>
 
                         <FormControl>
                             <FormLabel color="brand.gray.700" fontSize="sm" fontWeight="600">
-                                Backup Account Number
+                                Landlord's phone number
                             </FormLabel>
                             <Input
                                 placeholder="0123456789"
                                 type="text"
                                 maxLength={10}
                                 size="lg"
-                                value={updatedFormdata.backupAccountNumber}
+                                value={updatedFormdata.landlordPhoneNumber ?? ''}
                                 onChange={(e) => {
                                     const value = e.target.value.replace(/\D/g, '');
-                                    setUpdatedFormdata(prev => ({ ...prev, backupAccountNumber: value }));
+                                    setUpdatedFormdata(prev => ({ ...prev, landlordPhoneNumber: value }));
                                 }}
                                 _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
                             />

@@ -119,7 +119,7 @@ export default function PaymentBreakdown() {
         navigate("/dashboard", {state:{parameter: 1}})
       }, 3000);
     } catch (error) {
-      // console.log('Failed to initialize fund wallet:', error?.response?.data?.message);
+      console.log('Failed to initialize fund wallet:', error?.response?.data?.message);
       toast({
         title: 'Payment failed',
         description: error?.response?.data?.message,

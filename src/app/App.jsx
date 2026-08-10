@@ -69,11 +69,11 @@ const createEmptyListingFormData = () => ({
     phone: '',
     bankName: '',
     accountNumber: '',
-    backupBankName: '',
-    backupAccountNumber: '',
+    landlordEmail: '',
+    landlordPhoneNumber: '',
   },
-  backupBankName: '',
-  backupAccountNumber: '',
+  landlordEmail: '',
+  landlordPhoneNumber: '',
   termsAccepted: false,
   escrowAccepted: false,
   policyAccepted: false,
@@ -123,8 +123,8 @@ const normalizeListingDraft = (draft = {}) => {
       videos: video ? [video] : [],
     },
     landlordDetails,
-    backupBankName: draft.backupBankName ?? landlordDetails.backupBankName ?? '',
-    backupAccountNumber: draft.backupAccountNumber ?? landlordDetails.backupAccountNumber ?? '',
+    landlordEmail: draft.landlordEmail ?? landlordDetails.landlordEmail ?? '',
+    landlordPhoneNumber: draft.landlordPhoneNumber ?? landlordDetails.landlordPhoneNumber ?? '',
     termsAccepted: draft.termsAccepted ?? false,
     escrowAccepted: draft.escrowAccepted ?? false,
     policyAccepted: draft.policyAccepted ?? false,
@@ -201,9 +201,10 @@ export default function App() {
   const [loadingUser, setLoadingUser] = useState(true);
   const [notifications, setNotifications] = useState([]);
   const [updatedFormdata, setUpdatedFormdata] = useState(null)
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const toast = useToast();
   const login = (userData) => {
+    console.log("userdata", userData);
     setUser(userData);
     localStorage.setItem('user', JSON.stringify(userData));
   };

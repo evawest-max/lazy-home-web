@@ -15,6 +15,8 @@ import {
     Spinner,
     Alert,
     AlertIcon,
+    Stack,
+    SimpleGrid,
 } from '@chakra-ui/react';
 import { Camera } from 'lucide-react';
 import Navbar from './Navbar';
@@ -126,109 +128,125 @@ export default function EditProfile({ user }) {
         } catch (err) {
             const message = err?.response?.data?.message || 'Failed to update profile. Please try again.';
             setError(message);
-            console.error('Error updating profile:', err);
+            toast({
+                title: "Profile Update Failed",
+                description: message,
+                status: "error",
+                duration: 5000,
+                isClosable: true,
+            });
+            // console.error('Error updating profile:', message);
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <Box minH="100vh" bg="brand.background" px={6} py={10}>
-            <Box maxW="680px" mx="auto">
-                <VStack spacing={6} align="stretch">
-                    <Box bg="white" p={6} borderRadius="2xl" boxShadow="xl">
-                        <Heading size="lg" color="teal.700" mb={2}>
+        <Box minH="100vh" bg="brand.background" px={{ base: 4, md: 8, lg: 12 }} py={{ base: 8, md: 10, lg: 12 }}>
+            <Box maxW="7xl" mx="auto">
+                <VStack spacing={{ base: 6, md: 8 }} align="stretch">
+                    <Box bg="white" p={{ base: 6, md: 8 }} borderRadius="3xl" boxShadow="xl">
+                        <Heading size={{ base: 'lg', md: 'xl' }} color="brand.primary" mb={3}>
                             Edit Profile
                         </Heading>
-                        <Text color="gray.600">
+                        <Text color="brand.gray.600" fontSize={{ base: 'md', md: 'lg' }}>
                             Update your details so we can keep your account accurate and secure.
                         </Text>
                     </Box>
 
-                    <Box bg="white" p={6} borderRadius="2xl" boxShadow="xl">
+                    <Box bg="white" p={{ base: 6, md: 8 }} borderRadius="3xl" boxShadow="xl">
                         <form onSubmit={handleSubmit}>
-                            <VStack spacing={5} align="stretch">
-                                <HStack spacing={6} align="flex-start">
-                                    <Avatar size="xl" name={formData.fullName} src={avatarPreview} />
-                                    <VStack align="start" spacing={2}>
-                                        <Text fontWeight="600" color="brand.primary">
+                            <VStack spacing={6} align="stretch">
+                                <Stack direction={{ base: 'column', md: 'row' }} spacing={6} align="start">
+                                    <Box textAlign="center" flex="0 0 220px">
+                                        <Avatar size="2xl" name={formData.fullName} src={avatarPreview} mb={4} />
+                                        <Text fontWeight="600" color="brand.primary" mb={2}>
                                             Profile Photo
                                         </Text>
                                         <Input
                                             type="file"
                                             accept="image/*"
                                             onChange={handleAvatarChange}
-                                            width="auto"
+                                            width="100%"
                                             p={1}
+                                            bg="brand.gray.50"
+                                            borderRadius="xl"
+                                            borderColor="brand.gray.200"
                                         />
+                                    </Box>
+
+                                    <SimpleGrid columns={{ base: 1, md: 2 }} gap={6} flex="1">
+                                        <FormControl>
+                                            <FormLabel>Full Name</FormLabel>
+                                            <Input
+                                                value={formData.fullName}
+                                                onChange={handleInputChange('fullName')}
+                                                placeholder="Full name"
+                                                size="lg"
+                                                bg="brand.gray.50"
+                                                borderColor="brand.gray.300"
+                                                _focus={{ bg: 'white', borderColor: 'brand.primary', boxShadow: '0 0 0 1px rgba(0, 105, 92, 0.25)' }}
+                                            />
+                                        </FormControl>
+
+                                        <FormControl>
+                                            <FormLabel>Email Address</FormLabel>
+                                            <Input
+                                                type="email"
+                                                value={formData.email}
+                                                onChange={handleInputChange('email')}
+                                                placeholder="you@example.com"
+                                                size="lg"
+                                                bg="brand.gray.50"
+                                                borderColor="brand.gray.300"
+                                                _focus={{ bg: 'white', borderColor: 'brand.primary', boxShadow: '0 0 0 1px rgba(0, 105, 92, 0.25)' }}
+                                            />
+                                        </FormControl>
+
+                                        <FormControl>
+                                            <FormLabel>Phone Number</FormLabel>
+                                            <Input
+                                                type="tel"
+                                                value={formData.phone}
+                                                onChange={handleInputChange('phone')}
+                                                placeholder="08012345678"
+                                                size="lg"
+                                                bg="brand.gray.50"
+                                                borderColor="brand.gray.300"
+                                                _focus={{ bg: 'white', borderColor: 'brand.primary', boxShadow: '0 0 0 1px rgba(0, 105, 92, 0.25)' }}
+                                            />
+                                        </FormControl>
+
+                                        <FormControl gridColumn={{ base: '1 / -1', md: 'span 2' }}>
+                                            <FormLabel>About You</FormLabel>
+                                            <Input
+                                                value={formData.about}
+                                                onChange={handleInputChange('about')}
+                                                placeholder="A short bio or profile note"
+                                                size="lg"
+                                                bg="brand.gray.50"
+                                                borderColor="brand.gray.300"
+                                                _focus={{ bg: 'white', borderColor: 'brand.primary', boxShadow: '0 0 0 1px rgba(0, 105, 92, 0.25)' }}
+                                            />
+                                        </FormControl>
+                                    </SimpleGrid>
+                                </Stack>
+
+                                {(error || success) && (
+                                    <VStack spacing={3} align="stretch">
+                                        {error && (
+                                            <Alert status="error" borderRadius="xl">
+                                                <AlertIcon />
+                                                {error}
+                                            </Alert>
+                                        )}
+                                        {success && (
+                                            <Alert status="success" borderRadius="xl">
+                                                <AlertIcon />
+                                                {success}
+                                            </Alert>
+                                        )}
                                     </VStack>
-                                </HStack>
-
-                                <FormControl isReadOnly>
-                                    <FormLabel>Full Name</FormLabel>
-                                    <Input
-                                        value={formData.fullName}
-                                        onChange={handleInputChange('fullName')}
-                                        placeholder="Full name"
-                                        size="lg"
-                                        bg="gray.50"
-                                        borderColor="brand.gray.300"
-                                        _focus={{ bg: 'white', borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
-                                    />
-                                </FormControl>
-
-                                <FormControl isReadOnly>
-                                    <FormLabel>Email Address</FormLabel>
-                                    <Input
-                                        type="email"
-                                        value={formData.email}
-                                        onChange={handleInputChange('email')}
-                                        placeholder="you@example.com"
-                                        size="lg"
-                                        bg="gray.50"
-                                        borderColor="brand.gray.300"
-                                        _focus={{ bg: 'white', borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
-                                    />
-                                </FormControl>
-
-                                <FormControl isReadOnly>
-                                    <FormLabel>Phone Number</FormLabel>
-                                    <Input
-                                        type="tel"
-                                        value={formData.phone}
-                                        onChange={handleInputChange('phone')}
-                                        placeholder="08012345678"
-                                        size="lg"
-                                        bg="gray.50"
-                                        borderColor="brand.gray.300"
-                                        _focus={{ bg: 'white', borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
-                                    />
-                                </FormControl>
-
-                                <FormControl>
-                                    <FormLabel>About You</FormLabel>
-                                    <Input
-                                        value={formData.about}
-                                        onChange={handleInputChange('about')}
-                                        placeholder="A short bio or profile note"
-                                        size="lg"
-                                        bg="gray.50"
-                                        borderColor="brand.gray.300"
-                                        _focus={{ bg: 'white', borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
-                                    />
-                                </FormControl>
-
-                                {error && (
-                                    <Alert status="error" borderRadius="md">
-                                        <AlertIcon />
-                                        {error}
-                                    </Alert>
-                                )}
-                                {success && (
-                                    <Alert status="success" borderRadius="md">
-                                        <AlertIcon />
-                                        {success}
-                                    </Alert>
                                 )}
 
                                 <Button
@@ -236,7 +254,7 @@ export default function EditProfile({ user }) {
                                     size="lg"
                                     colorScheme="teal"
                                     isLoading={loading}
-                                    spinner={<Spinner size="sm" color="white" />}
+                                    alignSelf="flex-start"
                                 >
                                     Save Changes
                                 </Button>

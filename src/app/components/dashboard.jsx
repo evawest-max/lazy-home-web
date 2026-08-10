@@ -29,12 +29,20 @@ import {
     ModalBody,
     ModalFooter,
     ModalCloseButton,
+    Drawer,
+    DrawerOverlay,
+    DrawerContent,
+    DrawerHeader,
+    DrawerBody,
+    DrawerFooter,
+    DrawerCloseButton,
     useToast,
     useDisclosure,
     PinInput,
     PinInputField,
     Spinner,
     Icon,
+    Stack,
 } from '@chakra-ui/react';
 import {
     Search,
@@ -82,7 +90,15 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
     const [selectedEscrowAction, setSelectedEscrowAction] = useState(null);
     const [releasing, setReleasing] = useState(false);
     const [authCode, setAuthCode] = useState("");
+    const { isOpen: isDetailOpen, onOpen: onOpenDetails, onClose: onCloseDetails } = useDisclosure();
+    const [selectedPropertyDetails, setSelectedPropertyDetails] = useState(null);
+
     const location = useLocation();
+
+    const openPropertyDetails = (property) => {
+        setSelectedPropertyDetails(property);
+        onOpenDetails();
+    };
 
     const { parameter } = location.state || {};
     const tab = parameter
@@ -115,7 +131,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                 const analyticsResponse = await getAnalyticsDashboardAndProperties();
                 setMyProperties(analyticsResponse.data.data.propertiesWithInquiries || []);
                 setAllData(analyticsResponse.data.data || {});
-                console.log(analyticsResponse)
+                console.log("this is the anyalytics",analyticsResponse)
                 setLoading(false);
             } catch (error) {
                 console.error("Failed to fetch properties:", error);
@@ -134,7 +150,8 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
             setTransactionsLoading(true);
             try {
                 const resp = await getAllEscrowPayments({ page, limit: itemsPerPage });
-                const data = resp?.data?.data || resp?.data || {};
+                console.log("escrow transactions response", resp);
+                const data = resp?.data?.data?.escrow || resp?.data || {};
                 const list = Array.isArray(data)
                     ? data
                     : Array.isArray(data.payments)
@@ -549,9 +566,9 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                         <Text fontSize="lg" fontWeight="600" color="brand.gray.800">
                             My Property Listings
                         </Text>
-                        <Grid templateColumns={{ sm: "repeat(1, 1fr)", md: "repeat(2, 1fr)" }} gap={4}>
+                        <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={4}>
                             {paginatedListings.map((item, index) => (
-                                <HStack
+                                <Stack
                                     p={4}
                                     bg="white"
                                     borderRadius="lg"
@@ -559,13 +576,14 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                                     boxShadow="sm"
                                     cursor="pointer"
                                     _hover={{ boxShadow: 'md' }}
+                                    direction={{ base: 'column', md: 'row' }}
                                 >
                                     <Image
                                         src={item.media.images[0].url}
                                         alt="item"
                                         borderRadius="lg"
-                                        h="100px"
-                                        w="100px"
+                                        h={{ base: '180px', md: '100px' }}
+                                        w={{ base: '100%', md: '100px' }}
                                         objectFit="cover"
                                     />
 
@@ -586,28 +604,28 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                                             {item.address.area}, {item.address.state}
                                         </Text>
                                         <HStack>
-                                            {/* <Badge variant="verified" fontSize="xs">Rent Paid</Badge> */}
                                             {item.listingStatus == "rented" ? (
                                                 <Badge variant="verified" fontSize="xs">Rent Paid</Badge>
-                                            ) : (<Text fontSize="xs" color="brand.gray.600">{item.listingStatus}</Text>)}
+                                            ) : (
+                                                <Text fontSize="xs" color="brand.gray.600">{item.listingStatus}</Text>
+                                            )}
                                         </HStack>
                                         <Text fontSize="xs" color="brand.gray.600">₦{item.rentAmount.toLocaleString()} {item.rentDuration}</Text>
                                     </VStack>
 
-                                    <VStack align="stretch" spacing={1} textAlign="right">
+                                    <VStack align={{ base: 'start', md: 'stretch' }} spacing={1} textAlign={{ base: 'left', md: 'right' }}>
                                         <Menu>
-                                            <MenuButton size="sm" as={Button} rightIcon={<ChevronDownIcon />}>
+                                            <MenuButton size="sm" as={Button} rightIcon={<ChevronDownIcon />} width={{ base: '100%', md: 'auto' }}>
                                                 Actions
                                             </MenuButton>
                                             <MenuList>
                                                 {item.listingStatus == "under_offer" && (
                                                     <MenuItem onClick={() => handleReleasedKeys(item._id)}>I have released keys</MenuItem>
                                                 )}
-                                                <MenuItem>View details</MenuItem>
+                                                <MenuItem onClick={() => openPropertyDetails(item)}>View details</MenuItem>
                                                 <MenuItem>Share Property</MenuItem>
                                                 <MenuItem onClick={() => editProperty(item)}>Edit property</MenuItem>
                                                 <MenuItem onClick={() => deleteMyProperty(item._id)}>Delete Property</MenuItem>
-
                                             </MenuList>
                                         </Menu>
                                         <Text fontSize="xs" color="brand.gray.500">
@@ -620,7 +638,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                                             {allData.disputedProperties.reduce((count, prop) => prop._id === item._id ? count + 1 : count, 0)} new dispute
                                         </Text>
                                     </VStack>
-                                </HStack>
+                                </Stack>
                             ))}
                         </Grid>
 
@@ -670,7 +688,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                                     const title = 'Escrow Transaction';
                                     const status = escrow.status || escrow.state || 'unknown';
                                     const rawAmount = escrow.amount || escrow.payment?.amount || escrow.amountPaid || 0;
-                                    const amount = Number(rawAmount) || 0;
+                                    const amount = Number(rawAmount)*100 || 0;
                                     const created = new Date(escrow.createdAt || escrow.created_at || escrow.paymentDate || Date.now()).toLocaleString();
                                     const payer = escrow.payer?.name || escrow.payerName || escrow.user?.name || escrow.initiator || 'N/A';
                                     const property = myProperties.find((p) => p._id === escrow.propertyId || p.id === escrow.propertyId) || mockProperties.find((p) => p.id === escrow.propertyId) || {};
@@ -688,7 +706,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                                                     <HStack>
                                                         <Box boxSize="60px" borderRadius="md" bg="brand.background" >
                                                             <Image
-                                                                src={escrow?.images?.[0]?.url || "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTpjDOEMVVmUKWc44itg3SRb8byRB3wlGPCqOL5ETrLKnTGSvGBBNWdOoSY&s=10"}
+                                                                src={escrow?.images?.[0]?.url || escrow?.propertyImages?.[0]?.url || "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTpjDOEMVVmUKWc44itg3SRb8byRB3wlGPCqOL5ETrLKnTGSvGBBNWdOoSY&s=10"}
                                                                 objectFit="cover"
                                                                 alt="Escrow property image"
                                                                 h="100%"
@@ -726,7 +744,9 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                                                             </MenuButton>
                                                             <MenuList>
                                                                 {escrow.landlordConfirmedHandover && <MenuItem onClick={() => handleEscrowAction('inspected', escrow)}>I have inspected</MenuItem>}
-                                                                {escrow.landlordConfirmedHandover && escrow.tenantConfirmedInspection && <MenuItem onClick={() => handleEscrowAction('release', escrow)}>Release funds</MenuItem>}
+                                                                {escrow.landlordConfirmedHandover && escrow.tenantConfirmedInspection && escrow.status !== "released" && (
+                                                                    <MenuItem onClick={() => handleEscrowAction('release', escrow)}>Release funds</MenuItem>
+                                                                )}
                                                                 <MenuItem onClick={() => handleEscrowAction('refund', escrow)}>Refund me</MenuItem>
                                                                 <MenuItem onClick={() => handleEscrowAction('dispute', escrow)}>Submit dispute</MenuItem>
                                                             </MenuList>
@@ -991,6 +1011,92 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                     </ModalFooter>
                 </ModalContent>
             </Modal>
+
+            <Drawer isOpen={isDetailOpen} placement="right" onClose={() => { onCloseDetails(); setSelectedPropertyDetails(null); }} size="xl">
+                <DrawerOverlay />
+                <DrawerContent>
+                    <DrawerCloseButton />
+                    <DrawerHeader pb={0}>
+                        {selectedPropertyDetails?.title || 'Property details'}
+                    </DrawerHeader>
+                    <DrawerBody pt={2} px={6} pb={6} overflowY="auto">
+                        <VStack align="stretch" spacing={4}>
+                            <Image
+                                src={selectedPropertyDetails?.media?.images?.[0]?.url || selectedPropertyDetails?.images?.[0]?.url || selectedPropertyDetails?.image || ''}
+                                alt={selectedPropertyDetails?.title || 'Property image'}
+                                borderRadius="xl"
+                                objectFit="cover"
+                                h="240px"
+                                w="100%"
+                            />
+
+                            <Box>
+                                <Text fontSize="md" fontWeight="bold" mb={1}>{selectedPropertyDetails?.title}</Text>
+                                <Text fontSize="sm" color="brand.gray.600">
+                                    {selectedPropertyDetails?.address?.area}, {selectedPropertyDetails?.address?.state}
+                                </Text>
+                            </Box>
+
+                            <Grid templateColumns="repeat(2, minmax(0, 1fr))" gap={3}>
+                                <Box bg="brand.background" p={4} borderRadius="xl">
+                                    <Text fontSize="xs" color="brand.gray.600">Rent</Text>
+                                    <Text fontSize="lg" fontWeight="bold">₦{Number(selectedPropertyDetails?.rentAmount || selectedPropertyDetails?.price || 0).toLocaleString()}</Text>
+                                </Box>
+                                <Box bg="brand.background" p={4} borderRadius="xl">
+                                    <Text fontSize="xs" color="brand.gray.600">Status</Text>
+                                    <Text fontSize="lg" fontWeight="bold">{selectedPropertyDetails?.listingStatus || 'N/A'}</Text>
+                                </Box>
+                                <Box bg="brand.background" p={4} borderRadius="xl">
+                                    <Text fontSize="xs" color="brand.gray.600">Bedrooms</Text>
+                                    <Text fontSize="lg" fontWeight="bold">{selectedPropertyDetails?.bedrooms ?? selectedPropertyDetails?.bedCount ?? 'N/A'}</Text>
+                                </Box>
+                                <Box bg="brand.background" p={4} borderRadius="xl">
+                                    <Text fontSize="xs" color="brand.gray.600">Bathrooms</Text>
+                                    <Text fontSize="lg" fontWeight="bold">{selectedPropertyDetails?.bathrooms ?? selectedPropertyDetails?.bathCount ?? 'N/A'}</Text>
+                                </Box>
+                            </Grid>
+
+                            <Box bg="white" p={4} borderRadius="xl" boxShadow="sm">
+                                <Text fontSize="sm" fontWeight="600" mb={2}>Description</Text>
+                                <Text fontSize="sm" color="brand.gray.700">
+                                    {selectedPropertyDetails?.description || selectedPropertyDetails?.overview || 'No description available.'}
+                                </Text>
+                            </Box>
+
+                            <Box bg="white" p={4} borderRadius="xl" boxShadow="sm">
+                                <Text fontSize="sm" fontWeight="600" mb={2}>Property details</Text>
+                                <VStack align="stretch" spacing={3}>
+                                    {selectedPropertyDetails?.amenities && selectedPropertyDetails.amenities.length > 0 ? (
+                                        <Text fontSize="sm" color="brand.gray.700">
+                                            Amenities: {selectedPropertyDetails.amenities.join(', ')}
+                                        </Text>
+                                    ) : null}
+                                    {selectedPropertyDetails?.houseType && (
+                                        <Text fontSize="sm" color="brand.gray.700">Type: {selectedPropertyDetails.houseType}</Text>
+                                    )}
+                                    {selectedPropertyDetails?.landmark && (
+                                        <Text fontSize="sm" color="brand.gray.700">Landmark: {selectedPropertyDetails.landmark}</Text>
+                                    )}
+                                    {selectedPropertyDetails?.verificationStatus && (
+                                        <Text fontSize="sm" color="brand.gray.700">Verification: {selectedPropertyDetails.verificationStatus}</Text>
+                                    )}
+                                    {selectedPropertyDetails?.inquiries && (
+                                        <Text fontSize="sm" color="brand.gray.700">Inquiries: {selectedPropertyDetails.inquiries.length}</Text>
+                                    )}
+                                </VStack>
+                            </Box>
+                        </VStack>
+                    </DrawerBody>
+                    <DrawerFooter>
+                        <Button variant="outline" mr={3} onClick={() => { onCloseDetails(); setSelectedPropertyDetails(null); }}>
+                            Close
+                        </Button>
+                        <Button variant="primary" onClick={() => { onCloseDetails(); setSelectedPropertyDetails(null); }}>
+                            Done
+                        </Button>
+                    </DrawerFooter>
+                </DrawerContent>
+            </Drawer>
 
             <Navbar active="dashboard" />
         </Box>

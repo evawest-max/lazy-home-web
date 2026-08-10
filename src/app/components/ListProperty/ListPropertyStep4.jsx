@@ -17,6 +17,7 @@ import {
     AlertTitle,
     AlertDescription,
     Spinner,
+    useToast,
 } from '@chakra-ui/react';
 import {
     ArrowLeft,
@@ -32,6 +33,7 @@ import { Link } from 'react-router-dom';
 import { getBankcodes, verifyBankAccount } from '../../../../api';
 
 export default function ListPropertyStep4({ formData, setFormData, onBack, onSubmit, isLoading, setIsLoading }) {
+    const toast = useToast();
     const currentStep = 4;
     const totalSteps = 4;
     const landlordDetails = formData?.landlordDetails ?? {};
@@ -39,6 +41,7 @@ export default function ListPropertyStep4({ formData, setFormData, onBack, onSub
 
     const [accountVerified, setAccountVerified] = useState(false);
     const [formError, setFormError] = useState('');
+    const [isVerifying, setIsVerifying] = useState(false);
     const [banks, setBanks] = useState([]);
 
     const requiredFields = ['fullName', 'bankName', 'accountNumber'];
@@ -56,18 +59,18 @@ export default function ListPropertyStep4({ formData, setFormData, onBack, onSub
         return fieldsValid && checkboxesValid;
     };
 
-     useEffect(() => {
-            const fetchBanks = async () => {
-                try {
-                    const res = await getBankcodes()
-                    setBanks(res.data.data);
-                    console.log("this are the banks", res.data.data)
-                } catch (err) {
-                    console.error("Error fetching banks:", err);
-                }
-            };
-            fetchBanks();
-        }, []);
+    useEffect(() => {
+        const fetchBanks = async () => {
+            try {
+                const res = await getBankcodes()
+                setBanks(res.data.data);
+                console.log("this are the banks", res.data.data)
+            } catch (err) {
+                console.error("Error fetching banks:", err);
+            }
+        };
+        fetchBanks();
+    }, []);
 
     useEffect(() => {
         if (formError && isStepFourValid()) {
@@ -75,48 +78,55 @@ export default function ListPropertyStep4({ formData, setFormData, onBack, onSub
         }
     }, [formData, formError]);
 
-    useEffect(() => {
-            const isVerified =
-                String(landlordDetails.accountNumber ?? "").length === 10 &&
-                landlordDetails.bankCode;
-    
-            const verifyDetails = async () => {
-                 if (landlordDetails.accountNumber.length !== 10 || !landlordDetails.bankCode) return;
-                if (isVerified) {
-                    try {
-                        const res = await verifyBankAccount(
-                            landlordDetails.accountNumber,
-                            landlordDetails.bankCode
-                        );
-                        console.log("Verification result:", res);
-    
-                        setUpdatedFormdata((prev) => ({
-                            ...prev,
-                            landlordDetails: {
-                                ...(prev.landlordDetails ?? {}),
-                                fullName: res.account_name,
-                                bankAccount: res.account_number,
-                            },
-                        }));
-    
-                        setAccountVerified(true);
-                    } catch (error) {
-                        console.error("Verification failed:", error);
-                        setAccountVerified(false);
-                    }
-                } else {
-                    setAccountVerified(false);
-                }
-            };
-    
-            verifyDetails();
-        }, [landlordDetails.accountNumber, landlordDetails.bankCode]);
+    // useEffect(() => {
+    //     const accountNumber = String(landlordDetails.accountNumber ?? '');
 
-    const handleSubmit = () => {
-        console.log('loading data', isLoading);
+    //     if (accountNumber.length !== 10 || !landlordDetails.bankCode) {
+    //         setAccountVerified(false);
+    //         return;
+    //     }
+
+    //     const verifyDetails = async () => {
+    //         try {
+    //             const res = await verifyBankAccount(accountNumber, landlordDetails.bankCode);
+    //             console.log('Verification result:', res);
+
+    //             const verification = res?.data?.data ?? {};
+    //             const verifiedName = verification.accountName || verification.account_name || landlordDetails.fullName;
+    //             const verifiedAccountNumber = verification.accountNumber || verification.account_number || landlordDetails.accountNumber;
+
+    //             setFormData((prev) => ({
+    //                 ...prev,
+    //                 landlordDetails: {
+    //                     ...(prev.landlordDetails ?? {}),
+    //                     fullName: verifiedName,
+    //                     accountNumber: verifiedAccountNumber,
+    //                 },
+    //             }));
+
+    //             setAccountVerified(true);
+    //         } catch (error) {
+    //             console.error('Verification failed:', error);
+    //             setAccountVerified(false);
+    //         }
+    //     };
+
+    //     verifyDetails();
+    // }, [landlordDetails.accountNumber, landlordDetails.bankCode, setFormData]);
+
+    const handleSubmit = async () => {
         setIsLoading(true);
+
         if (!isStepFourValid()) {
             setFormError('Please fill in all required fields and accept all terms before submitting.');
+            setIsLoading(false);
+            return;
+        }
+
+        if (formData?.ownershipType === 'agent' && !accountVerified) {
+            setFormError('Agent listings must verify landlord bank account details before submitting.');
+            toast({ title: 'Account verification required', description: 'Please verify the landlord bank account details before submitting.', status: 'warning', duration: 4000 });
+            setIsLoading(false);
             return;
         }
 
@@ -124,19 +134,63 @@ export default function ListPropertyStep4({ formData, setFormData, onBack, onSub
             ...formData,
             landlordDetails: {
                 ...landlordDetails,
-                backupBankName: formData.backupBankName ?? landlordDetails.backupBankName ?? '',
-                backupAccountNumber: formData.backupAccountNumber ?? landlordDetails.backupAccountNumber ?? '',
+                landlordEmail: formData.landlordEmail ?? landlordDetails.landlordEmail ?? '',
+                landlordPhoneNumber: formData.landlordPhoneNumber ?? landlordDetails.landlordPhoneNumber ?? '',
             },
         };
 
         sessionStorage.setItem(draftKey, JSON.stringify(draft));
         localStorage.setItem(draftKey, JSON.stringify(draft));
         setFormData(draft);
-        
+
         if (onSubmit) {
-            onSubmit(draft);
+            await onSubmit(draft);
+            setIsLoading(false);
         }
     };
+
+    const verifyAccountDetails = async () => {
+        const accountNumber = String(landlordDetails.accountNumber ?? '');
+
+        if (!landlordDetails.bankCode || accountNumber.length !== 10) {
+            toast({ title: 'Enter a valid bank and 10-digit account number', status: 'warning', duration: 3000 });
+            return;
+        }
+        // console.log(formData,'Verifying account:', accountNumber, landlordDetails.bankCode);
+        // return
+        setIsVerifying(true);
+
+        try {
+            const res = await verifyBankAccount(accountNumber, landlordDetails.bankCode);
+            console.log('verification result:', res)
+            const verification = res?.data?.data ?? {};
+            const verifiedName = verification.accountName || verification.account_name || landlordDetails.fullName;
+            const verifiedAccountNumber = verification.accountNumber || verification.account_number || landlordDetails.accountNumber;
+            const verifiedBankName = verification.bankName || verification.bank_name || landlordDetails.bankName;
+            const verifiedBankCode = verification.bankCode || verification.bank_code || landlordDetails.bankCode;
+
+            setFormData((prev) => ({
+                ...prev,
+                landlordDetails: {
+                    ...(prev.landlordDetails ?? {}),
+                    fullName: verifiedName,
+                    accountNumber: verifiedAccountNumber,
+                    bankName: verifiedBankName,
+                    bankCode: verifiedBankCode,
+                },
+            }));
+
+            setAccountVerified(true);
+            setVerificationToken(res.data.data.verificationToken)
+            toast({ title: 'Account verified', status: 'success', duration: 3000 });
+        } catch (err) {
+            console.error('Verification failed:', err?.response.data.message);
+            setAccountVerified(false);
+            toast({ title: 'Verification failed', description: err?.response.data.message, status: 'error', duration: 4000 });
+        } finally {
+            setIsVerifying(false);
+        }
+    }
 
     return (
         <Box minH="100vh" bg="brand.background" pb="120px">
@@ -218,7 +272,10 @@ export default function ListPropertyStep4({ formData, setFormData, onBack, onSub
                                 <Building2 size={20} color="white" />
                             </Box>
                             <Text fontSize="lg" fontWeight="bold" color="brand.gray.800">
-                                Bank Account Details
+                                Landlord Bank Account Details
+                            </Text>
+                            <Text fontSize="sm" color="brand.gray.600">
+                                (Only fill if listing for a landlord)
                             </Text>
                         </HStack>
 
@@ -283,7 +340,8 @@ export default function ListPropertyStep4({ formData, setFormData, onBack, onSub
                                 }}
                                 _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
                             >
-                                 {banks.map((bank) => (
+
+                                {banks.map((bank) => (
                                     <option key={bank.code} value={bank.code}>
                                         {bank.name}
                                     </option>
@@ -318,6 +376,8 @@ export default function ListPropertyStep4({ formData, setFormData, onBack, onSub
                             <FormErrorMessage>Required (10 digits)</FormErrorMessage>
                         </FormControl>
 
+                        <Button onClick={ verifyAccountDetails}>Verify account</Button>
+
                         {accountVerified && (
                             <Box bg="brand.background" p={4} borderRadius="lg">
                                 <HStack spacing={3}>
@@ -343,54 +403,44 @@ export default function ListPropertyStep4({ formData, setFormData, onBack, onSub
                                 <CreditCard size={20} color="white" />
                             </Box>
                             <Text fontSize="lg" fontWeight="bold" color="brand.gray.800">
-                                Alternative Payment Method (Optional)
+                                Landlord contact details
                             </Text>
                         </HStack>
 
                         <Text fontSize="sm" color="brand.gray.600">
-                            Provide a backup account in case primary account has issues
+                            Provide accurate contact details for the landLord  so we can reach them if needed.<br />
+                            This information will not be shared with renters. (Only fill if listing for a landlord)
                         </Text>
 
                         <FormControl>
                             <FormLabel color="brand.gray.700" fontSize="sm" fontWeight="600">
-                                Backup Bank Name
+                                Landlord's email address
                             </FormLabel>
-                            <Select
-                                placeholder="Select backup bank"
+                            <Input
+                                placeholder="example@gmail.com"
+                                type="email"
                                 size="lg"
-                                value={formData.backupBankName ?? ''}
+                                value={formData.landlordEmail ?? ''}
                                 onChange={(e) => {
-                                    const selectedCode = e.target.value;
-                                    const selectedBank = banks.find(bank => bank.code === selectedCode);
-                                    setFormdata(prev => ({
-                                        ...prev,
-                                        backupBankName: selectedBank?.name,
-                                        backupBankCode: e.target.value
-                                    }))
+                                    setFormData(prev => ({ ...prev, landlordEmail: e.target.value }));
                                 }}
                                 _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
-                            >
-                                {banks.map((bank) => (
-                                    <option key={bank.code} value={bank.code}>
-                                        {bank.name}
-                                    </option>
-                                ))}
-                            </Select>
+                            />
                         </FormControl>
 
                         <FormControl>
                             <FormLabel color="brand.gray.700" fontSize="sm" fontWeight="600">
-                                Backup Account Number
+                                Landlord's phone number
                             </FormLabel>
                             <Input
-                                placeholder="0123456789"
+                                placeholder="0800 123 4567"
                                 type="text"
-                                maxLength={10}
+                                maxLength={11}
                                 size="lg"
-                                value={formData.backupAccountNumber}
+                                value={formData.landlordPhoneNumber ?? ''}
                                 onChange={(e) => {
                                     const value = e.target.value.replace(/\D/g, '');
-                                    setFormData(prev => ({ ...prev, backupAccountNumber: value }));
+                                    setFormData(prev => ({ ...prev, landlordPhoneNumber: value }));
                                 }}
                                 _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
                             />
@@ -575,16 +625,16 @@ export default function ListPropertyStep4({ formData, setFormData, onBack, onSub
                     >
                         Back
                     </Button>
-                    { !isLoading && (
+                    {!isLoading && (
                         <Button
                             w="100%"
                             variant="primary"
                             size="lg"
                             onClick={handleSubmit}
                         >
-                        Submit Listing for Verification
-                    </Button>)}
-                    { isLoading && (
+                            Submit Listing for Verification
+                        </Button>)}
+                    {isLoading && (
                         <Spinner size="lg" color="brand.primary" />
                     )}
                 </VStack>

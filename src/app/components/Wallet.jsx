@@ -2,6 +2,7 @@ import {
     Box,
     VStack,
     HStack,
+    Stack,
     Text,
     Button,
     Spinner,
@@ -145,31 +146,11 @@ export default function Wallet() {
 
     const handleFund = async () => {
         const value = Number(fundAmount) * 100;
-        console.log(value)
         if (!value || value <= 0) {
             toast({ title: 'Enter a valid amount', status: 'warning' });
             return;
         }
-        try {
-            const response = await initializeFundwallet(value);
-            console.log('Fund wallet response:', response);
-            const { data } = response;
-            toast({ title: data.message, status: 'success' });
-            setTransactions((prev) => [newTx, ...prev]);
-            setBalance((b) => b + value/100);
-            setFundAmount('');
-            closeFund();
-            if (data && data.data && data.data.authorization_url) {
-                window.location.href = data.data.authorization_url;
-            }
-        } catch (err) {
-            // console.log(err?.response?.data?.message)
-            closeFund();
-            toast({ title: `${err?.response?.data?.message} contact support`, status: 'error' });
-            return
-        }
 
-        // simulate fund: add a transaction locally (in real app call API)
         const newTx = {
             _id: `local-${Date.now()}`,
             amount: value,
@@ -180,24 +161,38 @@ export default function Wallet() {
             metadata: { note: 'Wallet top-up (simulated)' },
         };
 
-
+        try {
+            const response = await initializeFundwallet(value);
+            const { data } = response;
+            toast({ title: data?.message || 'Wallet funded', status: 'success' });
+            setTransactions((prev) => [newTx, ...prev]);
+            setBalance((b) => b + value / 100);
+            setFundAmount('');
+            closeFund();
+            if (data?.data?.authorization_url) {
+                window.location.href = data.data.authorization_url;
+            }
+        } catch (err) {
+            closeFund();
+            toast({ title: `${err?.response?.data?.message || 'Unable to fund wallet'}. Contact support.`, status: 'error' });
+        }
     };
 
     return (
         <Box minH="100vh" bg="brand.background" p={6}
             pb={20}>
             <VStack spacing={6} align="stretch">
-                <Box bg="white" p={6} borderRadius="xl" boxShadow="sm">
-                    <HStack justify="space-between">
-                        <VStack align="start">
-                            <Text fontSize="sm" color="brand.gray.600">Wallet balance</Text>
-                            <Text fontSize="3xl" fontWeight="bold" color="brand.primary">{formatCurrency(balance)}</Text>
+                <Box bg="white" p={{ base: 5, md: 6 }} borderRadius="xl" boxShadow="sm">
+                    <Stack direction={{ base: 'column', md: 'row' }} align="center" justify="space-between" spacing={4}>
+                        <VStack align="start" spacing={1} w={{ base: '100%', md: 'auto' }}>
+                            <Text fontSize={{ base: 'sm', md: 'md' }} color="brand.gray.600">Wallet balance</Text>
+                            <Text fontSize={{ base: '2xl', md: '3xl' }} fontWeight="bold" color="brand.primary">{formatCurrency(balance)}</Text>
                         </VStack>
-                        <Button size="lg" colorScheme="teal" onClick={openFund}>Fund Wallet</Button>
-                    </HStack>
+                        <Button w={{ base: '100%', sm: 'auto' }} size="lg" colorScheme="teal" onClick={openFund}>Fund Wallet</Button>
+                    </Stack>
                 </Box>
 
-                <Box bg="white" p={4} borderRadius="xl" boxShadow="sm">
+                <Box bg="white" p={{ base: 5, md: 6 }} borderRadius="xl" boxShadow="sm">
                     <Text fontSize="lg" fontWeight="600" mb={4}>Recent Transactions</Text>
                     {loading ? (
                         <HStack justify="center"><Spinner /></HStack>
@@ -207,21 +202,21 @@ export default function Wallet() {
                                 <Text color="brand.gray.500">No transactions yet.</Text>
                             ) : (
                                 transactions.map((t) => (
-                                    <Box key={t._id || t.id || t.reference} bg="brand.background" p={4} borderRadius="xl" boxShadow="sm">
-                                        <HStack justify="space-between" align="start">
-                                            <VStack align="start" spacing={1}>
+                                    <Box key={t._id || t.id || t.reference} bg="brand.background" p={{ base: 4, md: 5 }} borderRadius="xl" boxShadow="sm">
+                                        <Stack direction={{ base: 'column', md: 'row' }} justify="space-between" align="flex-start" spacing={4}>
+                                            <VStack align="start" spacing={1} flex={1} minW={0}>
                                                 <Text fontSize="sm" color="brand.gray.500">{new Date(t.createdAt || t.date || Date.now()).toLocaleString()}</Text>
-                                                <Text fontSize="md" fontWeight="600">{t.reference || t.txRef || t._id}</Text>
+                                                <Text fontSize="md" wordBreak="break-all"  fontWeight="600" noOfLines={3}>{t.reference || t.txRef || t._id}</Text>
                                                 <Text fontSize="sm" color="brand.gray.600">{t.type ? `${t.type} transaction` : 'Transaction'}</Text>
                                             </VStack>
-                                            <VStack align="end">
+                                            <VStack align={{ base: 'start', md: 'end' }} spacing={1} flexShrink={0}>
                                                 <Badge colorScheme={t.type?.toLowerCase() === 'debit' ? 'red' : 'green'}>{t.type || 'Unknown'}</Badge>
-                                                <Text fontWeight="700">{formatCurrency(t.amount / 100)}</Text>
+                                                <Text fontWeight="700">{formatCurrency((t.amount ?? 0) / 100)}</Text>
                                                 <Text fontSize="sm" color="brand.gray.600">{t.status || 'Status unavailable'}</Text>
                                             </VStack>
-                                        </HStack>
-                                        <HStack justify="flex-end" mt={4}>
-                                            <Button size="sm" variant="outline" onClick={() => openTransaction(t._id || t.id || t.reference)}>Details</Button>
+                                        </Stack>
+                                        <HStack justify={{ base: 'stretch', md: 'flex-end' }} mt={4}>
+                                            <Button w={{ base: '100%', md: 'auto' }} size="sm" variant="outline" onClick={() => openTransaction(t._id || t.id || t.reference)}>Details</Button>
                                         </HStack>
                                     </Box>
                                 ))
@@ -230,25 +225,27 @@ export default function Wallet() {
                     )}
 
                     {transactions.length > 0 && (
-                        <HStack justify="center" mt={6} spacing={2}>
-                            <ButtonGroup>
+                        <Stack direction={{ base: 'column', sm: 'row' }} align="center" justify="space-between" mt={6} spacing={3}>
+                            <ButtonGroup size="sm" w={{ base: '100%', sm: 'auto' }}>
                                 <Button
                                     onClick={() => handlePageChange(getCurrentPage() - 1)}
                                     isDisabled={getCurrentPage() <= 1 || loading}
+                                    w={{ base: '50%', sm: 'auto' }}
                                 >
                                     Previous
                                 </Button>
                                 <Button
                                     onClick={() => handlePageChange(getCurrentPage() + 1)}
                                     isDisabled={getCurrentPage() >= getTotalPages() || loading}
+                                    w={{ base: '50%', sm: 'auto' }}
                                 >
                                     Next
                                 </Button>
                             </ButtonGroup>
-                            <Text fontSize="sm" color="brand.gray.600">
+                            <Text fontSize="sm" color="brand.gray.600" textAlign={{ base: 'center', sm: 'right' }}>
                                 Page {getCurrentPage()} of {getTotalPages()}
                             </Text>
-                        </HStack>
+                        </Stack>
                     )}
                 </Box>
             </VStack>
@@ -265,7 +262,7 @@ export default function Wallet() {
                         ) : selectedTx ? (
                             <Box>
                                 <Text fontWeight="600">Reference: {selectedTx.reference || selectedTx._id}</Text>
-                                <Text>Amount: {formatCurrency(selectedTx.amount)}</Text>
+                                <Text>Amount: {formatCurrency(selectedTx.amount / 100)}</Text>
                                 <Text>Type: {selectedTx.type}</Text>
                                 <Text>Status: {selectedTx.status}</Text>
                                 <Text>Created: {new Date(selectedTx.createdAt || Date.now()).toLocaleString()}</Text>
@@ -292,12 +289,18 @@ export default function Wallet() {
                     <ModalBody>
                         <FormControl>
                             <FormLabel>Amount</FormLabel>
-                            <Input placeholder="Enter amount" value={fundAmount} onChange={(e) => setFundAmount(e.target.value)} type="number" />
+                            <Input
+                                placeholder="Enter amount"
+                                value={fundAmount}
+                                onChange={(e) => setFundAmount(e.target.value)}
+                                type="number"
+                                min={0}
+                            />
                         </FormControl>
                     </ModalBody>
-                    <ModalFooter>
-                        <Button variant="ghost" mr={3} onClick={closeFund}>Cancel</Button>
-                        <Button colorScheme="teal" onClick={handleFund}>Fund</Button>
+                    <ModalFooter flexDirection={{ base: 'column', sm: 'row' }} gap={3}>
+                        <Button w={{ base: '100%', sm: 'auto' }} variant="ghost" onClick={closeFund}>Cancel</Button>
+                        <Button w={{ base: '100%', sm: 'auto' }} colorScheme="teal" onClick={handleFund}>Fund</Button>
                     </ModalFooter>
                 </ModalContent>
             </Modal>

@@ -45,7 +45,7 @@ export default function SignInForm({onLogin}) {
         } catch (err) {
             const message = err?.response?.data?.message  || 'Login failed' ;
             console.log('login error', err);
-            setErrorMessage(err?.response?.data?.message === "Email not verified. Please check your inbox for the verification email." ? " Click the button below to resend the verification email." : message);
+            setErrorMessage(err?.response?.data?.message === "Email not verified. Please check your inbox for the verification email." ? "Verification email not found? Click the button below to resend the verification email." : message);
             setShowResendVerification(
                 message === 'Email not verified. Please check your inbox for the verification email.'
             );

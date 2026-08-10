@@ -19,7 +19,8 @@ import {
     ModalCloseButton,
     ModalBody,
     ModalFooter,
-    useDisclosure
+    useDisclosure,
+    useToast
 } from "@chakra-ui/react";
 import {
     Camera,
@@ -43,6 +44,7 @@ export default function Profile({ onLogout, user }) {
     const navigate = useNavigate();
     const { isOpen, onOpen, onClose } = useDisclosure();
     const [avatarSrc, setAvatarSrc] = useState("");
+    const toast = useToast();
     const fileInputRef = useRef(null);
 
     const resolveAvatarSrc = (profile) =>
@@ -81,7 +83,14 @@ export default function Profile({ onLogout, user }) {
         payload.append("image", file);
 
         updateProfile(payload, user.id).catch((error) => {
-            console.error("Error updating profile:", error);
+            toast({
+                title: "Profile Update Failed",
+                description: error?.response?.data?.message || "An error occurred while updating the profile.",
+                status: "error",
+                duration: 5000,
+                isClosable: true,
+            });
+            console.error("Error updating profile:", error.response?.data.message);
         });
 
     };

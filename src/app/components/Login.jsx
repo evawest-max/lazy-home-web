@@ -1,6 +1,6 @@
-import { Box, Button, VStack, Text, Heading, HStack, Divider, Toast } from '@chakra-ui/react';
+import { Box, Button, VStack, Text, Heading, HStack, Divider, useToast } from '@chakra-ui/react';
 import { Mail, Phone, Chrome, ShieldCheck, RefreshCw, Lock, Home, Search, FileText, User } from 'lucide-react';
-import { Link, useLocation,} from 'react-router-dom';
+import { Link, useLocation, } from 'react-router-dom';
 import Navbar from './Navbar';
 import { GoogleLogin } from '@react-oauth/google';
 import { googleSignIn } from '../../../api';
@@ -9,6 +9,7 @@ import { color } from 'framer-motion';
 
 export default function Login({ onLogin }) {
   const { state } = useLocation();
+  const toast = useToast()
 
   const handleGoogleSuccess = async (credentialResponse) => {
     console.log(credentialResponse);
@@ -16,10 +17,17 @@ export default function Login({ onLogin }) {
       const idToken = credentialResponse.credential;
       const { data } = await googleSignIn(idToken); // call backend
       localStorage.setItem('token', data.accessToken);
-      onLogin(data.user);
+      console.log('Google Sign-In successful:', data.data.user);
+      onLogin(data.data.user);
     } catch (err) {
       console.log(err)
-      alert(err?.data?.message);
+      toast({
+        title: 'Google Sign-In Failed',
+        description: err?.response.data?.message || 'An error occurred during Google Sign-In.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
     }
   };
 
@@ -96,7 +104,7 @@ export default function Login({ onLogin }) {
             <Button
               w="100%"
               variant="secondary"
-              leftIcon={<Mail size={20 } />}
+              leftIcon={<Mail size={20} />}
               size="sm"
               justifyContent="flex-start"
               gap="20%"

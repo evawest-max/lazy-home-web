@@ -38,7 +38,7 @@ export default function HomeScreen() {
         setLoading(true);
         const response = await getFeaturedProperties();
         const items = response?.data?.data?.properties || response?.data?.properties || [];
-        console.log(response)
+        console.log("featured properties:", response);
 
         const normalized = (Array.isArray(items) ? items : []).slice(0, 4).map((property) => ({
           ...property,
