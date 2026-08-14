@@ -327,6 +327,19 @@ export const confirmAccount = (verificationToken
     `/api/v1/settlementAccount/settlement-account/confirm`, { verificationToken }
   );
 
+// ======================================================
+// =================== withdrawal =====================
+// ======================================================
+export const requestWalletWithdrawal = (
+  amount, authpin
+) =>
+  API.post("/api/v1/withdrawals/wallet/withdraw", { amount, authpin });
+
+  export const finalizeWalletWithdrawal = (
+  withdrawalId, otp
+) =>
+  API.post("/api/v1/withdrawals/wallet/withdraw/finalize", { withdrawalId, otp });
+
 
 
 // ======================================================

@@ -22,7 +22,7 @@ import {
     ButtonGroup,
 } from '@chakra-ui/react';
 import { useEffect, useState } from 'react';
-import { getSingleTransaction, getwallet, getwalletTransactions, initializeFundwallet } from '../../../api';
+import { getSingleTransaction, getwallet, getwalletTransactions, initializeFundwallet, requestWalletWithdrawal } from '../../../api';
 import Navbar from './Navbar';
 
 const formatCurrency = (v) => {
@@ -38,7 +38,11 @@ export default function Wallet() {
     const [selectedTx, setSelectedTx] = useState(null);
     const { isOpen: txOpen, onOpen: openTx, onClose: closeTx } = useDisclosure();
     const { isOpen: fundOpen, onOpen: openFund, onClose: closeFund } = useDisclosure();
+    const { isOpen: withdrawOpen, onOpen: openWithdraw, onClose: closeWithdraw } = useDisclosure();
     const [fundAmount, setFundAmount] = useState('');
+    const [withdrawAmount, setWithdrawAmount] = useState('');
+    const [withdrawPin, setWithdrawPin] = useState('');
+    const [withdrawing, setWithdrawing] = useState(false);
     const [loadingTx, setLoadingTx] = useState(false);
     const [transactionPagination, setTransactionPagination] = useState({});
     const [currentPage, setCurrentPage] = useState(1);
@@ -110,6 +114,44 @@ export default function Wallet() {
             toast({ title: 'Failed to load transaction', status: 'error', duration: 3000 });
         } finally {
             setLoadingTx(false);
+        }
+    };
+
+    const handleWithdraw = async () => {
+        const value = Number(withdrawAmount) * 100;
+        if (!value || value <= 0) {
+            toast({ title: 'Enter a valid amount', status: 'warning' });
+            return;
+        }
+        if (!withdrawPin || withdrawPin.toString().trim().length < 4) {
+            toast({ title: 'Enter your authenticator PIN', status: 'warning' });
+            return;
+        }
+
+        setWithdrawing(true);
+        try {
+            const resp = await requestWalletWithdrawal(value, withdrawPin);
+            const data = resp?.data;
+            toast({ title: data?.message || 'Withdrawal requested', status: 'success' });
+
+            // refresh wallet balance
+            try {
+                const w = await getwallet();
+                const maybeBalance = w?.data?.data?.balance ?? w?.data?.data ?? w?.data;
+                if (typeof maybeBalance === 'number') setBalance(maybeBalance / 100);
+            } catch (e) {
+                console.warn('Failed to refresh wallet after withdrawal', e);
+            }
+
+            // clear and close
+            setWithdrawAmount('');
+            setWithdrawPin('');
+            closeWithdraw();
+        } catch (err) {
+            console.error('Failed withdrawal', err);
+            toast({ title: `${err?.response?.data?.message || 'Unable to process withdrawal'}`, status: 'error' });
+        } finally {
+            setWithdrawing(false);
         }
     };
 
@@ -188,7 +230,10 @@ export default function Wallet() {
                             <Text fontSize={{ base: 'sm', md: 'md' }} color="brand.gray.600">Wallet balance</Text>
                             <Text fontSize={{ base: '2xl', md: '3xl' }} fontWeight="bold" color="brand.primary">{formatCurrency(balance)}</Text>
                         </VStack>
-                        <Button w={{ base: '100%', sm: 'auto' }} size="lg" colorScheme="teal" onClick={openFund}>Fund Wallet</Button>
+                        <Box display="flex" gap={3} flexWrap="wrap" w={{ base: '100%', md: 'auto' }} justifyContent={{ base: 'space-between', md: 'flex-end' }}>
+                            <Button w={{ base: '100%', sm: 'auto' }} size="lg" colorScheme="teal" onClick={openFund}>Fund Wallet</Button>
+                            <Button w={{ base: '100%', sm: 'auto' }} size="lg" colorScheme="teal" onClick={openWithdraw}>Withdraw Funds</Button>
+                        </Box>
                     </Stack>
                 </Box>
 
@@ -301,6 +346,41 @@ export default function Wallet() {
                     <ModalFooter flexDirection={{ base: 'column', sm: 'row' }} gap={3}>
                         <Button w={{ base: '100%', sm: 'auto' }} variant="ghost" onClick={closeFund}>Cancel</Button>
                         <Button w={{ base: '100%', sm: 'auto' }} colorScheme="teal" onClick={handleFund}>Fund</Button>
+                    </ModalFooter>
+                </ModalContent>
+            </Modal>
+
+            {/* Withdraw wallet modal */}
+            <Modal isOpen={withdrawOpen} onClose={() => { setWithdrawAmount(''); setWithdrawPin(''); closeWithdraw(); }} isCentered>
+                <ModalOverlay />
+                <ModalContent>
+                    <ModalHeader>Withdraw Funds</ModalHeader>
+                    <ModalCloseButton />
+                    <ModalBody>
+                        <FormControl mb={4}>
+                            <FormLabel>Amount</FormLabel>
+                            <Input
+                                placeholder="Enter amount to withdraw"
+                                value={withdrawAmount}
+                                onChange={(e) => setWithdrawAmount(e.target.value)}
+                                type="number"
+                                min={0}
+                            />
+                        </FormControl>
+                        <FormControl>
+                            <FormLabel>Authenticator PIN</FormLabel>
+                            <Input
+                                placeholder="Enter authenticator PIN"
+                                value={withdrawPin}
+                                onChange={(e) => setWithdrawPin(e.target.value)}
+                                type="password"
+                                maxLength={8}
+                            />
+                        </FormControl>
+                    </ModalBody>
+                    <ModalFooter flexDirection={{ base: 'column', sm: 'row' }} gap={3}>
+                        <Button w={{ base: '100%', sm: 'auto' }} variant="ghost" onClick={() => { setWithdrawAmount(''); setWithdrawPin(''); closeWithdraw(); }}>Cancel</Button>
+                        <Button w={{ base: '100%', sm: 'auto' }} colorScheme="teal" isLoading={withdrawing} onClick={handleWithdraw}>Request Withdrawal</Button>
                     </ModalFooter>
                 </ModalContent>
             </Modal>
