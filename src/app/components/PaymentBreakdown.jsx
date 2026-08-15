@@ -167,9 +167,9 @@ export default function PaymentBreakdown() {
   const legalFee = Math.floor(price * 0.1);
   const safetyLevy = 15000;
   const serviceFee = Math.floor(price * 0.05);
-  const processingFee = Math.min(Math.floor(price * 0.015) + (price < 2500 ? 0 : 100), 2000);
-  const cautionDeposit = Math.floor(price * 0.1);
-  const totalAmount = price + agencyFee + legalFee  + serviceFee + processingFee + cautionDeposit;
+  const processingFee = Math.min(0);
+  const cautionDeposit = Number(property?.cautionDeposit ?? 0);
+  const totalAmount = price + agencyFee + legalFee  + serviceFee + cautionDeposit;
   const title = property?.title || property?.propertyType || 'Property';
   const location = property?.address?.area || property?.address?.city || property?.location?.area || property?.location?.city || 'Location coming soon';
 
