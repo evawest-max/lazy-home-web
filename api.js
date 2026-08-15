@@ -137,6 +137,7 @@ export const createProperty = (formData) =>
   });
 
 export const updateProperty = (
+  id,
   formData
 ) =>
   API.post(
@@ -148,6 +149,8 @@ export const updateProperty = (
       },
     }
   );
+  // export const updateProperty = (id, formData) => 
+  // API.post(`/api/v1/properties/update-property`, formData); 
 
 export const deleteProperty = (id) =>
   API.delete(`/api/v1/properties/delete/${id}`);

@@ -65,128 +65,55 @@ function UpdatePropertyStep4({ updatedFormdata, setUpdatedFormdata, onBack, onSu
         if (formError) setFormError('');
     }, [updatedFormdata]);
 
-    // useEffect(() => {
-    //     console.log("Verifying bank account:", landlordDetails.accountNumber, landlordDetails.bankCode);
-    //     const accountNumber = landlordDetails.accountNumber ?? '';
-    //     if (accountNumber.length !== 10 || !landlordDetails.bankCode) return;
-    //     const verifyDetails = async () => {
-
-    //         try {
-    //             const res = await verifyBankAccount(
-    //                 accountNumber,
-    //                 landlordDetails.bankCode
-    //             );
-    //             console.log("Verification result:", res);
-    //             const verification = res?.data?.data ?? {};
-    //             const verifiedName = verification.accountName || verification.account_name || landlordDetails.fullName;
-    //             const verifiedAccountNumber = verification.accountNumber || verification.account_number || landlordDetails.accountNumber;
-
-    //             setUpdatedFormdata((prev) => ({
-    //                 ...prev,
-    //                 landlordDetails: {
-    //                     ...(prev.landlordDetails ?? {}),
-    //                     fullName: verifiedName,
-    //                     bankAccount: verifiedAccountNumber,
-    //                 },
-    //             }));
-
-    //             // const isVerified =
-    //             //     String(landlordDetails.accountNumber ?? "").length === 10 &&
-    //             //     landlordDetails.bankCode;
-    //             // if (isVerified) {
-
-    //             // } else {
-    //             //     setAccountVerified(false);
-    //             // }
-    //             setAccountVerified(true);
-    //         } catch (error) {
-    //             console.error("Verification failed:", error);
-    //             setAccountVerified(false);
-    //         }
-    //     };
-
-    //     verifyDetails();
-    // }, [landlordDetails.accountNumber, landlordDetails.bankCode]);
-
 
     const handleSubmit = async () => {
         setIsLoading(true);
-
         try {
-            const draft = {
-                ...updatedFormdata,
-                landlordDetails: {
-                    ...landlordDetails,
-                    landlordEmail: updatedFormdata.landlordEmail ?? landlordDetails.landlordEmail ?? '',
-                    landlordPhoneNumber: updatedFormdata.landlordPhoneNumber ?? landlordDetails.landlordPhoneNumber ?? '',
-                },
-            };
-
             const formData = new FormData();
 
-            // 1. Append actual File objects
-            draft._photoFiles?.forEach(file => formData.append("_photoFiles", file));
-            draft._videoFiles?.forEach(file => formData.append("_videoFiles", file));
+            // ONLY editable fields - whitelist
+            formData.append('_id', updatedFormdata._id);
+            formData.append('title', updatedFormdata.title || '');
+            formData.append('description', updatedFormdata.description || '');
+            formData.append('propertyType', updatedFormdata.propertyType || '');
+            formData.append('rentAmount', updatedFormdata.rentAmount || updatedFormdata.annualRent || '');
+            formData.append('bedrooms', updatedFormdata.bedrooms || '');
+            formData.append('bathrooms', updatedFormdata.bathrooms || '');
+            formData.append('toilets', updatedFormdata.toilets || updatedFormdata.toilet || '');
+            formData.append('size', updatedFormdata.size || '');
 
-            // 2. Recursive flattener - skips files, converts everything else to primitives
-            const flatten = (obj, prefix = '') => {
-                Object.entries(obj).forEach(([key, val]) => {
-                    if (val === undefined || val === null) return;
-                    if (key === '_photoFiles' || key === '_videoFiles') return; // already handled
+            // Address - flat, backend merges
+            formData.append('state', updatedFormdata.address?.state || '');
+            formData.append('city', updatedFormdata.address?.area || '');
+            formData.append('address', updatedFormdata.address?.streetAddress || '');
+            formData.append('landmarks', updatedFormdata.address?.landmark || '');
 
-                    const formKey = prefix ? `${prefix}[${key}]` : key;
+            // Landlord - send nested JSON as single fields, easier to parse
+            formData.append('landlordDetails', JSON.stringify({
+                fullName: landlordDetails.fullName || '',
+                bankName: landlordDetails.bankName || '',
+                bankCode: landlordDetails.bankCode || '',
+                accountNumber: landlordDetails.accountNumber || '',
+                landlordEmail: updatedFormdata.landlordEmail || landlordDetails.landlordEmail || '',
+                landlordPhoneNumber: updatedFormdata.landlordPhoneNumber || landlordDetails.landlordPhoneNumber || '',
+            }));
 
-                    if (val instanceof Date) {
-                        formData.append(formKey, val.toISOString());
-                    } else if (Array.isArray(val)) {
-                        // Handle empty arrays explicitly
-                        if (val.length === 0) {
-                            formData.append(formKey, '[]'); // so backend knows it's empty array
-                        } else {
-                            val.forEach((item, i) => {
-                                if (typeof item === 'object' && item !== null) {
-                                    flatten(item, `${formKey}[${i}]`);
-                                } else {
-                                    formData.append(`${formKey}[${i}]`, item);
-                                }
-                            });
-                        }
-                    } else if (typeof val === 'object' && !(val instanceof File)) {
-                        flatten(val, formKey);
-                    } else {
-                        formData.append(formKey, val);
-                    }
-                });
-            };
+            // Only REAL files - not blob strings
+            const realPhotos = (updatedFormdata._photoFiles || []).filter(f => f instanceof File);
+            const realVideos = (updatedFormdata._videoFiles || []).filter(f => f instanceof File);
 
-            const { _photoFiles, _videoFiles, ...dataToFlatten } = draft;
-            flatten(dataToFlatten);
+            realPhotos.forEach(file => formData.append('images[]', file));
+            realVideos.forEach(file => formData.append('video', file));
 
-            // console.log("Sending:", Object.fromEntries(formData));
+            // Important: send _id as param, not in body
+            const id = updatedFormdata._id;
+            console.log( updatedFormdata)
+            const res = await updateProperty(id, formData); // api should be PUT /property/:id
 
-            const res = await updateProperty(formData);
-            // console.log(res)
-            setIsLoading(false)
-            toast({
-                title: 'property update.',
-                description: res?.data?.message,
-                status: 'success',
-                duration: 5000,
-                isClosable: true,
-            })
-            setTimeout(() => {
-                navigate("/dashboard")
-            }, 5000);
+            toast({ title: 'Property updated', description: res?.data?.message, status: 'success' });
+            navigate("/dashboard");
         } catch (error) {
-            console.error(error);
-            toast({
-                title: 'Property update',
-                description: error.response?.data?.message,
-                status: 'error',
-                duration: 5000,
-                isClosable: true,
-            })
-
+            toast({ title: 'Update failed', description: error.response?.data?.message, status: 'error' });
         } finally {
             setIsLoading(false);
         }
@@ -489,9 +416,9 @@ function UpdatePropertyStep4({ updatedFormdata, setUpdatedFormdata, onBack, onSu
                                 Landlord's phone number
                             </FormLabel>
                             <Input
-                                placeholder="0123456789"
+                                placeholder="07030000000"
                                 type="text"
-                                maxLength={10}
+                                maxLength={11}
                                 size="lg"
                                 value={updatedFormdata.landlordPhoneNumber ?? ''}
                                 onChange={(e) => {
