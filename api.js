@@ -149,8 +149,8 @@ export const updateProperty = (
       },
     }
   );
-  // export const updateProperty = (id, formData) => 
-  // API.post(`/api/v1/properties/update-property`, formData); 
+// export const updateProperty = (id, formData) => 
+// API.post(`/api/v1/properties/update-property`, formData); 
 
 export const deleteProperty = (id) =>
   API.delete(`/api/v1/properties/delete/${id}`);
@@ -287,6 +287,15 @@ export const releaseFunds = (
     "/api/v1/escrow/confirm-release", { escrowId, releaseCode, otp }
   );
 
+export const refundEscrow = (
+  id,
+  reason,
+  authCode
+) =>
+  API.post(
+    `/api/v1/escrow/${id}/refund`, { reason, authCode }
+  );
+
 export const adminFinalizeTransferController = (
   transferCode, otp,
 ) =>
@@ -338,7 +347,7 @@ export const requestWalletWithdrawal = (
 ) =>
   API.post("/api/v1/withdrawals/wallet/withdraw", { amount, authpin });
 
-  export const finalizeWalletWithdrawal = (
+export const finalizeWalletWithdrawal = (
   withdrawalId, otp
 ) =>
   API.post("/api/v1/withdrawals/wallet/withdraw/finalize", { withdrawalId, otp });

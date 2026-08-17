@@ -58,7 +58,7 @@ import {
     Briefcase,
     VerifiedIcon,
 } from 'lucide-react';
-import { Menu, MenuButton, MenuList, MenuItem } from '@chakra-ui/react';
+import { Menu, MenuButton, MenuList, MenuItem, FormControl, FormLabel } from '@chakra-ui/react';
 import { ChevronDownIcon } from '@chakra-ui/icons';
 
 import PropertyCard from './PropertyCard';
@@ -69,7 +69,7 @@ import FilterSearch from './FilterSearch';
 import { mockInspections, mockProperties } from './mockData';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Navbar from './Navbar';
-import { confirmInspection, deleteProperty, getAllEscrowPayments, getAnalyticsDashboardAndProperties, getUserProperties, releaseFunds, releaseKeys } from '../../../api';
+import { confirmInspection, deleteProperty, getAllEscrowPayments, getAnalyticsDashboardAndProperties, getUserProperties, releaseFunds, releaseKeys, refundEscrow } from '../../../api';
 import { reference } from '@popperjs/core';
 
 
@@ -90,8 +90,16 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
     const [selectedEscrowAction, setSelectedEscrowAction] = useState(null);
     const [releasing, setReleasing] = useState(false);
     const [authCode, setAuthCode] = useState("");
+    const { isOpen: isRefundOpen, onOpen: onOpenRefund, onClose: onCloseRefund } = useDisclosure();
+    const [refundReason, setRefundReason] = useState('');
+    const [refundAuthCode, setRefundAuthCode] = useState('');
+    const [refunding, setRefunding] = useState(false);
     const { isOpen: isDetailOpen, onOpen: onOpenDetails, onClose: onCloseDetails } = useDisclosure();
     const [selectedPropertyDetails, setSelectedPropertyDetails] = useState(null);
+    const [releasedEscrows, setReleasedEscrows] = useState("0")
+    const [releasingEscrows, setReleasingEscrows] = useState("0")
+    const [releaseFailedEscrows, setReleaseFailedEscrows] = useState("0")
+    const [refundedEscrows, setRefundedEscrows] = useState("0")
 
     const location = useLocation();
 
@@ -131,7 +139,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                 const analyticsResponse = await getAnalyticsDashboardAndProperties();
                 setMyProperties(analyticsResponse.data.data.propertiesWithInquiries || []);
                 setAllData(analyticsResponse.data.data || {});
-                console.log("this is the anyalytics",analyticsResponse)
+                console.log("this is the anyalytics", analyticsResponse)
                 setLoading(false);
             } catch (error) {
                 console.error("Failed to fetch properties:", error);
@@ -152,6 +160,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                 const resp = await getAllEscrowPayments({ page, limit: itemsPerPage });
                 console.log("escrow transactions response", resp);
                 const data = resp?.data?.data?.escrow || resp?.data || {};
+                console.log("escrow:", resp.data.data.pagination.total)
                 const list = Array.isArray(data)
                     ? data
                     : Array.isArray(data.payments)
@@ -162,12 +171,21 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                                 ? data.transactions
                                 : [];
 
-                const pagination = data.pagination || resp?.data?.pagination || data.meta || {};
+                const pagination = resp.data.data.pagination || resp?.data?.pagination || data.meta || {};
                 const totalPages = pagination.pages || pagination.totalPages || pagination.pageCount || Math.ceil((pagination.total || list.length) / itemsPerPage) || 1;
+                const released = resp.data.data.released
+                const releasing = resp.data.data.releasing
+                const release_failed = resp.data.data.release_failed
+                const refunded = resp.data.data.refunded
 
                 if (!mounted) return;
                 setEscrowTransactions(list);
                 setTransactionsTotalPages(totalPages);
+                setReleasedEscrows(released)
+                setReleasingEscrows(releasing)
+                setReleaseFailedEscrows(release_failed)
+                setRefundedEscrows(refunded)
+
             } catch (err) {
                 console.error('Failed to load escrow transactions', err);
                 if (mounted) setEscrowTransactions([]);
@@ -220,8 +238,11 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                 onOpenRelease();
                 return;
             case 'refund':
-                toast({ title: 'Refund requested', status: 'info' });
-                break;
+                setSelectedEscrowAction(escrow);
+                setRefundReason('');
+                setRefundAuthCode('');
+                onOpenRefund();
+                return;
             case 'dispute':
                 toast({ title: 'Dispute submitted', status: 'warning' });
                 break;
@@ -254,11 +275,39 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
         console.log("called inspect")
         try {
             const res = await confirmInspection(escrow._id);
-            console.log(res.response.data.message)
-            toast({ title: 'inspection confirmation', discription: res?.data?.message, status: 'success' });
+            console.log(res.response.data.data.message)
+            toast({ title: 'inspection confirmation', discription: res?.data?.data?.message, status: 'success' });
         } catch (error) {
             console.log("this is the error response:", error?.response?.data?.message)
             toast({ title: 'Release confirmation', discription: `${error?.response?.data?.message}`, status: 'info' });
+        }
+    }
+
+    const submitRefund = async () => {
+        if (!selectedEscrowAction) return;
+        if (!refundReason || refundReason.trim().length < 5) {
+            toast({ title: 'Enter a valid reason for refund (min 5 chars)', status: 'warning' });
+            return;
+        }
+        if (!refundAuthCode || refundAuthCode.trim().length < 4) {
+            toast({ title: 'Enter your authenticator code', status: 'warning' });
+            return;
+        }
+
+        setRefunding(true);
+        try {
+            const id = selectedEscrowAction._id || selectedEscrowAction.id || selectedEscrowAction.reference;
+            const res = await refundEscrow(id, refundReason, refundAuthCode);
+            toast({ title: res?.data?.message || 'Refund requested', status: 'success' });
+            onCloseRefund();
+            setSelectedEscrowAction(null);
+            setRefundReason('');
+            setRefundAuthCode('');
+        } catch (err) {
+            console.error('Refund failed', err);
+            toast({ title: err?.response?.data?.message || 'Failed to request refund', status: 'error' });
+        } finally {
+            setRefunding(false);
         }
     }
 
@@ -450,36 +499,34 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                                     <Grid templateColumns="repeat(2, 1fr)" gap={3}>
                                         <Box bg="white" borderRadius="lg" p={4} textAlign="center">
                                             <Text fontSize="2xl" fontWeight="bold" color="brand.primary">
-                                                {mockInspections.reduce((total, property) => total + (property.status === 'Upcoming' ? 1 : 0), 0)}
+                                                {releasedEscrows}
                                             </Text>
                                             <Text fontSize="xs" color="brand.gray.600">
-                                                Inspections
+                                                Released
                                             </Text>
                                         </Box>
                                         <Box bg="white" borderRadius="lg" p={4} textAlign="center">
                                             <Text fontSize="2xl" fontWeight="bold" color="brand.success">
-                                                {mockInspections.reduce((total, property) => total + (property.status === 'Pending' ? 1 : 0), 0)}
+                                                {releasingEscrows}
                                             </Text>
                                             <Text fontSize="xs" color="brand.gray.600">
-                                                In Progress
+                                                Releasing
                                             </Text>
                                         </Box>
                                         <Box bg="white" borderRadius="lg" p={4} textAlign="center">
                                             <Text fontSize="2xl" fontWeight="bold" color="brand.accent">
-                                                {mockInspections.filter(
-                                                    (property) => property.status === "completed"
-                                                ).length}
+                                                {refundedEscrows}
                                             </Text>
                                             <Text fontSize="xs" color="brand.gray.600">
-                                                Completed
+                                                Refunded
                                             </Text>
                                         </Box>
                                         <Box bg="white" borderRadius="lg" p={4} textAlign="center">
                                             <Text fontSize="2xl" fontWeight="bold" color="brand.warning">
-                                                {mockInspections.reduce((total, property) => total + (property.status === 'In Progress' ? 1 : 0), 0)}
+                                                {releaseFailedEscrows}
                                             </Text>
                                             <Text fontSize="xs" color="brand.gray.600">
-                                                Cancelled
+                                                Release faid
                                             </Text>
                                         </Box>
                                     </Grid>
@@ -688,7 +735,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                                     const title = 'Escrow Transaction';
                                     const status = escrow.status || escrow.state || 'unknown';
                                     const rawAmount = escrow.amount || escrow.payment?.amount || escrow.amountPaid || 0;
-                                    const amount = Number(rawAmount)*100 || 0;
+                                    const amount = Number(rawAmount) * 100 || 0;
                                     const created = new Date(escrow.createdAt || escrow.created_at || escrow.paymentDate || Date.now()).toLocaleString();
                                     const payer = escrow.payer?.name || escrow.payerName || escrow.user?.name || escrow.initiator || 'N/A';
                                     const property = myProperties.find((p) => p._id === escrow.propertyId || p.id === escrow.propertyId) || mockProperties.find((p) => p.id === escrow.propertyId) || {};
@@ -738,19 +785,30 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                                                     </VStack>
 
                                                     <HStack>
-                                                        <Menu>
-                                                            <MenuButton as={Button} size="sm" variant="outline">
-                                                                Actions
-                                                            </MenuButton>
-                                                            <MenuList>
-                                                                {escrow.landlordConfirmedHandover && <MenuItem onClick={() => handleEscrowAction('inspected', escrow)}>I have inspected</MenuItem>}
-                                                                {escrow.landlordConfirmedHandover && escrow.tenantConfirmedInspection && escrow.status !== "released" && (
-                                                                    <MenuItem onClick={() => handleEscrowAction('release', escrow)}>Release funds</MenuItem>
-                                                                )}
-                                                                <MenuItem onClick={() => handleEscrowAction('refund', escrow)}>Refund me</MenuItem>
-                                                                <MenuItem onClick={() => handleEscrowAction('dispute', escrow)}>Submit dispute</MenuItem>
-                                                            </MenuList>
-                                                        </Menu>
+                                                        {(escrow.status !== "released" && escrow.status !== "refunded") && (
+                                                            <Menu>
+                                                                <MenuButton as={Button} size="sm" variant="outline">
+                                                                    Actions
+                                                                </MenuButton>
+                                                                <MenuList>
+                                                                    {escrow.landlordConfirmedHandover && (
+                                                                        <MenuItem onClick={() => handleEscrowAction('inspected', escrow)}>
+                                                                            I have inspected
+                                                                        </MenuItem>
+                                                                    )}
+                                                                    {escrow.landlordConfirmedHandover &&
+                                                                        escrow.tenantConfirmedInspection &&
+                                                                        escrow.status !== "released" && (
+                                                                            <MenuItem onClick={() => handleEscrowAction('release', escrow)}>
+                                                                                Release funds
+                                                                            </MenuItem>
+                                                                        )}
+                                                                    <MenuItem onClick={() => handleEscrowAction('refund', escrow)}>Refund me</MenuItem>
+                                                                    <MenuItem onClick={() => handleEscrowAction('dispute', escrow)}>Submit dispute</MenuItem>
+                                                                </MenuList>
+                                                            </Menu>
+                                                        )}
+
 
                                                         {title.toLowerCase().includes('scheduled') && (
                                                             <Button size="sm" variant="primary" onClick={() => navigate(`/escrow-feedback/${property.id || property._id}`)}>
@@ -1007,6 +1065,39 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                             }}
                         >
                             Submit
+                        </Button>
+                    </ModalFooter>
+                </ModalContent>
+            </Modal>
+
+            <Modal isOpen={isRefundOpen} onClose={() => { onCloseRefund(); setSelectedEscrowAction(null); setRefundReason(''); setRefundAuthCode(''); }} isCentered>
+                <ModalOverlay />
+                <ModalContent borderRadius="2xl" overflow="hidden">
+                    <ModalHeader>Request Refund</ModalHeader>
+                    <ModalCloseButton />
+                    <ModalBody pb={6}>
+                        <VStack spacing={4} align="stretch">
+                            <FormControl>
+                                <FormLabel>Reason for refund</FormLabel>
+                                <Input placeholder="Describe why you want a refund" value={refundReason} onChange={(e) => setRefundReason(e.target.value)} />
+                            </FormControl>
+
+                            <FormControl>
+                                <FormLabel>Authenticator code</FormLabel>
+                                <Input placeholder="Enter authenticator code" value={refundAuthCode} onChange={(e) => setRefundAuthCode(e.target.value)} />
+                            </FormControl>
+
+                            {selectedEscrowAction && (
+                                <Text fontSize="xs" color="brand.gray.600">Ref: {selectedEscrowAction.reference || selectedEscrowAction._id || selectedEscrowAction.id}</Text>
+                            )}
+                        </VStack>
+                    </ModalBody>
+                    <ModalFooter>
+                        <Button mr={3} variant="ghost" onClick={() => { onCloseRefund(); setSelectedEscrowAction(null); setRefundReason(''); setRefundAuthCode(''); }}>
+                            Cancel
+                        </Button>
+                        <Button colorScheme="teal" isLoading={refunding} onClick={submitRefund}>
+                            Submit Refund
                         </Button>
                     </ModalFooter>
                 </ModalContent>
