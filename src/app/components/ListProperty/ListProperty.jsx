@@ -276,7 +276,7 @@ export default function ListProperty({ formData, setFormData, onSubmit, initialS
 
                 <FormControl isRequired>
                   <FormLabel color="brand.gray.700" fontSize="sm" fontWeight="600">
-                    I am
+                    I am the property:
                   </FormLabel>
                   <Select
                     placeholder="Select role"

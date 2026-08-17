@@ -112,7 +112,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
     const tab = parameter
     console.log("user tab", tab)
 
-    const itemsPerPage = 4;
+    const itemsPerPage = 5;
     const { isOpen: isPinOpen, onOpen: onOpenPin, onClose: onClosePin } = useDisclosure();
 
     const listingsTotalPages = Math.ceil(mockProperties.length / itemsPerPage);
@@ -218,12 +218,17 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
     };
 
     const deleteMyProperty = (id) => {
-        try {
-            const response = deleteProperty(id)
-            console.log("item deleted", response)
-        } catch (error) {
-            console.log("not deleted", error)
-        }
+        (async () => {
+            try {
+                const response = await deleteProperty(id);
+                console.log("item deleted", response);
+                toast({ title: 'Property deleted', status: 'success' });
+
+            } catch (error) {
+                console.log("not deleted", error);
+                toast({ title: 'Failed to delete property', status: 'error' });
+            }
+        })();
     }
 
     const toast = useToast();
@@ -272,16 +277,34 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
     }
 
     const handleInspected = async (escrow) => {
-        console.log("called inspect")
+        console.log("called inspect");
         try {
             const res = await confirmInspection(escrow._id);
-            console.log(res.response.data.data.message)
-            toast({ title: 'inspection confirmation', discription: res?.data?.data?.message, status: 'success' });
+            console.log(res?.data?.data?.message);
+
+            toast({
+                title: 'Inspection confirmation',
+                description: res?.data?.data?.message,
+                status: 'success',
+            });
+
+            setEscrowTransactions(prev =>
+                prev.map(item =>
+                    item._id === escrow._id
+                        ? { ...item, status: "inspection_confirmed" }
+                        : item
+                )
+            );
         } catch (error) {
-            console.log("this is the error response:", error?.response?.data?.message)
-            toast({ title: 'Release confirmation', discription: `${error?.response?.data?.message}`, status: 'info' });
+            console.log("this is the error response:", error?.response?.data?.message);
+            toast({
+                title: 'Release confirmation',
+                description: error?.response?.data?.message,
+                status: 'info',
+            });
         }
-    }
+    };
+
 
     const submitRefund = async () => {
         if (!selectedEscrowAction) return;
@@ -299,10 +322,18 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
             const id = selectedEscrowAction._id || selectedEscrowAction.id || selectedEscrowAction.reference;
             const res = await refundEscrow(id, refundReason, refundAuthCode);
             toast({ title: res?.data?.message || 'Refund requested', status: 'success' });
+
             onCloseRefund();
             setSelectedEscrowAction(null);
             setRefundReason('');
             setRefundAuthCode('');
+            setEscrowTransactions(prev =>
+                prev.map(item =>
+                    item._id === escrow._id
+                        ? { ...item, status: "refunded" }
+                        : item
+                )
+            );
         } catch (err) {
             console.error('Refund failed', err);
             toast({ title: err?.response?.data?.message || 'Failed to request refund', status: 'error' });
@@ -796,8 +827,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                                                                             I have inspected
                                                                         </MenuItem>
                                                                     )}
-                                                                    {escrow.landlordConfirmedHandover &&
-                                                                        escrow.tenantConfirmedInspection &&
+                                                                    {escrow.tenantConfirmedInspection &&
                                                                         escrow.status !== "released" && (
                                                                             <MenuItem onClick={() => handleEscrowAction('release', escrow)}>
                                                                                 Release funds
@@ -1053,9 +1083,17 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
 
                                     console.log('Submitting release code', res);
                                     toast({ title: 'Release code submitted', status: 'success' });
+
                                     onCloseRelease();
                                     setSelectedEscrowAction(null);
                                     setReleaseCode('');
+                                    setEscrowTransactions(prev =>
+                                        prev.map(item =>
+                                            item._id === selectedEscrowAction._id
+                                                ? { ...item, status: "released" }
+                                                : item
+                                        )
+                                    );
                                 } catch (err) {
                                     console.log('Failed to submit release code', err);
                                     toast({ title: `${err.response.data.message}`, status: 'error' });

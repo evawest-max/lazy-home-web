@@ -258,7 +258,7 @@ export default function UpdateProperty({ updatedFormdata, setUpdatedFormdata, on
 
                 <FormControl>
                   <FormLabel color="brand.gray.700" fontSize="sm" fontWeight="600">
-                    I am
+                    I am the property:
                   </FormLabel>
                   <Select
                     placeholder="Select role"
