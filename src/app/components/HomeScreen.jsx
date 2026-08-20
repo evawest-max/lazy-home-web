@@ -80,7 +80,7 @@ export default function HomeScreen() {
             <HStack justify="space-between" mb={4}>
               <VStack align="start" spacing={0}>
                 <Text fontSize="2xl" fontWeight="bold" color="white">
-                  LazyHomes
+                  SafeTenants
                 </Text>
                 <Text fontSize="xs" color="whiteAlpha.800">
                   Welcome back, John
@@ -205,7 +205,7 @@ export default function HomeScreen() {
         <Box bg="white" mx={6} p={6} borderRadius="xl" boxShadow="sm">
           <VStack spacing={4}>
             <Text fontSize="md" fontWeight="bold" color="brand.primary" textAlign="center">
-              Why Choose LazyHomes?
+              Why Choose DafeTenants?
             </Text>
 
             <VStack spacing={3} w="100%">

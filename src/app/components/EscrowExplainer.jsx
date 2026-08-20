@@ -14,7 +14,7 @@ export default function EscrowExplainer() {
               Your Money is 100% Safe
             </Text>
             <Text fontSize="sm" color="brand.gray.600">
-              How LazyHomes Escrow Protects You
+              How SafeTenants Escrow Protects You
             </Text>
           </VStack>
         </HStack>

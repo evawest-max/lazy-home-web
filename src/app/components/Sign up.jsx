@@ -29,6 +29,7 @@ export default function SignUp() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [referalCode, setReferalCode] = useState('')
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -41,7 +42,8 @@ export default function SignUp() {
       email,
       phone,
       password,
-      passwordConfirm: confirmPassword
+      passwordConfirm: confirmPassword,
+      referal : referalCode
     };
 
     try {
@@ -135,6 +137,17 @@ export default function SignUp() {
                 />
               </FormControl>
 
+              <FormControl>
+                <FormLabel>Referal code</FormLabel>
+                <Input
+                  type="text"
+                  placeholder="fsddw1"
+                  size="lg"
+                  value={referalCode}
+                  onChange={(e) => setReferalCode(e.target.value)}
+                />
+              </FormControl>
+
               {error && (
                 <Alert status="error" borderRadius="md">
                   <AlertIcon />
@@ -189,7 +202,7 @@ export default function SignUp() {
 
         {/* Terms */}
         <Text fontSize="xs" color="gray.500" textAlign="center">
-          By signing up, you agree to LazyHomes Terms and Privacy Policy
+          By signing up, you agree to SafeTenants Terms and Privacy Policy
         </Text>
       </VStack>
 

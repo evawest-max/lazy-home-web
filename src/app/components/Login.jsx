@@ -47,7 +47,7 @@ export default function Login({ onLogin }) {
             </Text>
           )}
           <Text color="brand.gray.600">
-            Sign in to continue your rental journey with LazyHomes
+            Sign in to continue your rental journey with SafeTenants
           </Text>
         </VStack>
 
@@ -145,7 +145,7 @@ export default function Login({ onLogin }) {
         </Link>
 
         <Text fontSize="xs" color="brand.gray.500" textAlign="center">
-          By continuing, you agree to LazyHomes Terms of Service and Privacy Policy
+          By continuing, you agree to SafeTenants Terms of Service and Privacy Policy
         </Text>
       </VStack>
 

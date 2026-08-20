@@ -334,7 +334,7 @@ export default function ListPropertyStep3({ formData, setFormData, onBack, onNex
 
               <HStack justify="space-between">
                 <VStack align="start" spacing={0}>
-                  <Text fontSize="sm" color="brand.gray.600">LazyHomes Service Fee (5%)</Text>
+                  <Text fontSize="sm" color="brand.gray.600">SafeTenants Service Fee (5%)</Text>
                   <Text fontSize="xs" color="brand.gray.500">Paid by renter</Text>
                 </VStack>
                 <Text fontSize="sm" fontWeight="600">₦{formData.serviceFee ? parseFloat(formData.serviceFee).toLocaleString() : '0'}</Text>

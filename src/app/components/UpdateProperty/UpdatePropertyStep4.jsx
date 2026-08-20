@@ -561,7 +561,7 @@ function UpdatePropertyStep4({ updatedFormdata, setUpdatedFormdata, onBack, onSu
                             }}
                         >
                             <Text fontSize="sm" color="brand.gray.700">
-                                I agree to LazyHomes <Text as="span" color="brand.primary" fontWeight="600">Agent Terms & Conditions</Text> and <Text as="span" color="brand.primary" fontWeight="600">Privacy Policy</Text>
+                                I agree to SafeTenants <Text as="span" color="brand.primary" fontWeight="600">Agent Terms & Conditions</Text> and <Text as="span" color="brand.primary" fontWeight="600">Privacy Policy</Text>
                             </Text>
                         </Checkbox>
                     </VStack>

@@ -12,7 +12,7 @@ export default function SafetyGuarantee() {
         </HStack>
 
         <Text fontSize="lg" fontWeight="bold" color="brand.primary" textAlign="center">
-          LazyHomes Safety Guarantee
+          SafeTenants Safety Guarantee
         </Text>
 
         <VStack spacing={4} align="stretch">
@@ -61,7 +61,7 @@ export default function SafetyGuarantee() {
 
         <Box bg="brand.success" p={4} borderRadius="lg" textAlign="center">
           <Text fontSize="sm" fontWeight="bold" color="white">
-            Over 10,000 Nigerians trust LazyHomes for safe rentals
+            Over 10,000 Nigerians trust SafeTenant for safe rentals
           </Text>
         </Box>
       </VStack>

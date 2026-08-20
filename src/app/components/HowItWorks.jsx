@@ -6,7 +6,7 @@ export default function HowItWorks() {
     <Box bg="white" borderRadius="xl" p={6} boxShadow="sm">
       <VStack spacing={5} align="stretch">
         <Text fontSize="lg" fontWeight="bold" color="brand.primary" textAlign="center">
-          How LazyHomes Works
+          How SafeTenants Works
         </Text>
 
         <VStack spacing={4} align="stretch">

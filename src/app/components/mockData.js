@@ -154,7 +154,7 @@ export const testimonials = [
         name: 'Chidi Okonkwo',
         location: 'Lekki, Lagos',
         avatar: 'https://i.pravatar.cc/150?img=12',
-        text: 'I was scared of online payment but LazyHomes escrow made me feel safe. My money stayed protected until I saw the house!',
+        text: 'I was scared of online payment but SafeTenants escrow made me feel safe. My money stayed protected until I saw the house!',
     },
     {
         name: 'Amina Bello',

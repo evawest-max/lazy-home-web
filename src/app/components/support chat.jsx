@@ -30,7 +30,7 @@ export default function SupportChat() {
         {
             id: 1,
             sender: 'support',
-            text: 'Hello! Welcome to LazyHomes Support. How can we help you today?',
+            text: 'Hello! Welcome to SafeTenants Support. How can we help you today?',
             timestamp: new Date(Date.now() - 5 * 60000),
             senderName: 'Support Team',
         },
@@ -59,7 +59,7 @@ export default function SupportChat() {
         {
             id: 4,
             question: 'How do I contact support?',
-            answer: 'You can reach us through this chat, email support@lazyhomes.com, or call +234 123 456 7890. We respond within 2 hours.',
+            answer: 'You can reach us through this chat, email support@SafeTenants.com, or call +234 123 456 7890. We respond within 2 hours.',
         },
         {
             id: 5,
@@ -325,7 +325,7 @@ export default function SupportChat() {
                 {/* Footer Info */}
                 <Box mt={4} textAlign="center">
                     <Text fontSize="xs" color="brand.gray.600">
-                        💬 Chat is monitored 24/7 • 📧 Email: support@lazyhomes.com • 📞 Call: +234 123 456 7890
+                        💬 Chat is monitored 24/7 • 📧 Email: support@SafeTenants.com • 📞 Call: +234 123 456 7890
                     </Text>
                 </Box>
 

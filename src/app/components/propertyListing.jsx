@@ -165,7 +165,7 @@ export default function PropertyListing() {
                 <Box bg="brand.primary" px={6} pt={12} pb={8}>
                     <VStack spacing={4} align="stretch">
                         <Text fontSize="2xl" fontWeight="bold" color="white">
-                            LazyHomes
+                            SafeTenants
                         </Text>
 
                         <HStack spacing={2} justify="center" bg="whiteAlpha.200" py={2} px={3} borderRadius="full">
@@ -264,7 +264,7 @@ export default function PropertyListing() {
                 <Box bg="white" mx={6} p={6} borderRadius="xl" boxShadow="sm">
                     <VStack spacing={4}>
                         <Text fontSize="md" fontWeight="bold" color="brand.primary" textAlign="center">
-                            Why Choose LazyHomes?
+                            Why Choose SafeTenants?
                         </Text>
 
                         <VStack spacing={3} w="100%">

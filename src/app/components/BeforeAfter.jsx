@@ -6,7 +6,7 @@ export default function BeforeAfter() {
     <Box bg="white" borderRadius="xl" p={6} boxShadow="md">
       <VStack spacing={5} align="stretch">
         <Text fontSize="lg" fontWeight="bold" color="brand.primary" textAlign="center">
-          Traditional Renting vs LazyHomes
+          Traditional Renting vs SafeTenants
         </Text>
 
         <Grid templateColumns="1fr 1fr" gap={4}>
@@ -58,7 +58,7 @@ export default function BeforeAfter() {
           <VStack align="stretch" spacing={3}>
             <Box bg="brand.success" py={2} px={3} borderRadius="lg" textAlign="center">
               <Text fontSize="sm" fontWeight="bold" color="white">
-                ✅ LazyHomes Way
+                ✅ SafeTenants Way
               </Text>
             </Box>
 
@@ -103,7 +103,7 @@ export default function BeforeAfter() {
 
         <Box bg="brand.background" p={4} borderRadius="lg" textAlign="center">
           <Text fontSize="sm" fontWeight="bold" color="brand.primary">
-            Join 10,000+ Nigerians Who Rent Safely with LazyHomes
+            Join 10,000+ Nigerians Who Rent Safely with SafeTenants
           </Text>
         </Box>
       </VStack>

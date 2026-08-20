@@ -441,7 +441,7 @@ export default function PaymentBreakdown() {
               🛡️ YOUR PROTECTION GUARANTEE
             </Text>
             <Text fontSize="sm" color="brand.gray.700" textAlign="center" lineHeight="1.6">
-              LazyHomes has protected over <Text as="span" fontWeight="bold" color="brand.primary">₦24 Billion</Text> in rental transactions. Your money is insured and 100% safe.
+              SafeTenants has protected over <Text as="span" fontWeight="bold" color="brand.primary">₦24 Billion</Text> in rental transactions. Your money is insured and 100% safe.
             </Text>
           </VStack>
         </Box>

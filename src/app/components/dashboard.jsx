@@ -100,6 +100,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
     const [releasingEscrows, setReleasingEscrows] = useState("0")
     const [releaseFailedEscrows, setReleaseFailedEscrows] = useState("0")
     const [refundedEscrows, setRefundedEscrows] = useState("0")
+    const [totalProperties, setTotalProperties] = useState(0)
 
     const location = useLocation();
 
@@ -112,7 +113,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
     const tab = parameter
     console.log("user tab", tab)
 
-    const itemsPerPage = 5;
+    const itemsPerPage = 4;
     const { isOpen: isPinOpen, onOpen: onOpenPin, onClose: onClosePin } = useDisclosure();
 
     const listingsTotalPages = Math.ceil(mockProperties.length / itemsPerPage);
@@ -137,7 +138,10 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
         const fetchProperties = async () => {
             try {
                 const analyticsResponse = await getAnalyticsDashboardAndProperties();
+                // setproper
                 setMyProperties(analyticsResponse.data.data.propertiesWithInquiries || []);
+                setListingsPage(1)
+                setTotalProperties(analyticsResponse.data.data.totalProperties / itemsPerPage)
                 setAllData(analyticsResponse.data.data || {});
                 console.log("this is the anyalytics", analyticsResponse)
                 setLoading(false);
@@ -387,7 +391,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                     <HStack justify="space-between" mb={4}>
                         <VStack align="start" spacing={0}>
                             <Text fontSize="2xl" fontWeight="bold" color="white">
-                                LazyHomes
+                                SafeTenants
                             </Text>
                             <Text fontSize="xs" color="whiteAlpha.800">
                                 Welcome back, {user.fullName.split(' ')[0]}!
@@ -729,7 +733,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                             >
                                 Previous
                             </Button>
-                            {Array.from({ length: listingsTotalPages }, (_, i) => i + 1).map((page) => (
+                            {Array.from({ length: totalProperties }, (_, i) => i + 1).map((page) => (
                                 <Button
                                     key={page}
                                     size="sm"
@@ -742,8 +746,8 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                             <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => setListingsPage((prev) => Math.min(prev + 1, listingsTotalPages))}
-                                isDisabled={listingsPage === listingsTotalPages}
+                                onClick={() => setListingsPage((prev) => Math.min(prev + 1, totalProperties))}
+                                isDisabled={listingsPage === totalProperties}
                             >
                                 Next
                             </Button>
@@ -760,7 +764,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                         </Text>
 
                         <VStack align="stretch" spacing={3}>
-                            <Grid templateColumns={{ sm: "repeat(2, 1fr)", md: "repeat(3, 1fr)" }} gap={4}>
+                            <Grid templateColumns={{ sm: "repeat(1, 1fr)", md: "repeat(2, 1fr)", lg: "repeat(3, 1fr)"  }} gap={4}>
                                 {escrowTransactions.map((escrow) => {
                                     const id = escrow._id || escrow.id || escrow.transactionId || escrow.reference;
                                     const title = 'Escrow Transaction';
