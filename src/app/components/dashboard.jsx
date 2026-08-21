@@ -69,8 +69,10 @@ import FilterSearch from './FilterSearch';
 import { mockInspections, mockProperties } from './mockData';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Navbar from './Navbar';
-import { confirmInspection, deleteProperty, getAllEscrowPayments, getAnalyticsDashboardAndProperties, getUserProperties, releaseFunds, releaseKeys, refundEscrow } from '../../../api';
+import { confirmInspection, deleteProperty, getAllEscrowPayments, getAnalyticsDashboardAndProperties, getUserProperties, releaseFunds, releaseKeys, refundEscrow, downloadTenancyDoc } from '../../../api';
 import { reference } from '@popperjs/core';
+import DownloadAgreementButton from './downloadAgreementButton';
+// import DownloadAgreementButton from './downloadAgreementButton';
 
 
 export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
@@ -101,6 +103,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
     const [releaseFailedEscrows, setReleaseFailedEscrows] = useState("0")
     const [refundedEscrows, setRefundedEscrows] = useState("0")
     const [totalProperties, setTotalProperties] = useState(0)
+    const [downloading, setDownloading] = useState(false);
 
     const location = useLocation();
 
@@ -273,10 +276,10 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
         try {
             const res = await releaseKeys(id);
             console.log(res)
-            toast({ title: 'Release confirmation', discription: res.data.message, status: 'success' });
+            toast({ title: 'Release confirmation', discription: res.data.data.message || res.data.message, status: 'success' });
         } catch (error) {
             console.log(error)
-            toast({ title: 'Release confirmation', discription: error.message, status: 'info' });
+            toast({ title: 'Release confirmation', discription: error.response.data.message, status: 'info' });
         }
     }
 
@@ -345,6 +348,43 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
             setRefunding(false);
         }
     }
+
+    const downloadAgreement = async (escrowId) => {
+        setDownloading(true);
+        try {
+            const response = await downloadTenancyDoc(escrowId); // already blob
+            const blob = response.data; // axios puts blob in .data
+            console.log(response)
+            const url = URL.createObjectURL(blob);
+
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `LazyHome-Tenancy-${escrowId}.pdf`; // use escrowId or tenancyId
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+
+            URL.revokeObjectURL(url);
+        } finally {
+            setDownloading(false);
+        }
+    };
+
+    // const downloadAgreement = async (id) => {
+    //     const token = localStorage.getItem("accessToken");
+    //     const res = await fetch(`/api/v1/escrow/tenancy/${id}/download`, {
+    //         headers: { Authorization: `Bearer ${token}` }
+    //     });
+    //     const blob = await res.blob();
+    //     const url = window.URL.createObjectURL(blob);
+    //     const a = document.createElement("a");
+    //     a.href = url;
+    //     a.download = `tenancy-${id}.pdf`;
+    //     a.click();
+    //     window.URL.revokeObjectURL(url);
+    // };
+
+
 
     if (loading) {
         return (
@@ -764,7 +804,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                         </Text>
 
                         <VStack align="stretch" spacing={3}>
-                            <Grid templateColumns={{ sm: "repeat(1, 1fr)", md: "repeat(2, 1fr)", lg: "repeat(3, 1fr)"  }} gap={4}>
+                            <Grid templateColumns={{ sm: "repeat(1, 1fr)", md: "repeat(2, 1fr)", lg: "repeat(3, 1fr)" }} gap={4}>
                                 {escrowTransactions.map((escrow) => {
                                     const id = escrow._id || escrow.id || escrow.transactionId || escrow.reference;
                                     const title = 'Escrow Transaction';
@@ -841,6 +881,16 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                                                                     <MenuItem onClick={() => handleEscrowAction('dispute', escrow)}>Submit dispute</MenuItem>
                                                                 </MenuList>
                                                             </Menu>
+                                                        )}
+                                                        {escrow.status === "released" && (
+                                                            <DownloadAgreementButton escrowid={escrow._id}/>
+                                                            // <Button
+                                                            //     size="sm"
+                                                            //     onClick={() => downloadAgreement(escrow._id)}
+                                                            //     disabled={downloading}
+                                                            // >
+                                                            //     {downloading ? "Generating..." : "Download Agreement"}
+                                                            // </Button>
                                                         )}
 
 

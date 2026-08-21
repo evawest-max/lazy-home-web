@@ -22,22 +22,35 @@ API.interceptors.request.use((req) => {
 
 API.interceptors.response.use(
   (response) => response,
-
-  (error) => {
+  async (error) => {
     const status = error?.response?.status;
 
-    if (status === 401 || status === 403) {
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
+    if (status === 401) {
+      try {
+        // Call refresh endpoint
+        const { data } = await API.post("/auth/refresh-token");
+        const newToken = data?.data?.accessToken;
 
-      if (window.location.pathname !== "/login") {
-        window.location.href = "/login";
+        if (newToken) {
+          localStorage.setItem("token", newToken);
+          error.config.headers["Authorization"] = `Bearer ${newToken}`;
+          return API(error.config); // retry original request
+        }
+      } catch (refreshError) {
+        // Refresh failed → logout
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        if (window.location.pathname !== "/login") {
+          window.location.href = "/login";
+        }
       }
     }
 
     return Promise.reject(error);
   }
 );
+
+
 
 // ======================================================
 // ====================== AUTH ==========================
@@ -296,6 +309,11 @@ export const refundEscrow = (
     `/api/v1/escrow/${id}/refund`, { reason, authCode }
   );
 
+// API call helper
+export const downloadTenancyDoc = (escrowId) => {
+  return API.get(`/api/v1/escrow/tenancy/${escrowId}/download`);
+};
+
 export const adminFinalizeTransferController = (
   transferCode, otp,
 ) =>
@@ -435,12 +453,23 @@ export const getNotifications =
       "/api/v1/notifications"
     );
 
+export const markAllAsRead =
+  () =>
+    API.patch(
+      `/api/v1/notifications/read-all`
+    );
+
 export const markNotificationAsRead =
   (id) =>
     API.patch(
       `/api/v1/notifications/${id}/read`
     );
 
+export const getUnreadCount =
+  () =>
+    API.patch(
+      `/api/v1/notifications/unread-count`
+    );
 // ======================================================
 // ====================== ADMIN =========================
 // ======================================================

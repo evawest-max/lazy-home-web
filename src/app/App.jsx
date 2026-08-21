@@ -30,6 +30,7 @@ import { createProperty } from '../../api';
 import UpdateProperty from './components/UpdateProperty/updateProperty';
 import Wallet from './components/Wallet';
 import BankVerificationForm from './components/Bank Verification Page';
+import Notifications from './components/Notifications';
 
 const LISTING_DRAFT_KEY = 'listingFormData';
 
@@ -383,6 +384,7 @@ export default function App() {
             <Route path="/profile" element={ loadingUser ? (<Spinner />) : user ? (<Profile onLogout={logout} user={user} />  ) : (<Navigate to="/login" /> ) } />
             {/* <Route path="/profile" element={!user ? <Navigate to="/login" /> : <Profile onLogout={logout} user={user} />} /> */}
             <Route path="/wallet" element={user ? <Wallet user={user} /> : <Navigate to="/login" />} />
+            <Route path="/notifications" element={loadingUser ? (<Spinner />) : user ? <Notifications user={user} /> : <Navigate to="/login" />} />
             <Route path="/bank-verification" element={user ? <BankVerificationForm user={user} /> : <Navigate to="/login" />} />
             <Route path="/verify_ID" element={user ? <IdentityVerification /> : <Navigate to="/login" />} />
             <Route path="/edit-profile" element={user ? <EditProfile user={user} /> : <Navigate to="/login" />} />

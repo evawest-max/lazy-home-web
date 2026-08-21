@@ -217,14 +217,16 @@ export default function Profile({ onLogout, user }) {
                             {/* View wallet transactions and history <Link to="/wallet" style={{ color: '#0F766E', fontWeight: 'bold' }}>here</Link> */}
                         </Box>
                     </Link>
-                    {/* <Box bg="white"
-                    p={6}
-                    borderRadius="2xl"
-                    boxShadow="xl"
-                    textAlign="center"
-                    mb={8}>
-                    View your escrow transactions and history <Link to="/escrow" style={{ color: '#0F766E', fontWeight: 'bold' }}>here</Link>
-                </Box> */}
+                    <Link to="/notifications" style={{ color: '#0F766E', fontWeight: 'bold' }}>
+                        <Box bg="white"
+                            p={6}
+                            borderRadius="2xl"
+                            boxShadow="xl"
+                            textAlign="center"
+                            mb={8}>
+                            <Text fontWeight="bold" >Notifications</Text>
+                        </Box>
+                    </Link>
                 </HStack>
 
 
