@@ -23,6 +23,7 @@ import {
 	} from '@chakra-ui/react';
 import { Bell } from 'lucide-react';
 import { getNotifications, markNotificationAsRead, markAllAsRead } from '../../../api';
+import Navbar from './Navbar';
 
 function formatDate(d) {
 	try {
@@ -192,6 +193,7 @@ export default function Notifications() {
 					</ModalFooter>
 				</ModalContent>
 			</Modal>
+            <Navbar active="profile" />
 		</Box>
 	);
 }

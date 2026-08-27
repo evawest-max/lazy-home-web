@@ -2,8 +2,12 @@
 
 import axios from "axios";
 
+// const API = axios.create({
+//   baseURL: import.meta.env.VITE_BACKEND_URL,
+// });
 const API = axios.create({
-  baseURL: import.meta.env.VITE_BACKEND_URL,
+    baseURL: import.meta.env.VITE_BACKEND_URL,
+    withCredentials: true,
 });
 
 const APISub = import.meta.env.VITE_BACKEND_URL;
@@ -27,8 +31,8 @@ API.interceptors.response.use(
 
     if (status === 401) {
       try {
-        // Call refresh endpoint
-        const { data } = await API.post("/auth/refresh-token");
+        // Call refresh endpoint with cookies
+        const { data } = await API.post( "/api/v1/auth/refresh-token");
         const newToken = data?.data?.accessToken;
 
         if (newToken) {
@@ -61,6 +65,9 @@ export const registerUser = (data) =>
 
 export const loginUser = (data) =>
   API.post("/api/v1/auth/login", data);
+
+export const loginOutUser = (data) =>
+  API.post("/api/v1/auth/logout");
 
 export const verifyEmail = (token) =>
   API.post(`/api/v1/verification/verify-email/${token}`);
@@ -474,12 +481,40 @@ export const getUnreadCount =
 // ====================== ADMIN =========================
 // ======================================================
 
-export const getAdminDashboard =
+//Admin financial API
+export const getfinancialSummary =
   () =>
     API.get(
-      "/api/v1/admin/dashboard"
+      "/api/v1/admin/finance/summary"
+    );
+export const getWithdrawals =
+  () =>
+    API.get(
+      "/api/v1/admin/finance/withdrawals"
+    );
+export const getWithdrawal =
+  (withdrawalId) =>
+    API.get(
+      `/api/v1/admin/finance/withdrawals/${withdrawalId}`
+    );
+export const getEscrows =
+  () =>
+    API.get(
+      "/api/v1/admin/finance/escrows"
+    );
+export const getEscrow =
+  (escrowId) =>
+    API.get(
+      `/api/v1/admin/finance/escrows/${escrowId}`
     );
 
+export const getFinanceReconcilation =
+  () =>
+    API.get(
+      "/api/v1/admin/finance/reconciliation"
+    );
+
+//Admin Other API
 export const moderateProperty = (
   propertyId,
   data

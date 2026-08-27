@@ -133,6 +133,7 @@ export default function Profile({ onLogout, user }) {
 
     const handleLogout = () => {
         onLogout();
+        
         navigate('/login');
     };
 
@@ -147,7 +148,7 @@ export default function Profile({ onLogout, user }) {
 
                 {/* Header */}
                 <Heading mb={8} color="teal.700">
-                    Lazy Homes Profile
+                    SafeTenant Profile
                 </Heading>
 
                 {/* Profile Card */}

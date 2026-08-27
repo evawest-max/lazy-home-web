@@ -26,11 +26,12 @@ import VerifyEmail from './components/Verify Email';
 import ChangePassword from './components/changePassword';
 import EditProfile from './components/Edit profile';
 import SupportChat from './components/support chat';
-import { createProperty } from '../../api';
+import { createProperty, loginOutUser } from '../../api';
 import UpdateProperty from './components/UpdateProperty/updateProperty';
 import Wallet from './components/Wallet';
 import BankVerificationForm from './components/Bank Verification Page';
 import Notifications from './components/Notifications';
+import AdminFinancialSummary from './components/AdminComponents/AdminFinancialSummary';
 
 const LISTING_DRAFT_KEY = 'listingFormData';
 
@@ -209,12 +210,18 @@ export default function App() {
     setUser(userData);
     localStorage.setItem('user', JSON.stringify(userData));
   };
-  const logout = () => {
-    setUser(null);
-    setNotifications([]);
-    localStorage.removeItem('user');
-    localStorage.removeItem('notifications');
-    localStorage.removeItem('token');
+  const logout = async() => {
+    try {
+      const response = await loginOutUser()
+      setUser(null);
+      setNotifications([]);
+      localStorage.removeItem('user');
+      localStorage.removeItem('notifications');
+      localStorage.removeItem('token');
+    } catch (error) {
+      alert(" An error occured why logging out")
+    }
+
   };
   useEffect(() => {
     const savedUser = localStorage.getItem("user");
@@ -383,7 +390,7 @@ export default function App() {
             {/* <Route path="/create-listing/step-4" element={ user ? <ListProperty formData={formData} setFormData={setFormData} initialStep={4} onSubmit={handleListingSubmit} /> : <Navigate to="/login" />} />  */}
             <Route path="/profile" element={ loadingUser ? (<Spinner />) : user ? (<Profile onLogout={logout} user={user} />  ) : (<Navigate to="/login" /> ) } />
             {/* <Route path="/profile" element={!user ? <Navigate to="/login" /> : <Profile onLogout={logout} user={user} />} /> */}
-            <Route path="/wallet" element={user ? <Wallet user={user} /> : <Navigate to="/login" />} />
+            <Route path="/wallet" element={loadingUser ? (<Spinner />) : user ? ( <Wallet user={user} /> ): (<Navigate to="/login" />)} />
             <Route path="/notifications" element={loadingUser ? (<Spinner />) : user ? <Notifications user={user} /> : <Navigate to="/login" />} />
             <Route path="/bank-verification" element={user ? <BankVerificationForm user={user} /> : <Navigate to="/login" />} />
             <Route path="/verify_ID" element={user ? <IdentityVerification /> : <Navigate to="/login" />} />
@@ -392,6 +399,7 @@ export default function App() {
             <Route path="/security" element={user ? <ChangePassword user={user}/> : <Navigate to="/login" />} />
             <Route path="/settings" element={user ? <ListProperty /> : <Navigate to="/login" />} />
             <Route path="/support" element={user ? <SupportChat /> : <Navigate to="/login" />} />
+              <Route path="/financial-dashboard" element={ loadingUser ? (<Spinner />) : user && user.role == "super_admin" ? (<AdminFinancialSummary onLogout={logout} user={user} />  ) : (<Navigate to="/login" /> ) } />
             {/* Add more routes here */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

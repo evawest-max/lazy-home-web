@@ -313,7 +313,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
     };
 
 
-    const submitRefund = async () => {
+    const submitRefund = async (escrow) => {
         if (!selectedEscrowAction) return;
         if (!refundReason || refundReason.trim().length < 5) {
             toast({ title: 'Enter a valid reason for refund (min 5 chars)', status: 'warning' });
@@ -336,7 +336,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
             setRefundAuthCode('');
             setEscrowTransactions(prev =>
                 prev.map(item =>
-                    item._id === escrow._id
+                    item._id === selectedEscrowAction._id
                         ? { ...item, status: "refunded" }
                         : item
                 )
