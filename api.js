@@ -474,7 +474,7 @@ export const markNotificationAsRead =
 
 export const getUnreadCount =
   () =>
-    API.patch(
+    API.get(
       `/api/v1/notifications/unread-count`
     );
 // ======================================================

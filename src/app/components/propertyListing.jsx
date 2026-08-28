@@ -14,16 +14,19 @@ import {
     Flex,
     Button,
     Spinner,
+    Icon,
+    Avatar,
 } from '@chakra-ui/react';
-import { Search, MapPin, ShieldCheck } from 'lucide-react';
+import { Search, MapPin, ShieldCheck, Bell, AlertCircle } from 'lucide-react';
 import PropertyCard from './PropertyCard';
 import Navbar from './Navbar';
 import FilterSearch from './FilterSearch';
 import { useEffect, useState } from 'react';
-import { advancedPropertySearch, getAllProperties } from '../../../api';
+import { advancedPropertySearch, getAllProperties, getUnreadCount } from '../../../api';
+import { Link } from 'react-router-dom';
 
 
-export default function PropertyListing() {
+export default function PropertyListing({ user }) {
     const [properties, setProperties] = useState([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [searchText, setSearchText] = useState('');
@@ -39,6 +42,7 @@ export default function PropertyListing() {
     const [loading, setLoading] = useState(true);
     const [isFiltered, setIsFiltered] = useState(false);
     const [filterPayload, setFilterPayload] = useState({});
+    const [unreadNotificationsCount, setUnreadNotificationsCount] = useState("0")
     const itemsPerPage = 10;
 
     const filteredProperties = properties
@@ -59,8 +63,8 @@ export default function PropertyListing() {
         setSearchText(e.target.value);
         if (e.target.value === '') {
             setIsFiltered(false);
-            
-        }else {
+
+        } else {
             setIsFiltered(true);
             setCurrentPage(1);
         }
@@ -69,7 +73,7 @@ export default function PropertyListing() {
 
     const handleLocationChange = async (e) => {
         setLocationFilter(e.target.value);
-        if (e.target.value == "" || e.target.value == null || e.target.value == undefined || e.target.value == "All Locations" ) {
+        if (e.target.value == "" || e.target.value == null || e.target.value == undefined || e.target.value == "All Locations") {
             fetchProperties(1);
             // setFilterPayload((prev) => ({ ...prev, state: e.target.value }));
         }
@@ -102,7 +106,7 @@ export default function PropertyListing() {
 
             setProperties(response?.data?.data?.properties || []);
             setTotalPages(response?.data?.data?.pages || 1);
-            
+
         } catch (error) {
             console.error('Failed to fetch properties:', error);
             setProperties([]);
@@ -112,9 +116,23 @@ export default function PropertyListing() {
         }
     };
 
+    const fetchUnreadCount = async () => {
+        console.log("counting unread")
+        try {
+            const response = await getUnreadCount();
+            const count = response?.data?.data?.count ?? response?.data?.count ?? response?.data ?? 0;
+            setUnreadNotificationsCount(Number(count) || 0);
+            // console.log("count", count)
+        } catch (error) {
+            console.error('Failed to fetch unread notifications count:', error);
+            setUnreadNotificationsCount(0);
+        }
+    };
+
     useEffect(() => {
         if (!isFiltered) {
-            fetchProperties(currentPage);
+            Promise.all([fetchProperties(currentPage),]);
+            user && fetchUnreadCount()
         }
     }, [currentPage]);
 
@@ -164,9 +182,59 @@ export default function PropertyListing() {
             <VStack spacing={0} align="stretch">
                 <Box bg="brand.primary" px={6} pt={12} pb={8}>
                     <VStack spacing={4} align="stretch">
-                        <Text fontSize="2xl" fontWeight="bold" color="white">
-                            SafeTenants
-                        </Text>
+                        <HStack justify="space-between" mb={4}>
+                            <VStack align="start" spacing={0}>
+                                <Text fontSize="2xl" fontWeight="bold" color="white">
+                                    SafeTenants
+                                </Text>
+                                {user && <Text fontSize="xs" color="whiteAlpha.800">
+                                    Welcome back, {user.fullName.split(' ')[0]}!
+                                </Text>}
+                            </VStack>
+                            <HStack spacing={3} align="center">
+                                {user && Number(unreadNotificationsCount) > 0 && (
+                                    <Link to="/notifications">
+                                        <Box position="relative" display="flex" alignItems="center" justifyContent="center">
+                                            <Box
+                                                bg="whiteAlpha.200"
+                                                border="1px solid"
+                                                borderColor="whiteAlpha.300"
+                                                borderRadius="full"
+                                                p={2.5}
+                                                display="flex"
+                                                alignItems="center"
+                                                justifyContent="center"
+                                                cursor="pointer"
+                                            >
+                                                <Icon as={Bell} color="white" boxSize={4} />
+                                            </Box>
+                                            <Badge
+                                                position="absolute"
+                                                top="-4px"
+                                                right="-2px"
+                                                borderRadius="full"
+                                                colorScheme="red"
+                                                fontSize="10px"
+                                                px={1.5}
+                                                minW="18px"
+                                                h="18px"
+                                                display="flex"
+                                                alignItems="center"
+                                                justifyContent="center"
+                                            >
+                                                {unreadNotificationsCount}
+                                            </Badge>
+                                        </Box>
+                                    </Link>
+                                )}
+                                {user && <Avatar
+                                    size="md"
+                                    name={user.fullName || "John Adeyemi"}
+                                    src={user.image || "https://i.pravatar.cc/150?img=33"}
+                                    cursor="pointer"
+                                />}
+                            </HStack>
+                        </HStack>
 
                         <HStack spacing={2} justify="center" bg="whiteAlpha.200" py={2} px={3} borderRadius="full">
                             <ShieldCheck size={16} color="white" />

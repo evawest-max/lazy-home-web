@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { getRecommendedProperties, getSingleProperty, saveProperty } from '../../../api';
 import PropertyCard from './PropertyCard';
-import { AlertCircle, ArrowLeft, Bath, Bed, Calendar, Eye, Save, Share, ShieldCheck, Square, Toilet } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Bath, Bed, Calendar, Copy, Eye, HeartPulse, LockIcon, Save, Share, ShieldCheck, Square, Toilet } from 'lucide-react';
 
 const formatCurrency = (value) => {
   if (value === null || value === undefined || value === "") return "N/A";
@@ -228,18 +228,18 @@ export default function PropertyDetails() {
               {title}
             </Text>
 
-            <Text fontSize="xl" fontWeight="600" color="brand.gray.800">
+            <Text textAlign="center" fontSize="xl" fontWeight="600" color="brand.gray.800">
               {location}{state ? `, ${state}` : ""}
             </Text>
-            <Text fontSize="sm" color="brand.gray.600">
+            <Text textAlign="center" fontSize="sm" color="brand.gray.600">
               {description}
             </Text>
-            <HStack justify="space-between" align="center">
-              <Text fontSize="2xl" fontWeight="bold" color="brand.primary">
+            <HStack justify="space-between" align="center" flexDirection={{ base: "column", sm: "row", md: "row" }}>
+              <Text fontSize="xl" fontWeight="bold" color="brand.primary">
                 {formatCurrency(rentAmount)} {property.rentDuration ? `/${property.rentDuration}` : ""}
               </Text>
               <VStack align="end">
-                <Text>Views: {property.views || '0'}</Text>
+                <Text fontSize="sm" fontWeight="400" color="brand.gray.800">{property.views || '0'} views </Text>
                 <HStack spacing={3}>
                   <Button
                     size="sm"
@@ -266,7 +266,7 @@ export default function PropertyDetails() {
                       }
                     }}
                     isLoading={isSaving}
-                    leftIcon={<Save size={14} />}
+                    leftIcon={<HeartPulse size={14} color='red' fill='red' />}
                   >
                     {propertySaved ? 'Saved' : 'Save'}
                   </Button>
@@ -296,9 +296,9 @@ export default function PropertyDetails() {
                       }
                     }}
                     isLoading={isSharing}
-                    leftIcon={<Share size={14} />}
+                    leftIcon={<Copy size={14} />}
                   >
-                    {shareSaved ? 'Link copied' : 'Share'}
+                    {shareSaved ? 'Link copied' : 'Copy link'}
                   </Button>
                 </HStack>
               </VStack>
@@ -346,9 +346,9 @@ export default function PropertyDetails() {
               <Text fontWeight="600" color="brand.gray.800">
                 {agentName}
               </Text>
-              <Text fontSize="sm" color="brand.gray.600">
+              {/* <Text fontSize="sm" color="brand.gray.600">
                 {agentPhone}
-              </Text>
+              </Text> */}
             </VStack>
             <Button size="sm" variant="secondary">
               Contact
@@ -395,14 +395,14 @@ export default function PropertyDetails() {
 
 
       <Box position="fixed" bottom={0} left={0} right={0} bg="white" borderTop="2px solid" borderColor="brand.success" p={6} boxShadow="2xl">
-        <Grid templateColumns="1fr 1fr" gap={3} w="100%">
-          <Button as={Link} to={`/book-inspection/${property._id}`} variant="secondary" leftIcon={<Calendar size={18} />} size="lg">
+        {/* <Grid templateColumns="1fr 1fr" gap={3} w="100%"> */}
+        {/* <Button as={Link} to={`/book-inspection/${property._id}`} variant="secondary" leftIcon={<Calendar size={18} />} size="lg">
             Book Inspection
-          </Button>
-          <Button as={Link} to={`/secure-payment/${property._id}`} variant="primary" leftIcon={<Eye size={18} />} size="lg">
-            Secure Property
-          </Button>
-        </Grid>
+          </Button> */}
+        <Button as={Link} to={`/secure-payment/${property._id}`} variant="primary" leftIcon={<LockIcon size={18} />} size="lg" w="100%">
+          Secure Property
+        </Button>
+        {/* </Grid> */}
       </Box>
     </Box>
   );

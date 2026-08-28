@@ -57,6 +57,7 @@ import {
     ClipboardList,
     Briefcase,
     VerifiedIcon,
+    Bell,
 } from 'lucide-react';
 import { Menu, MenuButton, MenuList, MenuItem, FormControl, FormLabel } from '@chakra-ui/react';
 import { ChevronDownIcon } from '@chakra-ui/icons';
@@ -69,7 +70,7 @@ import FilterSearch from './FilterSearch';
 import { mockInspections, mockProperties } from './mockData';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Navbar from './Navbar';
-import { confirmInspection, deleteProperty, getAllEscrowPayments, getAnalyticsDashboardAndProperties, getUserProperties, releaseFunds, releaseKeys, refundEscrow, downloadTenancyDoc } from '../../../api';
+import { confirmInspection, deleteProperty, getAllEscrowPayments, getAnalyticsDashboardAndProperties, getUnreadCount, getUserProperties, releaseFunds, releaseKeys, refundEscrow, downloadTenancyDoc } from '../../../api';
 import { reference } from '@popperjs/core';
 import DownloadAgreementButton from './downloadAgreementButton';
 // import DownloadAgreementButton from './downloadAgreementButton';
@@ -104,6 +105,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
     const [refundedEscrows, setRefundedEscrows] = useState("0")
     const [totalProperties, setTotalProperties] = useState(0)
     const [downloading, setDownloading] = useState(false);
+    const [unreadNotificationsCount, setUnreadNotificationsCount] = useState("0")
 
     const location = useLocation();
 
@@ -126,6 +128,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
     const listingsEndIndex = listingsStartIndex + itemsPerPage;
     const paginatedListings = myProperties.slice(listingsStartIndex, listingsEndIndex);
 
+
     // Pagination calculations for transactions
     // transactions pagination handled by API; UI buttons use `transactionsTotalPages`
 
@@ -138,24 +141,40 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
         } else {
             setActiveTab(0)
         }
+
         const fetchProperties = async () => {
             try {
                 const analyticsResponse = await getAnalyticsDashboardAndProperties();
-                // setproper
                 setMyProperties(analyticsResponse.data.data.propertiesWithInquiries || []);
                 setListingsPage(1)
                 setTotalProperties(analyticsResponse.data.data.totalProperties / itemsPerPage)
                 setAllData(analyticsResponse.data.data || {});
                 console.log("this is the anyalytics", analyticsResponse)
-                setLoading(false);
             } catch (error) {
                 console.error("Failed to fetch properties:", error);
                 setMyProperties([]);
-                setLoading(false);
             }
         };
 
-        fetchProperties();
+        const fetchUnreadCount = async () => {
+            console.log("counting unread")
+            try {
+                const response = await getUnreadCount();
+                const count = response?.data?.data?.count ?? response?.data?.count ?? response?.data ?? 0;
+                setUnreadNotificationsCount(Number(count) || 0);
+                console.log("count", count)
+            } catch (error) {
+                console.error('Failed to fetch unread notifications count:', error);
+                setUnreadNotificationsCount(0);
+            }
+        };
+
+        const loadDashboard = async () => {
+            await Promise.all([fetchProperties(), fetchUnreadCount()]);
+            setLoading(false);
+        };
+
+        loadDashboard();
     }, []);
 
     // Fetch escrow transactions for the current transactionsPage
@@ -232,8 +251,8 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                 toast({ title: 'Property deleted', status: 'success' });
 
             } catch (error) {
-                console.log("not deleted", error);
-                toast({ title: 'Failed to delete property', status: 'error' });
+                console.log("not deleted", error.response);
+                toast({ title: error.response.data.message, status: 'error' });
             }
         })();
     }
@@ -437,12 +456,50 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                                 Welcome back, {user.fullName.split(' ')[0]}!
                             </Text>
                         </VStack>
-                        <Avatar
-                            size="md"
-                            name="John Adeyemi"
-                            src={user.image || "https://i.pravatar.cc/150?img=33"}
-                            cursor="pointer"
-                        />
+
+                        <HStack spacing={3} align="center">
+                            {/* {Number(unreadNotificationsCount) <= 0 && ( */}
+                            <Link to="/notifications" >
+                                <Box position="relative" display="flex" alignItems="center" justifyContent="center">
+                                    <Box
+                                        bg="whiteAlpha.200"
+                                        border="1px solid"
+                                        borderColor="whiteAlpha.300"
+                                        borderRadius="full"
+                                        p={2.5}
+                                        display="flex"
+                                        alignItems="center"
+                                        justifyContent="center"
+                                        cursor="pointer"
+                                    >
+                                        <Icon as={Bell} color="white" boxSize={4} />
+                                    </Box>
+                                    <Badge
+                                        position="absolute"
+                                        top="-4px"
+                                        right="-2px"
+                                        borderRadius="full"
+                                        colorScheme="red"
+                                        fontSize="10px"
+                                        px={1.5}
+                                        minW="18px"
+                                        h="18px"
+                                        display="flex"
+                                        alignItems="center"
+                                        justifyContent="center"
+                                    >
+                                        {unreadNotificationsCount}
+                                    </Badge>
+                                </Box>
+                            </Link>
+                            {/* )} */}
+                            <Avatar
+                                size="md"
+                                name={user.fullName || "John Adeyemi"}
+                                src={user.image || "https://i.pravatar.cc/150?img=33"}
+                                cursor="pointer"
+                            />
+                        </HStack>
                     </HStack>
 
                     <Tabs
@@ -737,14 +794,19 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
 
                                     <VStack align={{ base: 'start', md: 'stretch' }} spacing={1} textAlign={{ base: 'left', md: 'right' }}>
                                         <Menu>
-                                            <MenuButton size="sm" as={Button} rightIcon={<ChevronDownIcon />} width={{ base: '100%', md: 'auto' }}>
-                                                Actions
-                                            </MenuButton>
+                                            <HStack gap={1} width={{ base: '100%', md: 'auto' }}>
+                                                <Button onClick={() => openPropertyDetails(item)} width={{ base: '100%', md: 'auto' }} size="sm">
+                                                    Details
+                                                </Button>
+                                                <MenuButton size="sm" as={Button} rightIcon={<ChevronDownIcon />} >
+
+                                                </MenuButton>
+                                            </HStack>
                                             <MenuList>
                                                 {item.listingStatus == "under_offer" && (
-                                                    <MenuItem onClick={() => handleReleasedKeys(item._id)}>I have released keys</MenuItem>
+                                                    <MenuItem onClick={() => handleReleasedKeys(item._id)}>Released keys</MenuItem>
                                                 )}
-                                                <MenuItem onClick={() => openPropertyDetails(item)}>View details</MenuItem>
+                                                <MenuItem >Decline Offer</MenuItem>
                                                 <MenuItem>Share Property</MenuItem>
                                                 <MenuItem onClick={() => editProperty(item)}>Edit property</MenuItem>
                                                 <MenuItem onClick={() => deleteMyProperty(item._id)}>Delete Property</MenuItem>
@@ -883,7 +945,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                                                             </Menu>
                                                         )}
                                                         {escrow.status === "released" && (
-                                                            <DownloadAgreementButton escrowid={escrow._id}/>
+                                                            <DownloadAgreementButton escrowid={escrow._id} />
                                                             // <Button
                                                             //     size="sm"
                                                             //     onClick={() => downloadAgreement(escrow._id)}

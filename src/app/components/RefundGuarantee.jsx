@@ -56,7 +56,7 @@ export default function RefundGuarantee() {
             Get Your FULL MONEY BACK in 24 Hours
           </Text>
           <Text fontSize="xs" color="brand.gray.600" mt={1}>
-            Processed instantly to your bank account
+            Processed instantly to your wallet
           </Text>
         </Box>
       </VStack>

@@ -377,8 +377,8 @@ export default function App() {
             <Route path="/forgot-password" element={!user ? <ForgotPassword /> : <Navigate to="/dashboard" />} />
             <Route path="/reset-password/:resetToken" element={!user ? <ResetPassword /> : <Navigate to="/dashboard" />} />
             <Route path="/verify/:token" element={<VerifyEmail />} />
-            <Route path="/home" element={<HomeScreen />} />
-            <Route path="/property-listings" element={<PropertyListing />} />
+            <Route path="/home" element={<HomeScreen user={user}/>} />
+            <Route path="/property-listings" element={<PropertyListing user={user}/>} />
             <Route path="/property/:id" element={<PropertyDetails />} />
             <Route path="/inspection-feedback/:id" element={user ? <InspectionFeedback /> : <Navigate to="/login" />} />
             <Route path="/secure-payment/:id" element={<PaymentBreakdown />} />

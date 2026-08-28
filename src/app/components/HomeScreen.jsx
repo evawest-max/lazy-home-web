@@ -13,9 +13,10 @@ import {
   Flex,
   Heading,
   Button,
+  Icon,
   Avatar,
 } from '@chakra-ui/react';
-import { Search, MapPin, SlidersHorizontal, Home, User, FileText, ShieldCheck } from 'lucide-react';
+import { Search, MapPin, SlidersHorizontal, Home, User, FileText, ShieldCheck, Bell, AlertCircle } from 'lucide-react';
 import PropertyCard from './PropertyCard';
 import TrustBanner from './TrustBanner';
 import TestimonialCard from './TestimonialCard';
@@ -24,11 +25,26 @@ import Navbar from './Navbar';
 import { testimonials } from './mockData';
 import FilterSearch from './FilterSearch';
 import { useEffect, useState } from 'react';
-import { getAllProperties, getFeaturedProperties } from '../../../api';
+import { getAllProperties, getFeaturedProperties, getUnreadCount } from '../../../api';
+import { Link } from 'react-router-dom';
 
-export default function HomeScreen() {
+export default function HomeScreen({ user }) {
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState("0")
+
+  const fetchUnreadCount = async () => {
+    console.log("counting unread")
+    try {
+      const response = await getUnreadCount();
+      const count = response?.data?.data?.count ?? response?.data?.count ?? response?.data ?? 0;
+      setUnreadNotificationsCount(Number(count) || 0);
+      // console.log("count", count)
+    } catch (error) {
+      console.error('Failed to fetch unread notifications count:', error);
+      setUnreadNotificationsCount(0);
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -67,7 +83,7 @@ export default function HomeScreen() {
     };
 
     fetchProperties();
-
+    user && fetchUnreadCount()
     return () => {
       isMounted = false;
     };
@@ -82,16 +98,55 @@ export default function HomeScreen() {
                 <Text fontSize="2xl" fontWeight="bold" color="white">
                   SafeTenants
                 </Text>
-                <Text fontSize="xs" color="whiteAlpha.800">
-                  Welcome back, John
-                </Text>
+                {user && <Text fontSize="xs" color="whiteAlpha.800">
+                  Welcome back, {user.fullName.split(' ')[0]}!
+                </Text>}
               </VStack>
-              <Avatar
-                size="md"
-                name="John Adeyemi"
-                src="https://i.pravatar.cc/150?img=33"
-                cursor="pointer"
-              />
+              <HStack spacing={3} align="center">
+                {user && 
+                // Number(unreadNotificationsCount) > 0 && 
+                (
+                  <Link to="/notifications">
+                    <Box position="relative" display="flex" alignItems="center" justifyContent="center">
+                      <Box
+                        bg="whiteAlpha.200"
+                        border="1px solid"
+                        borderColor="whiteAlpha.300"
+                        borderRadius="full"
+                        p={2.5}
+                        display="flex"
+                        alignItems="center"
+                        justifyContent="center"
+                        cursor="pointer"
+                      >
+                        <Icon as={Bell} color="white" boxSize={4} />
+                      </Box>
+                      <Badge
+                        position="absolute"
+                        top="-4px"
+                        right="-2px"
+                        borderRadius="full"
+                        colorScheme="red"
+                        fontSize="10px"
+                        px={1.5}
+                        minW="18px"
+                        h="18px"
+                        display="flex"
+                        alignItems="center"
+                        justifyContent="center"
+                      >
+                        {unreadNotificationsCount}
+                      </Badge>
+                    </Box>
+                  </Link>
+                )}
+                {user && <Avatar
+                  size="md"
+                  name={user.fullName || "John Adeyemi"}
+                  src={user.image || "https://i.pravatar.cc/150?img=33"}
+                  cursor="pointer"
+                />}
+              </HStack>
             </HStack>
             <HStack spacing={2} justify="center" bg="whiteAlpha.200" py={2} px={3} borderRadius="full">
               <ShieldCheck size={16} color="white" />
