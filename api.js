@@ -29,7 +29,7 @@ API.interceptors.response.use(
   async (error) => {
     const status = error?.response?.status;
 
-    if (status === 401) {
+    if (status === 401 && error.config.url !== "/api/v1/auth/refresh-token") {
       try {
         // Call refresh endpoint with cookies
         const { data } = await API.post( "/api/v1/auth/refresh-token");
