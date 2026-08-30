@@ -133,7 +133,7 @@ export default function Profile({ onLogout, user }) {
 
     const handleLogout = () => {
         onLogout();
-        
+
         navigate('/login');
     };
 
@@ -193,6 +193,7 @@ export default function Profile({ onLogout, user }) {
 
                         <Heading size="md">{user.fullName}</Heading>
                         <Text color="gray.500">{user.email}</Text>
+                        <Text color="gray.500"><strong>Referal code</strong>: {user.referralCode}</Text>
 
                         <HStack>
                             <Text fontSize="sm" color="gray.500">

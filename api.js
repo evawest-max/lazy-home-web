@@ -114,6 +114,12 @@ export const setupTwoFactor = (idToken) =>
 export const verifyTwoFactor = (idToken) =>
   API.post("/api/v1/twofactor/verify", { token: idToken });
 
+export const recoverTwoFactor = (password, recoveryCode) =>
+  API.post("/api/v1/twofactor/recover", {password, recoveryCode});
+
+export const DisableTwoFactor = (password, authCode) =>
+  API.post("/api/v1/twofactor/disable", {password, authCode});
+
 // ======================================================
 // ====================== USER ==========================
 // ======================================================

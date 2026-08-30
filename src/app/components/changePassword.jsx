@@ -18,15 +18,29 @@ import {
     Spinner,
     useToast,
     Image,
+    Modal,
+    ModalOverlay,
+    ModalContent,
+    ModalHeader,
+    ModalBody,
+    ModalFooter,
+    ModalCloseButton,
+    Grid,
+    SimpleGrid,
+    AlertTitle,
+    AlertDescription,
 } from '@chakra-ui/react';
 import { useState } from 'react';
 import { Eye, EyeOff, Check, X } from 'lucide-react';
-import { changePassword, setupTwoFactor, verifyTwoFactor } from '../../../api';
+import { changePassword, DisableTwoFactor, recoverTwoFactor, setupTwoFactor, verifyTwoFactor } from '../../../api';
 import Navbar from './Navbar';
-import { PinInput, PinInputField} from "@chakra-ui/react";
+import { PinInput, PinInputField } from "@chakra-ui/react";
+import RecoveryCodesDisplay from '../RecoveryDisplayCodes';
+import { useLocation, useNavigate } from 'react-router-dom';
 
-export default function ChangePassword({user}) {
+export default function ChangePassword({ user }) {
     console.log(user)
+    const [localTwoFactorEnabled, setLocalTwoFactorEnabled] = useState(user?.twoFactorEnabled ?? false);
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -38,7 +52,17 @@ export default function ChangePassword({user}) {
     const [success, setSuccess] = useState('');
     const [barcode, setBarcode] = useState(null)
     const [token, setToken] = useState("")
+    const [recoverModalOpen, setRecoverModalOpen] = useState(false);
+    const [recoverPassword, setRecoverPassword] = useState('');
+    const [recoveryCode, setRecoveryCode] = useState("");
+    const [recoveryCodes, setRecoveryCodes] = useState([]);
+    const [recovering2fa, setRecovering2fa] = useState(false);
+    const [disableModalOpen, setDisableModalOpen] = useState(false);
+    const [disablePassword, setDisablePassword] = useState('');
+    const [disableAuthCode, setDisableAuthCode] = useState('');
+    const [disabling2fa, setDisabling2fa] = useState(false);
     const toast = useToast()
+    const navigate = useNavigate()
 
     // Password strength validation
     const getPasswordStrength = (password) => {
@@ -57,6 +81,17 @@ export default function ChangePassword({user}) {
     };
 
     const passwordStrength = getPasswordStrength(newPassword);
+
+    const updateStoredUserTwoFactorFlag = (twoFactorEnabled) => {
+        try {
+            const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+            const updatedUser = { ...storedUser, twoFactorEnabled };
+            localStorage.setItem('user', JSON.stringify(updatedUser));
+            setLocalTwoFactorEnabled(twoFactorEnabled);
+        } catch (error) {
+            console.error('Failed to update stored user 2FA status:', error);
+        }
+    };
 
     const passwordsMatch = newPassword && confirmPassword && newPassword === confirmPassword;
     const passwordValid = newPassword.length >= 8;
@@ -135,6 +170,9 @@ export default function ChangePassword({user}) {
         console.log(token)
         try {
             const res = await verifyTwoFactor(token)
+            console.log(res)
+            setRecoveryCodes(res.data.data.recoveryCodes)
+            updateStoredUserTwoFactorFlag(true);
             toast({
                 title: '2FA verification',
                 description: res.data.message || "activated",
@@ -142,7 +180,6 @@ export default function ChangePassword({user}) {
                 duration: 3000,
                 isClosable: true,
             });
-
             console.log(res)
         } catch (error) {
             toast({
@@ -153,6 +190,116 @@ export default function ChangePassword({user}) {
                 isClosable: true,
             });
             // console.log(error.data.message)
+        }
+    }
+
+    async function handleRecover2fa() {
+        if (!recoverPassword.trim()) {
+            toast({
+                title: 'Recovery required',
+                description: 'Please enter your password.',
+                status: 'warning',
+                duration: 3000,
+                isClosable: true,
+            });
+            return;
+        }
+
+        if (!recoveryCode.trim()) {
+            toast({
+                title: 'Recovery code required',
+                description: 'Please enter your recovery code.',
+                status: 'warning',
+                duration: 3000,
+                isClosable: true,
+            });
+            return;
+        }
+
+        setRecovering2fa(true);
+
+        try {
+            const res = await recoverTwoFactor(recoverPassword, recoveryCode);
+            toast({
+                title: '2FA recovered',
+                description: res?.data?.message || 'Your 2FA has been recovered successfully.',
+                status: 'success',
+                duration: 3000,
+                isClosable: true,
+            });
+
+            updateStoredUserTwoFactorFlag(false);
+            setRecoverModalOpen(false);
+            setRecoverPassword('');
+            setRecoveryCode('');
+            await enable2fa();
+        } catch (error) {
+            const message = error?.response?.data?.message || 'Unable to recover 2FA. Please try again.';
+            toast({
+                title: '2FA recovery failed',
+                description: message,
+                status: 'error',
+                duration: 3000,
+                isClosable: true,
+            });
+        } finally {
+            setRecovering2fa(false);
+        }
+    }
+
+    async function handleDisable2fa() {
+        if (!disablePassword.trim()) {
+            toast({
+                title: 'Password required',
+                description: 'Please enter your password.',
+                status: 'warning',
+                duration: 3000,
+                isClosable: true,
+            });
+            return;
+        }
+
+        if (!disableAuthCode.trim()) {
+            toast({
+                title: 'Authenticator code required',
+                description: 'Please enter your authenticator code.',
+                status: 'warning',
+                duration: 3000,
+                isClosable: true,
+            });
+            return;
+        }
+
+        setDisabling2fa(true);
+
+        try {
+            const res = await DisableTwoFactor(disablePassword, disableAuthCode);
+            toast({
+                title: '2FA disabled',
+                description: res?.data?.message || 'Two-factor authentication has been disabled.',
+                status: 'success',
+                duration: 3000,
+                isClosable: true,
+            });
+
+            updateStoredUserTwoFactorFlag(false);
+            setDisableModalOpen(false);
+            setDisablePassword('');
+            setDisableAuthCode('');
+            setRecoveryCodes([]);
+            setBarcode(null);
+            setToken('');
+        } catch (error) {
+            const message = error?.response?.data?.message || 'Unable to disable 2FA. Please try again.';
+            toast({
+                title: '2FA disable failed',
+                description: message,
+                status: 'error',
+                duration: 3000,
+                isClosable: true,
+            });
+        } finally {
+            setDisabling2fa(false);
         }
     }
 
@@ -343,12 +490,12 @@ export default function ChangePassword({user}) {
                     </form>
                 </Box>
 
-                {user.twoFactorEnabled === false ? <Button
+                {localTwoFactorEnabled === false ? <Button
                     type="submit"
                     w="100%"
                     bg="brand.primary"
                     color="white"
-                    size="lg"
+                    size="sm"
                     fontSize="md"
                     fontWeight="600"
                     _hover={{ bg: 'brand.primary', opacity: 0.9 }}
@@ -358,14 +505,33 @@ export default function ChangePassword({user}) {
                     onClick={() => enable2fa()}
                 >
                     Enable 2FA
-                </Button>:
-                <Text textAlign="center"> 2FA Enabled</Text>
+                </Button> :
+                    <>
+                        <Text textAlign="center" > 2FA Enabled!</Text>
+                        {
+                            recoveryCodes.length <= 0 &&
+                            <>
+                                <Button size="sm" onClick={() => setDisableModalOpen(true)}>Disable 2FA</Button>
+
+                                <Text textAlign="center"> <strong>OR</strong></Text>
+                                <HStack justifyContent="center">
+                                    <Text textAlign="center"> Lost 2FA?</Text>
+                                    <Button size="xs" onClick={() => setRecoverModalOpen(true)}>Recover 2FA</Button>
+                                </HStack>
+                            </>
+                        }
+                    </>
                 }
-                {barcode && (<VStack>
+                {recoveryCodes.length < 10 && barcode && (<VStack>
                     <Image src={barcode.qrCode || ""} placeholder="Barcode" />
+                    <Text overflowWrap="anywhere">
+                        {barcode.secret}
+                    </Text>
                     <FormControl isRequired>
                         <FormLabel fontWeight="600" color="brand.primary">
                             Scan code and enter token
+                            <br />
+
                         </FormLabel>
                         <InputGroup size="md">
                             <HStack mx="auto" alignSelf="center" >
@@ -426,6 +592,13 @@ export default function ChangePassword({user}) {
                     </Button>
                 </VStack>)}
 
+                {recoveryCodes.length > 0 &&
+
+                    <RecoveryCodesDisplay recoveryCodes={recoveryCodes} onCompleteSetup={() => navigate("/dashboard")} />
+
+                }
+
+
                 {/* Info Box */}
                 <Box
                     bg="blue.50"
@@ -451,6 +624,102 @@ export default function ChangePassword({user}) {
                 </Box>
 
             </VStack>
+            <Modal isOpen={disableModalOpen} onClose={() => setDisableModalOpen(false)} isCentered>
+                <ModalOverlay />
+                <ModalContent borderRadius="xl">
+                    <ModalHeader>Disable 2FA</ModalHeader>
+                    <ModalCloseButton />
+                    <ModalBody pb={6}>
+                        <VStack spacing={4} align="stretch">
+                            <Text fontSize="sm" color="brand.gray.600">
+                                Enter your password and the current authenticator code to disable two-factor authentication.
+                            </Text>
+
+                            <FormControl isRequired>
+                                <FormLabel fontWeight="600" color="brand.primary">Password</FormLabel>
+                                <Input
+                                    type="password"
+                                    placeholder="Enter your password"
+                                    value={disablePassword}
+                                    onChange={(e) => setDisablePassword(e.target.value)}
+                                />
+                            </FormControl>
+
+                            <FormControl isRequired>
+                                <FormLabel fontWeight="600" color="brand.primary">Authenticator code</FormLabel>
+                                <Input
+                                    placeholder="Enter your 6-digit code"
+                                    value={disableAuthCode}
+                                    onChange={(e) => setDisableAuthCode(e.target.value)}
+                                />
+                            </FormControl>
+                        </VStack>
+                    </ModalBody>
+
+                    <ModalFooter>
+                        <Button variant="ghost" mr={3} onClick={() => setDisableModalOpen(false)}>
+                            Cancel
+                        </Button>
+                        <Button
+                            bg="brand.primary"
+                            color="white"
+                            isLoading={disabling2fa}
+                            onClick={handleDisable2fa}
+                        >
+                            Disable 2FA
+                        </Button>
+                    </ModalFooter>
+                </ModalContent>
+            </Modal>
+
+            <Modal isOpen={recoverModalOpen} onClose={() => setRecoverModalOpen(false)} isCentered>
+                <ModalOverlay />
+                <ModalContent borderRadius="xl">
+                    <ModalHeader>Recover 2FA</ModalHeader>
+                    <ModalCloseButton />
+                    <ModalBody pb={6}>
+                        <VStack spacing={4} align="stretch">
+                            <Text fontSize="sm" color="brand.gray.600">
+                                Enter your password and one of your recovery codes to regain access and set up 2FA again.
+                            </Text>
+
+                            <FormControl isRequired>
+                                <FormLabel fontWeight="600" color="brand.primary">Password</FormLabel>
+                                <Input
+                                    type="password"
+                                    placeholder="Enter your password"
+                                    value={recoverPassword}
+                                    onChange={(e) => setRecoverPassword(e.target.value)}
+                                />
+                            </FormControl>
+
+                            <FormControl isRequired>
+                                <FormLabel fontWeight="600" color="brand.primary">Recovery code</FormLabel>
+                                <Input
+                                    placeholder="Enter your recovery code"
+                                    value={recoveryCode}
+                                    onChange={(e) => setRecoveryCode(e.target.value)}
+                                />
+                            </FormControl>
+                        </VStack>
+                    </ModalBody>
+
+                    <ModalFooter>
+                        <Button variant="ghost" mr={3} onClick={() => setRecoverModalOpen(false)}>
+                            Cancel
+                        </Button>
+                        <Button
+                            bg="brand.primary"
+                            color="white"
+                            isLoading={recovering2fa}
+                            onClick={handleRecover2fa}
+                        >
+                            Recover 2FA
+                        </Button>
+                    </ModalFooter>
+                </ModalContent>
+            </Modal>
+
             <Navbar active="profile" />
         </Box>
     );

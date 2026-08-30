@@ -396,7 +396,7 @@ export default function App() {
             <Route path="/verify_ID" element={user ? <IdentityVerification /> : <Navigate to="/login" />} />
             <Route path="/edit-profile" element={user ? <EditProfile user={user} /> : <Navigate to="/login" />} />
             <Route path="/change-password" element={user ? <ChangePassword user={user} /> : <Navigate to="/login" />} />
-            <Route path="/security" element={user ? <ChangePassword user={user}/> : <Navigate to="/login" />} />
+            <Route path="/security" element={loadingUser ? (<Spinner />) : user ? <ChangePassword user={user}/> : <Navigate to="/login" />} />
             <Route path="/settings" element={user ? <ListProperty /> : <Navigate to="/login" />} />
             <Route path="/support" element={user ? <SupportChat /> : <Navigate to="/login" />} />
               <Route path="/financial-dashboard" element={ loadingUser ? (<Spinner />) : user && user.role == "super_admin" ? (<AdminFinancialSummary onLogout={logout} user={user} />  ) : (<Navigate to="/login" /> ) } />
