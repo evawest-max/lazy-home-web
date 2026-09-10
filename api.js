@@ -127,8 +127,8 @@ export const DisableTwoFactor = (password, authCode) =>
 export const getCurrentUser = () =>
   API.get("/api/v1/users/me");
 
-export const updateProfile = (formData, id) =>
-  API.patch(`/api/v1/users/profile/${id}`, formData, {
+export const updateProfile = (formData) =>
+  API.patch(`/api/v1/users/profile`, formData, {
     headers: {
       "Content-Type": "multipart/form-data",
     },
@@ -167,7 +167,7 @@ export const updateProperty = (
   formData
 ) =>
   API.post(
-    `/api/v1/properties/update-property`,
+    `/api/v1/properties/update-property/${id}`,
     formData,
     {
       headers: {

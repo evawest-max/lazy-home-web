@@ -103,7 +103,7 @@ export default function EditProfile({ user }) {
                 payload.append('image', avatarFile);
             }
 
-            await updateProfile(payload, user.id);
+            await updateProfile(payload);
             setSuccess('Profile updated successfully.');
             toast({
                 title: 'Profile updated',

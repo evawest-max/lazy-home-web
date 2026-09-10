@@ -378,7 +378,7 @@ export default function ListPropertyStep4({ formData, setFormData, onBack, onSub
 
                         <Button onClick={ verifyAccountDetails}>Verify account</Button>
 
-                        {accountVerified && (
+                        {accountVerified ? (
                             <Box bg="brand.background" p={4} borderRadius="lg">
                                 <HStack spacing={3}>
                                     <CheckCircle size={20} color="#2E7D32" />
@@ -390,6 +390,15 @@ export default function ListPropertyStep4({ formData, setFormData, onBack, onSub
                                             {landlordDetails.fullName} - {landlordDetails.bankName} ({landlordDetails.accountNumber})
                                         </Text>
                                     </VStack>
+                                </HStack>
+                            </Box>
+                        ) : (
+                            <Box bg="brand.background" p={4} borderRadius="lg">
+                                <HStack spacing={3}>
+                                    <Warning size={20} color="#FF9800" />
+                                    <Text fontSize="sm" fontWeight="600" color="brand.warning">
+                                         invalid Account. Please check the recipient account details before submitting.
+                                    </Text>
                                 </HStack>
                             </Box>
                         )}

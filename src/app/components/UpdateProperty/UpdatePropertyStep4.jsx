@@ -107,7 +107,8 @@ function UpdatePropertyStep4({ updatedFormdata, setUpdatedFormdata, onBack, onSu
 
             // Important: send _id as param, not in body
             const id = updatedFormdata._id;
-            console.log( updatedFormdata)
+            console.log( updatedFormdata, formData, 'Submitting updated property with ID:', id);
+
             const res = await updateProperty(id, formData); // api should be PUT /property/:id
 
             toast({ title: 'Property updated', description: res?.data?.message, status: 'success' });

@@ -136,7 +136,7 @@ export default function ForgotPassword() {
 
                 {/* Redirect */}
                 <Text fontSize="sm" color="gray.600">
-                    Remember your password?{" "}
+                    Remembered your password?{" "}
                     <Text
                         as={Link}
                         to="/login-form"

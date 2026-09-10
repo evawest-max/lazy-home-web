@@ -82,7 +82,7 @@ export default function Profile({ onLogout, user }) {
         const payload = new FormData();
         payload.append("image", file);
 
-        updateProfile(payload, user.id).catch((error) => {
+        updateProfile(payload).catch((error) => {
             toast({
                 title: "Profile Update Failed",
                 description: error?.response?.data?.message || "An error occurred while updating the profile.",
@@ -197,7 +197,7 @@ export default function Profile({ onLogout, user }) {
 
                         <HStack>
                             <Text fontSize="sm" color="gray.500">
-                                Member since {user.memberSince || "N/A"}
+                                Member since {user.registrationDate || "N/A"}
                             </Text>
 
                             {user.verified && (

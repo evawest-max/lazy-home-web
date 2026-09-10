@@ -282,7 +282,7 @@ export default function UpdatePropertyStep3({ updatedFormdata, setUpdatedFormdat
                   <Text fontSize="sm" color="brand.gray.600">SafeTenants Service Fee (5%)</Text>
                   <Text fontSize="xs" color="brand.gray.500">Paid by renter</Text>
                 </VStack>
-                <Text fontSize="sm" fontWeight="600">₦{updatedFormdata.serviceFee ? parseFloat(updatedFormdata.serviceFee).toLocaleString() : '0'}</Text>
+                <Text fontSize="sm" fontWeight="600">₦{updatedFormdata.annualRent ? parseFloat(updatedFormdata.annualRent * 0.05).toLocaleString() : '0'}</Text>
               </HStack>
 
               <HStack justify="space-between">
