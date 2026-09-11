@@ -6,8 +6,8 @@ import axios from "axios";
 //   baseURL: import.meta.env.VITE_BACKEND_URL,
 // });
 const API = axios.create({
-    baseURL: import.meta.env.VITE_BACKEND_URL,
-    withCredentials: true,
+  baseURL: import.meta.env.VITE_BACKEND_URL,
+  withCredentials: true,
 });
 
 const APISub = import.meta.env.VITE_BACKEND_URL;
@@ -32,7 +32,7 @@ API.interceptors.response.use(
     if (status === 401 && error.config.url !== "/api/v1/auth/refresh-token") {
       try {
         // Call refresh endpoint with cookies
-        const { data } = await API.post( "/api/v1/auth/refresh-token");
+        const { data } = await API.post("/api/v1/auth/refresh-token");
         const newToken = data?.data?.accessToken;
 
         if (newToken) {
@@ -115,10 +115,10 @@ export const verifyTwoFactor = (idToken) =>
   API.post("/api/v1/twofactor/verify", { token: idToken });
 
 export const recoverTwoFactor = (password, recoveryCode) =>
-  API.post("/api/v1/twofactor/recover", {password, recoveryCode});
+  API.post("/api/v1/twofactor/recover", { password, recoveryCode });
 
 export const DisableTwoFactor = (password, authCode) =>
-  API.post("/api/v1/twofactor/disable", {password, authCode});
+  API.post("/api/v1/twofactor/disable", { password, authCode });
 
 // ======================================================
 // ====================== USER ==========================
@@ -513,6 +513,17 @@ export const getEscrow =
     API.get(
       `/api/v1/admin/finance/escrows/${escrowId}`
     );
+export const getWalletFundings =
+  () =>
+    API.get(
+      "/api/v1/admin/finance/fundings"
+    );
+
+// export const getUserwallets = (params = {}) =>
+//   API.get(
+//     "/api/v1/admin/wallets",
+//     { params }
+//   );
 
 export const getFinanceReconcilation =
   () =>
@@ -549,6 +560,49 @@ export const reviewVerification = (
     `/api/v1/admin/verifications/${verificationId}/review`,
     data
   );
+
+
+
+export const getUsersWallets =
+  () =>
+    API.get(
+      "/api/v1/admin/finance/wallets"
+    );
+
+export const getWalletDetailsByWalletId =
+  (walletId) =>
+    API.get(
+      `/api/v1/admin/finance/wallets/${walletId}`
+    );
+
+export const getWalletByUserId =
+  (userId) =>
+    API.get(
+      `/api/v1/admin/finance/users/${userId}/wallet`
+    );
+
+export const getWalletDetailsByUserId =
+  (userId) =>
+    API.get(
+      `/api/v1/admin/finance/users/${userId}/wallet/details`
+    );
+
+// /finance/wallets /: walletId / unfreeze
+// finance / wallets /: walletId / freeze
+export const freezeWallet = (
+  walletId, reason = "Suspicious activity detected"
+) =>
+  API.patch(
+    `/api/v1/admin/finance/wallets/${walletId}/freeze`,
+    { reason }
+  );
+
+export const unfreezeWallet = (walletId, reason= "Suspicious activity detected") =>
+  API.patch(
+    `/api/v1/admin/finance/wallets/${walletId}/unfreeze`,
+    { reason }
+  );
+
 
 // ======================================================
 // ====================== HEALTH ========================

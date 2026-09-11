@@ -58,6 +58,8 @@ import {
     Briefcase,
     VerifiedIcon,
     Bell,
+    BadgeEuroIcon,
+    Shield,
 } from 'lucide-react';
 import { Menu, MenuButton, MenuList, MenuItem, FormControl, FormLabel } from '@chakra-ui/react';
 import { ChevronDownIcon } from '@chakra-ui/icons';
@@ -461,6 +463,23 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                             {/* {Number(unreadNotificationsCount) <= 0 && ( */}
                             <Link to="/notifications" >
                                 <Box position="relative" display="flex" alignItems="center" justifyContent="center">
+                                    <HStack spacing={2} align="center">
+                                    {user.role === 'admin' || "super_admin" && 
+                                        <Link to="/financial-dashboard" style={{ textDecoration: 'none', }}>
+                                    <Box
+                                        bg="whiteAlpha.200"
+                                        border="1px solid"
+                                        borderColor="whiteAlpha.300"
+                                        borderRadius="full"
+                                        p={2.5}
+                                        display="flex"
+                                        alignItems="center"
+                                        justifyContent="center"
+                                        cursor="pointer"
+                                    >
+                                            <Icon as={Shield} color="white" boxSize={4} />
+                                    </Box></Link>}
+                                        
                                     <Box
                                         bg="whiteAlpha.200"
                                         border="1px solid"
@@ -474,6 +493,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                                     >
                                         <Icon as={Bell} color="white" boxSize={4} />
                                     </Box>
+                                    </HStack>
                                     <Badge
                                         position="absolute"
                                         top="-4px"

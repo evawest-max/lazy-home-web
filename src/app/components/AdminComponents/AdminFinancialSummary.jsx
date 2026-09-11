@@ -45,8 +45,10 @@ import {
     getEscrows,
     getFinanceReconcilation,
     getfinancialSummary,
+    getWalletFundings,
     getWithdrawals,
 } from '../../../../api';
+import AdminNavbar from './AdminNavbar';
 
 const COLORS = ["#3182CE", "#38A169", "#E53E3E", "#D69E2E", "#805AD5"];
 
@@ -57,6 +59,21 @@ export default function AdminFinancialSummary() {
     const [escrowsLoading, setEscrowsLoading] = useState(false);
     const [escrowsPageInfo, setEscrowsPageInfo] = useState({ page: 1, limit: 6, pages: 1, total: 0 });
     const [reconciliation, setReconciliation] = useState({});
+    const [walletFundings, setWalletFundings] = useState([]);
+    const [walletLoading, setWalletLoading] = useState(false);
+    const [walletCurrentPage, setWalletCurrentPage] = useState(1);
+    const [walletPageSize, setWalletPageSize] = useState(10);
+    const walletTotalPages = Math.max(1, Math.ceil((walletFundings?.length ?? 0) / walletPageSize));
+    const walletPaginated = walletFundings.slice((walletCurrentPage - 1) * walletPageSize, walletCurrentPage * walletPageSize);
+    const [walletExpandedIds, setWalletExpandedIds] = useState([]);
+
+    const toggleWalletExpanded = (id) => {
+        setWalletExpandedIds((prev) => {
+            const exists = prev.includes(id);
+            if (exists) return prev.filter((x) => x !== id);
+            return [...prev, id];
+        });
+    };
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
@@ -119,18 +136,20 @@ export default function AdminFinancialSummary() {
             setLoading(true);
             setError('');
             try {
-                const [summaryRes, withdrawalsRes, escrowsRes, reconciliationRes] = await Promise.all([
+                const [summaryRes, withdrawalsRes, escrowsRes, reconciliationRes, walletFundingsRes] = await Promise.all([
                     getfinancialSummary(),
                     getWithdrawals(),
                     getEscrows(),
                     getFinanceReconcilation(),
+                    getWalletFundings()
                 ]);
 
                 const summaryData = summaryRes?.data?.data ?? summaryRes?.data ?? summaryRes ?? {};
                 const withdrawalData = withdrawalsRes?.data?.data ?? withdrawalsRes?.data ?? withdrawalsRes ?? {};
                 const escrowData = escrowsRes?.data?.data ?? escrowsRes?.data ?? escrowsRes ?? {};
                 const reconciliationData = reconciliationRes?.data?.data ?? reconciliationRes?.data ?? reconciliationRes ?? {};
-                console.log('Fetched financial data:', { summaryData, withdrawalData, escrowData, reconciliationData });
+                const walletFundingsData = walletFundingsRes?.data?.data ?? walletFundingsRes?.data ?? walletFundingsRes ?? {};
+                console.log('Fetched financial data:', { summaryData, withdrawalData, escrowData, reconciliationData, walletFundingsData });
                 setSummary(summaryData);
                 setWithdrawals(asArray(withdrawalData?.withdrawals ?? withdrawalData?.items ?? withdrawalData?.data ?? withdrawalData));
                 // process escrows response: items + pagination if present
@@ -143,6 +162,7 @@ export default function AdminFinancialSummary() {
                 };
                 setEscrows(escItems);
                 setEscrowsPageInfo(escPageInfo);
+                setWalletFundings(asArray(walletFundingsData?.fundings ?? walletFundingsData?.items ?? walletFundingsData?.data ?? walletFundingsData));
                 setReconciliation(reconciliationData);
             } catch (err) {
                 console.error('Failed to load admin financial data', err);
@@ -171,11 +191,125 @@ export default function AdminFinancialSummary() {
     };
 
     const totals = {
-        totalEscrow: summary?.escrows?.active ?? summary?.totalEscrows ?? 0,
-        totalWithdrawals: summary?.withdrawals?.pending ?? summary?.totalWithdrawals ?? 0,
-        totalCommissions: summary?.commissions?.pending ?? 0,
-        totalBonuses: summary?.bonuses?.pending ?? 0,
+        heldInEscrow: summary?.totals?.heldInEscrow ?? summary?.escrows?.heldAmount ?? 0,
+        walletBalance: summary?.totals?.totalWalletBalance ?? summary?.wallets?.totalBalance ?? 0,
+        totalLiability: summary?.totals?.totalLiability ?? ((summary?.totals?.heldInEscrow ?? 0) + (summary?.totals?.totalWalletBalance ?? summary?.wallets?.totalBalance ?? 0)),
+        totalRevenue: summary?.totals?.totalRevenue ?? summary?.revenue?.total ?? 0,
+        totalWithdrawn: summary?.totals?.totalWithdrawn ?? summary?.withdrawals?.completed?.amount ?? 0,
+        totalCommissionsPaid: summary?.totals?.totalCommissionsPaid ?? summary?.commissions?.paid?.amount ?? 0,
+        totalBonusesPaid: summary?.totals?.totalBonusesPaid ?? summary?.bonuses?.paid?.amount ?? 0,
+        totalWithdrawalFees: summary?.totals?.totalWithdrawalFees ?? summary?.revenue?.withdrawalFees ?? 0,
     };
+
+    const summaryCards = [
+        {
+            title: 'Held in Escrow',
+            value: totals.heldInEscrow,
+            subtext: `${summary?.escrows?.active ?? 0} active • ${summary?.escrows?.released ?? 0} released`,
+            accent: 'blue',
+        },
+        {
+            title: 'Wallet Balance',
+            value: totals.walletBalance/100,
+            subtext: `${summary?.wallets?.totalWallets ?? 0} wallets • ${summary?.wallets?.activeWallets ?? 0} active`,
+            accent: 'cyan',
+        },
+        {
+            title: 'Total Liability',
+            value: totals.totalLiability/100,
+            subtext: `Escrow + wallet balance`,
+            accent: 'red',
+        },
+        {
+            title: 'Total Revenue',
+            value: totals.totalRevenue,
+            subtext: `Gross ${formatCurrency(summary?.revenue?.gross ?? 0)} • Pending ${formatCurrency(summary?.revenue?.pending ?? 0)}`,
+            accent: 'green',
+        },
+        {
+            title: 'Total Withdrawn',
+            value: totals.totalWithdrawn/100,
+            subtext: `${summary?.withdrawals?.completed?.count ?? 0} completed • ${summary?.withdrawals?.pending?.count ?? 0} pending`,
+            accent: 'purple',
+        },
+        {
+            title: 'Total Fees',
+            value: totals.totalWithdrawalFees,
+            subtext: `${formatCurrency(totals.totalCommissionsPaid)} commissions • ${formatCurrency(totals.totalBonusesPaid)} bonuses`,
+            accent: 'orange',
+        },
+    ];
+
+    const breakdownCards = [
+        {
+            title: 'Withdrawals',
+            rows: [
+                { label: 'Pending', value: `${summary?.withdrawals?.pending?.count ?? 0} • ${formatCurrency(summary?.withdrawals?.pending?.amount ?? 0)}` },
+                { label: 'Completed', value: `${summary?.withdrawals?.completed?.count/100 ?? 0} • ${formatCurrency(summary?.withdrawals?.completed?.amount ?? 0)}` },
+                { label: 'Failed', value: `${summary?.withdrawals?.failed?.count ?? 0} • ${formatCurrency(summary?.withdrawals?.failed?.amount ?? 0)}` },
+                { label: 'Net amount', value: formatCurrency(summary?.withdrawals?.pending?.netAmount ?? 0) },
+                { label: 'Fees', value: formatCurrency(summary?.withdrawals?.pending?.fee ?? summary?.totals?.totalWithdrawalFees ?? summary?.revenue?.withdrawalFees ?? 0) },
+            ],
+        },
+        {
+            title: 'Escrows',
+            rows: [
+                { label: 'Active', value: `${summary?.escrows?.active ?? 0}` },
+                { label: 'Released', value: `${summary?.escrows?.released ?? 0}` },
+                { label: 'Held amount', value: formatCurrency(summary?.escrows?.heldAmount ?? summary?.totals?.heldInEscrow ?? 0) },
+                { label: 'Platform fees', value: formatCurrency(summary?.escrows?.heldPlatformFees ?? 0) },
+                { label: 'Released volume', value: formatCurrency(summary?.escrows?.releasedVolume ?? 0) },
+            ],
+        },
+        {
+            title: 'Commissions',
+            rows: [
+                { label: 'Pending', value: `${summary?.commissions?.pending ?? 0}` },
+                { label: 'Paid count', value: `${summary?.commissions?.paid?.count ?? 0}` },
+                { label: 'Paid amount', value: formatCurrency(summary?.commissions?.paid?.amount ?? summary?.totals?.totalCommissionsPaid ?? 0) },
+            ],
+        },
+        {
+            title: 'Bonuses',
+            rows: [
+                { label: 'Pending', value: `${summary?.bonuses?.pending ?? 0}` },
+                { label: 'Paid count', value: `${summary?.bonuses?.paid?.count ?? 0}` },
+                { label: 'Paid amount', value: formatCurrency(summary?.bonuses?.paid?.amount ?? summary?.totals?.totalBonusesPaid ?? 0) },
+            ],
+        },
+        {
+            title: 'Wallets',
+            rows: [
+                { label: 'Total balance', value: formatCurrency(summary?.wallets?.totalBalance/100 ?? summary?.totals?.totalWalletBalance/100 ?? 0) },
+                { label: 'Total wallets', value: `${summary?.wallets?.totalWallets ?? 0}` },
+                { label: 'Active wallets', value: `${summary?.wallets?.activeWallets ?? 0}` },
+                { label: 'Frozen wallets', value: `${summary?.wallets?.frozenWallets ?? 0}` },
+                { label: 'Average balance', value: formatCurrency(summary?.wallets?.avgBalance/100 ?? 0) },
+            ],
+        },
+        {
+            title: 'Revenue',
+            rows: [
+                { label: 'Total', value: formatCurrency(summary?.revenue?.total ?? summary?.totals?.totalRevenue ?? 0) },
+                { label: 'Pending', value: formatCurrency(summary?.revenue?.pending ?? 0) },
+                { label: 'Withdrawal fees', value: formatCurrency(summary?.revenue?.withdrawalFees ?? summary?.totals?.totalWithdrawalFees ?? 0) },
+                { label: 'Gross', value: formatCurrency(summary?.revenue?.gross ?? 0) },
+            ],
+        },
+        {
+            title: 'Totals',
+            rows: [
+                { label: 'Held in escrow', value: formatCurrency(summary?.totals?.heldInEscrow/100 ?? 0) },
+                { label: 'Wallet balance', value: formatCurrency(summary?.totals?.totalWalletBalance/100 ?? summary?.wallets?.totalBalance/100 ?? 0) },
+                { label: 'Total liability', value: formatCurrency(summary?.totals?.totalLiability/100 ?? 0) },
+                { label: 'Total revenue', value: formatCurrency(summary?.totals?.totalRevenue ?? 0) },
+                { label: 'Commissions paid', value: formatCurrency(summary?.totals?.totalCommissionsPaid/100 ?? 0) },
+                { label: 'Bonuses paid', value: formatCurrency(summary?.totals?.totalBonusesPaid/100 ?? 0) },
+                { label: 'Total withdrawn', value: formatCurrency(summary?.totals?.totalWithdrawn/100 ?? 0) },
+                { label: 'Total withdrawal fees', value: formatCurrency(summary?.totals?.totalWithdrawalFees/100 ?? 0) },
+            ],
+        },
+    ];
 
     // derive a checked-stats object for reconciliation display (defensive defaults)
     const checked = reconciliation?.checked ?? {
@@ -196,7 +330,7 @@ export default function AdminFinancialSummary() {
     ];
 
     return (
-        <Box p={6} bg="gray.50" minH="100vh">
+        <Box p={6} bg="brand.background" minH="100vh" pb={58} mb={2}>
             <VStack spacing={6} align="stretch">
                 <Flex align="center" justify="space-between">
                     <Heading size="lg" color="teal.600">Admin Financial Dashboard</Heading>
@@ -205,22 +339,40 @@ export default function AdminFinancialSummary() {
                     </HStack>
                 </Flex>
 
-                {/* Summary Cards */}
-                <SimpleGrid columns={{ base: 1, md: 4 }} spacing={4}>
-                    {Object.entries(totals).map(([key, value]) => (
-                        <Card key={key} shadow="md" borderRadius="lg">
-                            <CardHeader>
-                                <Text fontSize="sm" color="gray.500">{value} Pending {key.replace('total', '')}</Text>
+                <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={4}>
+                    {summaryCards.map((card) => (
+                        <Card key={card.title} shadow="md" borderRadius="lg" borderLeft="4px solid" borderLeftColor={`${card.accent}.500`}>
+                            <CardBody p={5}>
+                                <Text fontSize="sm" fontWeight="semibold" color="gray.500">{card.title}</Text>
+                                <Heading size="lg" mt={2}>{formatCurrency(card.value)}</Heading>
+                                <Text fontSize="xs" color="gray.500" mt={3}>{card.subtext}</Text>
+                            </CardBody>
+                        </Card>
+                    ))}
+                </SimpleGrid>
+
+                <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={4}>
+                    {breakdownCards.map((card) => (
+                        <Card key={card.title} shadow="sm" borderRadius="lg" bg="white">
+                            <CardHeader pb={2}>
+                                <Heading size="sm">{card.title}</Heading>
                             </CardHeader>
-                            <CardBody>
-                                <Heading size="md">{formatCurrency(value)}</Heading>
+                            <CardBody pt={0}>
+                                <VStack spacing={3} align="stretch">
+                                    {card.rows.map((row) => (
+                                        <Flex key={`${card.title}-${row.label}`} justify="space-between" align="center" borderBottom="1px solid" borderColor="gray.100" pb={2}>
+                                            <Text fontSize="sm" color="gray.600">{row.label}</Text>
+                                            <Text fontSize="sm" fontWeight="semibold" color="gray.800">{row.value}</Text>
+                                        </Flex>
+                                    ))}
+                                </VStack>
                             </CardBody>
                         </Card>
                     ))}
                 </SimpleGrid>
 
                 {/* Charts Section */}
-                <Grid templateColumns={{ base: '1fr', md: '1fr 1fr' }} gap={6}>
+                {/* <Grid templateColumns={{ base: '1fr', md: '1fr 1fr' }} gap={6}>
                     <Card>
                         <CardHeader><Heading size="sm">Withdrawals Status</Heading></CardHeader>
                         <CardBody>
@@ -251,7 +403,7 @@ export default function AdminFinancialSummary() {
                             </ResponsiveContainer>
                         </CardBody>
                     </Card>
-                </Grid>
+                </Grid> */}
 
                 {/* Recent Withdrawals Table */}
                 <Card>
@@ -314,7 +466,7 @@ export default function AdminFinancialSummary() {
                                                         <Td>{renderJSONShort(w.paystackResponse)}</Td>
                                                         <Td>{renderJSONShort(w.accountSnapshot)}</Td>
                                                         <Td>{renderJSONShort(w.settlementAccount)}</Td>
-                                                        <Td>{w.wallet ?? '—'}</Td>
+                                                        <Td>{renderJSONShort(w.wallet)}</Td>
                                                         <Td>{renderJSONShort(w.walletTransaction)}</Td>
                                                         <Td>{renderJSONShort(w.user)}</Td>
                                                         <Td>{w.createdAt ? new Date(w.createdAt).toLocaleString() : '—'}</Td>
@@ -469,6 +621,95 @@ export default function AdminFinancialSummary() {
                         </CardBody>
                     </Card>
 
+                    {/* Wallet Fundings Table */}
+                    <Card>
+                        <CardHeader><Heading size="sm">Wallet Fundings</Heading></CardHeader>
+                        <CardBody>
+                            {walletLoading || loading ? (
+                                <Spinner />
+                            ) : (
+                                <Box>
+                                    <TableContainer>
+                                        <Table variant="simple">
+                                            <Thead>
+                                                <Tr>
+                                                    <Th></Th>
+                                                    <Th>_id</Th>
+                                                    <Th>amount</Th>
+                                                    <Th>netAmount</Th>
+                                                    <Th>fee</Th>
+                                                    <Th>status</Th>
+                                                    <Th>reference</Th>
+                                                    <Th>wallet</Th>
+                                                    <Th>user</Th>
+                                                    <Th>createdAt</Th>
+                                                    <Th>completedAt</Th>
+                                                    <Th>metadata</Th>
+                                                </Tr>
+                                            </Thead>
+                                            <Tbody>
+                                                {walletFundings.length === 0 && (
+                                                    <Tr><Td colSpan={12}>No wallet fundings found</Td></Tr>
+                                                )}
+                                                {walletPaginated.map((w, idx) => {
+                                                    const id = w._id ?? w.id ?? ((walletCurrentPage - 1) * walletPageSize) + idx;
+                                                    const isOpen = walletExpandedIds.includes(id);
+                                                    return (
+                                                        <React.Fragment key={id}>
+                                                            <Tr>
+                                                                <Td>
+                                                                    <IconButton size="sm" variant="ghost" aria-label={isOpen ? 'collapse' : 'expand'} icon={isOpen ? <ChevronUpIcon /> : <ChevronDownIcon />} onClick={() => toggleWalletExpanded(id)} />
+                                                                </Td>
+                                                                <Td>{w._id ?? w.id ?? `#${(walletCurrentPage - 1) * walletPageSize + idx + 1}`}</Td>
+                                                                <Td>{formatCurrency((w.amount ?? w.value ?? 0) / 100)}</Td>
+                                                                <Td>{formatCurrency((w.netAmount ?? 0) / 100)}</Td>
+                                                                <Td>{formatCurrency((w.fee ?? 0) / 100)}</Td>
+                                                                <Td><Badge colorScheme={w.status === 'failed' ? 'red' : w.status === 'completed' ? 'green' : 'gray'}>{w.status ?? 'unknown'}</Badge></Td>
+                                                                <Td>{w.reference ?? '—'}</Td>
+                                                                <Td>{renderJSONShort(w.wallet)}</Td>
+                                                                <Td>{renderJSONShort(w.user)}</Td>
+                                                                <Td>{w.createdAt ? new Date(w.createdAt).toLocaleString() : '—'}</Td>
+                                                                <Td>{w.completedAt ? new Date(w.completedAt).toLocaleString() : '—'}</Td>
+                                                                <Td>{renderJSONShort(w.metadata)}</Td>
+                                                            </Tr>
+                                                            <Tr>
+                                                                <Td colSpan={12} p={0}>
+                                                                    <Collapse in={isOpen} animateOpacity>
+                                                                        <Box p={3} bg="gray.50" borderTop="1px solid" borderColor="gray.100">
+                                                                            <Box as="pre" whiteSpace="pre-wrap" fontSize="12px">{JSON.stringify(w, null, 2)}</Box>
+                                                                        </Box>
+                                                                    </Collapse>
+                                                                </Td>
+                                                            </Tr>
+                                                        </React.Fragment>
+                                                    );
+                                                })}
+                                            </Tbody>
+                                        </Table>
+                                    </TableContainer>
+
+                                    <Flex mt={3} justify="space-between" align="center">
+                                        <HStack spacing={3}>
+                                            <Text fontSize="sm">Rows per page:</Text>
+                                            <Select size="sm" width="80px" value={String(walletPageSize)} onChange={(e) => { setWalletPageSize(Number(e.target.value)); setWalletCurrentPage(1); }}>
+                                                <option value="5">5</option>
+                                                <option value="10">10</option>
+                                                <option value="25">25</option>
+                                            </Select>
+                                            <Text fontSize="sm" color="gray.600">Showing {(walletFundings.length === 0) ? 0 : ((walletCurrentPage - 1) * walletPageSize + 1)} - {Math.min(walletCurrentPage * walletPageSize, walletFundings.length)} of {walletFundings.length}</Text>
+                                        </HStack>
+
+                                        <HStack>
+                                            <Button size="sm" onClick={() => setWalletCurrentPage((p) => Math.max(1, p - 1))} isDisabled={walletCurrentPage <= 1}>Prev</Button>
+                                            <Text fontSize="sm">Page {walletCurrentPage} / {walletTotalPages}</Text>
+                                            <Button size="sm" onClick={() => setWalletCurrentPage((p) => Math.min(walletTotalPages, p + 1))} isDisabled={walletCurrentPage >= walletTotalPages}>Next</Button>
+                                        </HStack>
+                                    </Flex>
+                                </Box>
+                            )}
+                        </CardBody>
+                    </Card>
+
 
                 {/* Reconciliation Data */}
                 <Card>
@@ -535,6 +776,7 @@ export default function AdminFinancialSummary() {
                     </CardBody>
                 </Card>
             </VStack>
+            <AdminNavbar active= "Finance" />
         </Box>
     );
 }
