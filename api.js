@@ -541,27 +541,6 @@ export const moderateProperty = (
     data
   );
 
-export const suspendUser = (
-  userId,
-  reason
-) =>
-  API.patch(
-    `/api/v1/admin/users/${userId}/suspend`,
-    {
-      reason,
-    }
-  );
-
-export const reviewVerification = (
-  verificationId,
-  data
-) =>
-  API.patch(
-    `/api/v1/admin/verifications/${verificationId}/review`,
-    data
-  );
-
-
 
 export const getUsersWallets =
   () =>
@@ -587,8 +566,6 @@ export const getWalletDetailsByUserId =
       `/api/v1/admin/finance/users/${userId}/wallet/details`
     );
 
-// /finance/wallets /: walletId / unfreeze
-// finance / wallets /: walletId / freeze
 export const freezeWallet = (
   walletId, reason = "Suspicious activity detected"
 ) =>
@@ -597,12 +574,115 @@ export const freezeWallet = (
     { reason }
   );
 
-export const unfreezeWallet = (walletId, reason= "Suspicious activity detected") =>
+export const unfreezeWallet = (walletId, reason = "Suspicious activity detected") =>
   API.patch(
     `/api/v1/admin/finance/wallets/${walletId}/unfreeze`,
     { reason }
   );
+//Admin moderation API
+export const getAdminModerationDashboardSummary =
+  () =>
+    API.get(
+      "/api/v1/admin/userModeration/dashboard"
+    );
+export const getModerationQueue =
+  () =>
+    API.get(
+      "/api/v1/admin/moderation/queue"
+    );
+export const suspendUser = (
+  userId,
+  reason
+) =>
+  API.patch(
+    `/api/v1/admin/users/${userId}/suspend`,
+    {
+      reason,
+    }
+  );
 
+export const unSuspendUser = (
+  userId,
+  reason
+) =>
+  API.patch(
+    `/api/v1/admin/users/${userId}/unsuspend`
+  );
+
+export const reviewVerification = (
+  verificationId,
+  status,
+  reason,
+) =>
+  API.patch(
+    `/api/v1/admin/verifications/${verificationId}/review`,
+    { status, reason }
+  );
+
+export const updateCapabilities = (
+  userId,
+  capabilities
+) =>
+  API.patch(
+    `/api/v1/admin/users/${userId}/capabilities`,
+    capabilities
+  );
+
+export const getDisputes =
+  () =>
+    API.get(
+      "/api/v1/admin/disputes"
+    );
+
+export const getAuditLogs =
+  () =>
+    API.get(
+      "/api/v1/admin/audit-logs"
+    );
+
+export const moderateDispute = (
+  disputeId,
+  status, resolution, note
+) =>
+  API.patch(
+    `/api/v1/admin/disputes/${disputeId}/moderate`,
+    { status, resolution, note }
+  );
+
+export const getAllUsers =
+  () =>
+    API.get(
+      "/api/v1/admin/users"
+    );
+
+export const getAllUsersProperties =
+  () =>
+    API.get(
+      "/api/v1/admin/properties"
+    );
+
+export const getUserDetails =
+  (userId) =>
+    API.get(
+      `/api/v1/admin/users/${userId}`
+    );
+
+
+
+export const getPropertyDetails =
+  (propertyId) =>
+    API.get(
+      `/api/v1/admin/properties/${propertyId}`
+    );
+
+export const findProperty =
+  (query) =>
+    API.get(
+      `/api/v1/admin/properties/find`,
+      {
+        params: typeof query === 'string' && query.trim() ? { q: query.trim() } : {},
+      }
+    );
 
 // ======================================================
 // ====================== HEALTH ========================

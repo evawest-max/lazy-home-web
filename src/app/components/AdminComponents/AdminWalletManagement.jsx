@@ -119,13 +119,13 @@ export default function AdminWalletManagement() {
     const summaryCards = useMemo(() => [
         {
             label: 'Total Wallet Balance',
-            value: formatCurrency(stats.totalBalance ?? 0),
+            value: formatCurrency((stats.totalBalance ?? 0)/100),
             helper: `${wallets.length} wallets loaded`,
             accent: 'teal',
         },
         {
             label: 'Average Balance',
-            value: formatCurrency(stats.avgBalance ?? 0),
+            value: formatCurrency((stats.avgBalance ?? 0)/100),
             helper: 'Across all wallets',
             accent: 'blue',
         },
@@ -409,7 +409,7 @@ export default function AdminWalletManagement() {
                                                         </VStack>
                                                     </Td>
                                                     <Td>
-                                                        <Text fontWeight="bold">{formatCurrency(wallet.balance ?? 0)}</Text>
+                                                        <Text fontWeight="bold">{formatCurrency((wallet.balance ?? 0)/100)}</Text>
                                                     </Td>
                                                     <Td>
                                                         <Badge colorScheme={getStatusColor(wallet.status)}>{wallet.status || 'active'}</Badge>

@@ -33,6 +33,8 @@ import BankVerificationForm from './components/Bank Verification Page';
 import Notifications from './components/Notifications';
 import AdminFinancialSummary from './components/AdminComponents/AdminFinancialSummary';
 import AdminUserManagementDashboard from './components/AdminComponents/AdminUserManagement';
+import AdminAllUsersPage from './components/AdminComponents/AdminAllUsersPage';
+import AdminAllPropertiesPage from './components/AdminComponents/AdminAllPropertiesPage';
 import AdminWalletManagement from './components/AdminComponents/AdminWalletManagement';
 import AdminViewSingleUserWallet from './components/AdminComponents/AdminViewSingleUserWallet';
 
@@ -406,6 +408,8 @@ export default function App() {
               <Route path="/wallet-management" element={ loadingUser ? (<Spinner />) : user && user.role == "super_admin" ? (<AdminWalletManagement onLogout={logout} user={user} />  ) : (<Navigate to="/login" /> ) } />
               <Route path="/view-user-wallet" element={ loadingUser ? (<Spinner />) : user && user.role == "super_admin" ? (<AdminViewSingleUserWallet onLogout={logout} user={user} />  ) : (<Navigate to="/login" /> ) } />
               <Route path="/user-management" element={ loadingUser ? (<Spinner />) : user && user.role == "super_admin" ? (<AdminUserManagementDashboard onLogout={logout} user={user} />  ) : (<Navigate to="/login" /> ) } />
+              <Route path="/all-users" element={ loadingUser ? (<Spinner />) : user && user.role == "super_admin" ? (<AdminAllUsersPage onLogout={logout} user={user} />  ) : (<Navigate to="/login" /> ) } />
+              <Route path="/all-properties" element={ loadingUser ? (<Spinner />) : user && user.role == "super_admin" ? (<AdminAllPropertiesPage onLogout={logout} user={user} />  ) : (<Navigate to="/login" /> ) } />
             {/* Add more routes here */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
