@@ -76,6 +76,90 @@ export default function AdminFinancialSummary() {
     };
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [resolvedIssueRefs, setResolvedIssueRefs] = useState([]);
+    const [resolvedFundingIssueRefs, setResolvedFundingIssueRefs] = useState([]);
+
+    const escrowIssues = Array.isArray(reconciliation?.escrowIssues)
+        ? reconciliation.escrowIssues
+        : Array.isArray(reconciliation?.issues)
+            ? reconciliation.issues
+            : [];
+
+    const fundingIssues = Array.isArray(reconciliation?.fundingIssues)
+        ? reconciliation.fundingIssues
+        : Array.isArray(reconciliation?.walletFundingIssues)
+            ? reconciliation.walletFundingIssues
+            : [];
+
+    const handleResolveIssue = (issue) => {
+        const key = issue?.reference || issue?.escrowId || issue?.id || issue?.type;
+        if (!key) return;
+
+        setResolvedIssueRefs((prev) => (prev.includes(key) ? prev : [...prev, key]));
+
+        setReconciliation((prev) => ({
+            ...prev,
+            escrowIssues: (prev?.escrowIssues ?? prev?.issues ?? []).map((item) => {
+                const itemKey = item?.reference || item?.escrowId || item?.id || item?.type;
+                if (itemKey === key) {
+                    return {
+                        ...item,
+                        status: 'resolved',
+                        resolvedAt: new Date().toISOString(),
+                    };
+                }
+                return item;
+            }),
+            issues: Array.isArray(prev?.issues)
+                ? prev.issues.map((item) => {
+                    const itemKey = item?.reference || item?.escrowId || item?.id || item?.type;
+                    if (itemKey === key) {
+                        return {
+                            ...item,
+                            status: 'resolved',
+                            resolvedAt: new Date().toISOString(),
+                        };
+                    }
+                    return item;
+                })
+                : prev?.issues,
+        }));
+    };
+
+    const handleResolveFundingIssue = (issue) => {
+        const key = issue?.reference || issue?.fundingId || issue?.id || issue?.type;
+        if (!key) return;
+
+        setResolvedFundingIssueRefs((prev) => (prev.includes(key) ? prev : [...prev, key]));
+
+        setReconciliation((prev) => ({
+            ...prev,
+            fundingIssues: (prev?.fundingIssues ?? prev?.walletFundingIssues ?? []).map((item) => {
+                const itemKey = item?.reference || item?.fundingId || item?.id || item?.type;
+                if (itemKey === key) {
+                    return {
+                        ...item,
+                        status: 'resolved',
+                        resolvedAt: new Date().toISOString(),
+                    };
+                }
+                return item;
+            }),
+            walletFundingIssues: Array.isArray(prev?.walletFundingIssues)
+                ? prev.walletFundingIssues.map((item) => {
+                    const itemKey = item?.reference || item?.fundingId || item?.id || item?.type;
+                    if (itemKey === key) {
+                        return {
+                            ...item,
+                            status: 'resolved',
+                            resolvedAt: new Date().toISOString(),
+                        };
+                    }
+                    return item;
+                })
+                : prev?.walletFundingIssues,
+        }));
+    };
 
     const asArray = (v) => {
         if (!v) return [];
@@ -210,13 +294,13 @@ export default function AdminFinancialSummary() {
         },
         {
             title: 'Wallet Balance',
-            value: totals.walletBalance/100,
+            value: totals.walletBalance / 100,
             subtext: `${summary?.wallets?.totalWallets ?? 0} wallets • ${summary?.wallets?.activeWallets ?? 0} active`,
             accent: 'cyan',
         },
         {
             title: 'Total Liability',
-            value: totals.totalLiability/100,
+            value: totals.totalLiability / 100,
             subtext: `Escrow + wallet balance`,
             accent: 'red',
         },
@@ -228,7 +312,7 @@ export default function AdminFinancialSummary() {
         },
         {
             title: 'Total Withdrawn',
-            value: totals.totalWithdrawn/100,
+            value: totals.totalWithdrawn / 100,
             subtext: `${summary?.withdrawals?.completed?.count ?? 0} completed • ${summary?.withdrawals?.pending?.count ?? 0} pending`,
             accent: 'purple',
         },
@@ -245,7 +329,7 @@ export default function AdminFinancialSummary() {
             title: 'Withdrawals',
             rows: [
                 { label: 'Pending', value: `${summary?.withdrawals?.pending?.count ?? 0} • ${formatCurrency(summary?.withdrawals?.pending?.amount ?? 0)}` },
-                { label: 'Completed', value: `${summary?.withdrawals?.completed?.count/100 ?? 0} • ${formatCurrency(summary?.withdrawals?.completed?.amount ?? 0)}` },
+                { label: 'Completed', value: `${(summary?.withdrawals?.completed?.count ?? 0) / 100} • ${formatCurrency(summary?.withdrawals?.completed?.amount ?? 0)}` },
                 { label: 'Failed', value: `${summary?.withdrawals?.failed?.count ?? 0} • ${formatCurrency(summary?.withdrawals?.failed?.amount ?? 0)}` },
                 { label: 'Net amount', value: formatCurrency(summary?.withdrawals?.pending?.netAmount ?? 0) },
                 { label: 'Fees', value: formatCurrency(summary?.withdrawals?.pending?.fee ?? summary?.totals?.totalWithdrawalFees ?? summary?.revenue?.withdrawalFees ?? 0) },
@@ -280,11 +364,11 @@ export default function AdminFinancialSummary() {
         {
             title: 'Wallets',
             rows: [
-                { label: 'Total balance', value: formatCurrency(summary?.wallets?.totalBalance/100 ?? summary?.totals?.totalWalletBalance/100 ?? 0) },
+                { label: 'Total balance', value: formatCurrency((summary?.wallets?.totalBalance ?? summary?.totals?.totalWalletBalance ?? 0) / 100) },
                 { label: 'Total wallets', value: `${summary?.wallets?.totalWallets ?? 0}` },
                 { label: 'Active wallets', value: `${summary?.wallets?.activeWallets ?? 0}` },
                 { label: 'Frozen wallets', value: `${summary?.wallets?.frozenWallets ?? 0}` },
-                { label: 'Average balance', value: formatCurrency(summary?.wallets?.avgBalance/100 ?? 0) },
+                { label: 'Average balance', value: formatCurrency((summary?.wallets?.avgBalance ?? 0) / 100) },
             ],
         },
         {
@@ -299,14 +383,14 @@ export default function AdminFinancialSummary() {
         {
             title: 'Totals',
             rows: [
-                { label: 'Held in escrow', value: formatCurrency(summary?.totals?.heldInEscrow/100 ?? 0) },
-                { label: 'Wallet balance', value: formatCurrency(summary?.totals?.totalWalletBalance/100 ?? summary?.wallets?.totalBalance/100 ?? 0) },
-                { label: 'Total liability', value: formatCurrency(summary?.totals?.totalLiability/100 ?? 0) },
+                { label: 'Held in escrow', value: formatCurrency((summary?.totals?.heldInEscrow ?? 0) / 100) },
+                { label: 'Wallet balance', value: formatCurrency(summary?.totals?.totalWalletBalance ?? (summary?.wallets?.totalBalance ?? 0) / 100) },
+                { label: 'Total liability', value: formatCurrency((summary?.totals?.totalLiability ?? 0) / 100) },
                 { label: 'Total revenue', value: formatCurrency(summary?.totals?.totalRevenue ?? 0) },
-                { label: 'Commissions paid', value: formatCurrency(summary?.totals?.totalCommissionsPaid/100 ?? 0) },
-                { label: 'Bonuses paid', value: formatCurrency(summary?.totals?.totalBonusesPaid/100 ?? 0) },
-                { label: 'Total withdrawn', value: formatCurrency(summary?.totals?.totalWithdrawn/100 ?? 0) },
-                { label: 'Total withdrawal fees', value: formatCurrency(summary?.totals?.totalWithdrawalFees/100 ?? 0) },
+                { label: 'Commissions paid', value: formatCurrency((summary?.totals?.totalCommissionsPaid ?? 0)) },
+                { label: 'Bonuses paid', value: formatCurrency((summary?.totals?.totalBonusesPaid ?? 0) / 100) },
+                { label: 'Total withdrawn', value: formatCurrency((summary?.totals?.totalWithdrawn ?? 0) / 100) },
+                { label: 'Total withdrawal fees', value: formatCurrency((summary?.totals?.totalWithdrawalFees ?? 0) / 100) },
             ],
         },
     ];
@@ -413,302 +497,302 @@ export default function AdminFinancialSummary() {
                             <Spinner />
                         ) : (
                             <Box>
-                            <TableContainer>
-                                <Table variant="simple">
-                                    <Thead>
-                                        <Tr>
-                                            <Th></Th>
-                                            <Th>_id</Th>
-                                            <Th>reference</Th>
-                                            <Th>amount</Th>
-                                            <Th>netAmount</Th>
-                                            <Th>fee</Th>
-                                            <Th>status</Th>
-                                            <Th>transferMode</Th>
-                                            <Th>transferCode</Th>
-                                            <Th>paystackTransferId</Th>
-                                            <Th>paystackResponse</Th>
-                                            <Th>accountSnapshot</Th>
-                                            <Th>settlementAccount</Th>
-                                            <Th>wallet</Th>
-                                            <Th>walletTransaction</Th>
-                                            <Th>user</Th>
-                                            <Th>createdAt</Th>
-                                            <Th>initiatedAt</Th>
-                                            <Th>completedAt</Th>
-                                            <Th>updatedAt</Th>
-                                            <Th>metadata</Th>
-                                            <Th>__v</Th>
-                                        </Tr>
-                                    </Thead>
-                                    <Tbody>
-                                        {withdrawals.length === 0 && (
-                                            <Tr><Td colSpan={22}>No withdrawals found</Td></Tr>
-                                        )}
-                                        {paginatedWithdrawals.map((w, idx) => {
-                                            const id = w._id ?? w.id ?? ((currentPage - 1) * pageSize) + idx;
-                                            const isOpen = expandedIds.includes(id);
-                                            return (
-                                                <>
-                                                    <Tr key={id}>
-                                                        <Td>
-                                                            <IconButton size="sm" variant="ghost" aria-label={isOpen ? 'collapse' : 'expand'} icon={isOpen ? <ChevronUpIcon /> : <ChevronDownIcon />} onClick={() => toggleExpanded(id)} />
-                                                        </Td>
-                                                        <Td>{w._id ?? w.id ?? `#${(currentPage - 1) * pageSize + idx + 1}`}</Td>
-                                                        <Td>{w.reference ?? '—'}</Td>
-                                                        <Td>{formatCurrency((w.amount ?? w.value ?? 0) / 100)}</Td>
-                                                        <Td>{formatCurrency((w.netAmount ?? 0) / 100)}</Td>
-                                                        <Td>{formatCurrency((w.fee ?? 0) / 100)}</Td>
-                                                        <Td><Badge colorScheme={w.status === 'failed' ? 'red' : w.status === 'completed' ? 'green' : 'gray'}>{w.status ?? 'unknown'}</Badge></Td>
-                                                        <Td>{w.transferMode ?? '—'}</Td>
-                                                        <Td>{w.transferCode ?? '—'}</Td>
-                                                        <Td>{w.paystackTransferId ?? '—'}</Td>
-                                                        <Td>{renderJSONShort(w.paystackResponse)}</Td>
-                                                        <Td>{renderJSONShort(w.accountSnapshot)}</Td>
-                                                        <Td>{renderJSONShort(w.settlementAccount)}</Td>
-                                                        <Td>{renderJSONShort(w.wallet)}</Td>
-                                                        <Td>{renderJSONShort(w.walletTransaction)}</Td>
-                                                        <Td>{renderJSONShort(w.user)}</Td>
-                                                        <Td>{w.createdAt ? new Date(w.createdAt).toLocaleString() : '—'}</Td>
-                                                        <Td>{w.initiatedAt ? new Date(w.initiatedAt).toLocaleString() : '—'}</Td>
-                                                        <Td>{w.completedAt ? new Date(w.completedAt).toLocaleString() : '—'}</Td>
-                                                        <Td>{w.updatedAt ? new Date(w.updatedAt).toLocaleString() : '—'}</Td>
-                                                        <Td>{renderJSONShort(w.metadata)}</Td>
-                                                        <Td>{w.__v ?? '—'}</Td>
-                                                    </Tr>
-                                                    <Tr key={`${id}-details`}>
-                                                        <Td colSpan={22} p={0}>
-                                                            <Collapse in={isOpen} animateOpacity>
-                                                                <Box p={3} bg="gray.50" borderTop="1px solid" borderColor="gray.100">
-                                                                    <Box as="pre" whiteSpace="pre-wrap" fontSize="12px">{JSON.stringify(w, null, 2)}</Box>
-                                                                </Box>
-                                                            </Collapse>
-                                                        </Td>
-                                                    </Tr>
-                                                </>
-                                            );
-                                        })}
-                                    </Tbody>
-                                </Table>
-                            </TableContainer>
-                            {/* Pagination controls */}
-                        <Flex mt={3} justify="space-between" align="center">
-                            <HStack spacing={3}>
-                                <Text fontSize="sm">Rows per page:</Text>
-                                <Select size="sm" width="80px" value={String(pageSize)} onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}>
-                                    <option value="5">5</option>
-                                    <option value="10">10</option>
-                                    <option value="25">25</option>
-                                </Select>
-                                <Text fontSize="sm" color="gray.600">Showing {(withdrawals.length === 0) ? 0 : ((currentPage - 1) * pageSize + 1)} - {Math.min(currentPage * pageSize, withdrawals.length)} of {withdrawals.length}</Text>
-                            </HStack>
+                                <TableContainer>
+                                    <Table variant="simple">
+                                        <Thead>
+                                            <Tr>
+                                                <Th></Th>
+                                                <Th>_id</Th>
+                                                <Th>reference</Th>
+                                                <Th>amount</Th>
+                                                <Th>netAmount</Th>
+                                                <Th>fee</Th>
+                                                <Th>status</Th>
+                                                <Th>transferMode</Th>
+                                                <Th>transferCode</Th>
+                                                <Th>paystackTransferId</Th>
+                                                <Th>paystackResponse</Th>
+                                                <Th>accountSnapshot</Th>
+                                                <Th>settlementAccount</Th>
+                                                <Th>wallet</Th>
+                                                <Th>walletTransaction</Th>
+                                                <Th>user</Th>
+                                                <Th>createdAt</Th>
+                                                <Th>initiatedAt</Th>
+                                                <Th>completedAt</Th>
+                                                <Th>updatedAt</Th>
+                                                <Th>metadata</Th>
+                                                <Th>__v</Th>
+                                            </Tr>
+                                        </Thead>
+                                        <Tbody>
+                                            {withdrawals.length === 0 && (
+                                                <Tr><Td colSpan={22}>No withdrawals found</Td></Tr>
+                                            )}
+                                            {paginatedWithdrawals.map((w, idx) => {
+                                                const id = w._id ?? w.id ?? ((currentPage - 1) * pageSize) + idx;
+                                                const isOpen = expandedIds.includes(id);
+                                                return (
+                                                    <>
+                                                        <Tr key={id}>
+                                                            <Td>
+                                                                <IconButton size="sm" variant="ghost" aria-label={isOpen ? 'collapse' : 'expand'} icon={isOpen ? <ChevronUpIcon /> : <ChevronDownIcon />} onClick={() => toggleExpanded(id)} />
+                                                            </Td>
+                                                            <Td>{w._id ?? w.id ?? `#${(currentPage - 1) * pageSize + idx + 1}`}</Td>
+                                                            <Td>{w.reference ?? '—'}</Td>
+                                                            <Td>{formatCurrency((w.amount ?? w.value ?? 0) / 100)}</Td>
+                                                            <Td>{formatCurrency((w.netAmount ?? 0) / 100)}</Td>
+                                                            <Td>{formatCurrency((w.fee ?? 0) / 100)}</Td>
+                                                            <Td><Badge colorScheme={w.status === 'failed' ? 'red' : w.status === 'completed' ? 'green' : 'gray'}>{w.status ?? 'unknown'}</Badge></Td>
+                                                            <Td>{w.transferMode ?? '—'}</Td>
+                                                            <Td>{w.transferCode ?? '—'}</Td>
+                                                            <Td>{w.paystackTransferId ?? '—'}</Td>
+                                                            <Td>{renderJSONShort(w.paystackResponse)}</Td>
+                                                            <Td>{renderJSONShort(w.accountSnapshot)}</Td>
+                                                            <Td>{renderJSONShort(w.settlementAccount)}</Td>
+                                                            <Td>{renderJSONShort(w.wallet)}</Td>
+                                                            <Td>{renderJSONShort(w.walletTransaction)}</Td>
+                                                            <Td>{renderJSONShort(w.user)}</Td>
+                                                            <Td>{w.createdAt ? new Date(w.createdAt).toLocaleString() : '—'}</Td>
+                                                            <Td>{w.initiatedAt ? new Date(w.initiatedAt).toLocaleString() : '—'}</Td>
+                                                            <Td>{w.completedAt ? new Date(w.completedAt).toLocaleString() : '—'}</Td>
+                                                            <Td>{w.updatedAt ? new Date(w.updatedAt).toLocaleString() : '—'}</Td>
+                                                            <Td>{renderJSONShort(w.metadata)}</Td>
+                                                            <Td>{w.__v ?? '—'}</Td>
+                                                        </Tr>
+                                                        <Tr key={`${id}-details`}>
+                                                            <Td colSpan={22} p={0}>
+                                                                <Collapse in={isOpen} animateOpacity>
+                                                                    <Box p={3} bg="gray.50" borderTop="1px solid" borderColor="gray.100">
+                                                                        <Box as="pre" whiteSpace="pre-wrap" fontSize="12px">{JSON.stringify(w, null, 2)}</Box>
+                                                                    </Box>
+                                                                </Collapse>
+                                                            </Td>
+                                                        </Tr>
+                                                    </>
+                                                );
+                                            })}
+                                        </Tbody>
+                                    </Table>
+                                </TableContainer>
+                                {/* Pagination controls */}
+                                <Flex mt={3} justify="space-between" align="center">
+                                    <HStack spacing={3}>
+                                        <Text fontSize="sm">Rows per page:</Text>
+                                        <Select size="sm" width="80px" value={String(pageSize)} onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}>
+                                            <option value="5">5</option>
+                                            <option value="10">10</option>
+                                            <option value="25">25</option>
+                                        </Select>
+                                        <Text fontSize="sm" color="gray.600">Showing {(withdrawals.length === 0) ? 0 : ((currentPage - 1) * pageSize + 1)} - {Math.min(currentPage * pageSize, withdrawals.length)} of {withdrawals.length}</Text>
+                                    </HStack>
 
-                            <HStack>
-                                <Button size="sm" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} isDisabled={currentPage <= 1}>Prev</Button>
-                                <Text fontSize="sm">Page {currentPage} / {totalPages}</Text>
-                                <Button size="sm" onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} isDisabled={currentPage >= totalPages}>Next</Button>
-                            </HStack>
-                        </Flex>
-                        </Box>
+                                    <HStack>
+                                        <Button size="sm" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} isDisabled={currentPage <= 1}>Prev</Button>
+                                        <Text fontSize="sm">Page {currentPage} / {totalPages}</Text>
+                                        <Button size="sm" onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} isDisabled={currentPage >= totalPages}>Next</Button>
+                                    </HStack>
+                                </Flex>
+                            </Box>
                         )}
                     </CardBody>
                 </Card>
 
                 {/* Escrows List */}
-                    <Card>
-                        <CardHeader><Heading size="sm">Escrows</Heading></CardHeader>
-                        <CardBody>
-                            {escrowsLoading ? (
-                                <Spinner />
-                            ) : (
-                                <Box>
-                                    <TableContainer>
-                                        <Table variant="simple">
-                                            <Thead>
-                                                <Tr>
-                                                    <Th></Th>
-                                                    <Th>_id</Th>
-                                                    <Th>reference</Th>
-                                                    <Th>amount</Th>
-                                                    <Th>status</Th>
-                                                    <Th>escrowType</Th>
-                                                    <Th>payoutStatus</Th>
-                                                    <Th>releasedAmount</Th>
-                                                    <Th>releasedAt</Th>
-                                                    <Th>landlord</Th>
-                                                    <Th>tenant</Th>
-                                                    <Th>property</Th>
-                                                    <Th>payoutBreakdown</Th>
-                                                    <Th>paymentDate</Th>
-                                                    <Th>createdAt</Th>
-                                                    <Th>updatedAt</Th>
-                                                    <Th>walletTransaction</Th>
-                                                    <Th>transfers</Th>
-                                                    <Th>timeline</Th>
-                                                    <Th>__v</Th>
-                                                </Tr>
-                                            </Thead>
-                                            <Tbody>
-                                                {escrows.length === 0 && (
-                                                    <Tr><Td colSpan={20}>No escrows found</Td></Tr>
-                                                )}
-                                                {escrows.map((e, i) => {
-                                                    const id = e._id ?? e.id ?? `${escrowsPageInfo.page}-${i}`;
-                                                    const isOpen = escrowsExpandedIds.includes(id);
-                                                    return (
-                                                        <React.Fragment key={id}>
-                                                            <Tr>
-                                                                <Td>
-                                                                    <IconButton size="sm" variant="ghost" aria-label={isOpen ? 'collapse' : 'expand'} icon={isOpen ? <ChevronUpIcon /> : <ChevronDownIcon />} onClick={() => toggleEscrowExpanded(id)} />
-                                                                </Td>
-                                                                <Td>{e._id ?? e.id ?? `#${(escrowsPageInfo.page - 1) * escrowsPageInfo.limit + i + 1}`}</Td>
-                                                                <Td>{e.reference ?? '—'}</Td>
-                                                                <Td>{formatCurrency(e.amount ?? e.totalPaid ?? 0)}</Td>
-                                                                <Td>{e.status ?? '—'}</Td>
-                                                                <Td>{e.escrowType ?? '—'}</Td>
-                                                                <Td>{e.payoutStatus ?? '—'}</Td>
-                                                                <Td>{formatCurrency(e.releasedAmount ?? 0)}</Td>
-                                                                <Td>{e.releasedAt ? new Date(e.releasedAt).toLocaleString() : '—'}</Td>
-                                                                <Td>{renderJSONShort(e.landlord ?? e.landlordDetails)}</Td>
-                                                                <Td>{renderJSONShort(e.tenant)}</Td>
-                                                                <Td>{renderJSONShort(e.property?.title ?? e.property)}</Td>
-                                                                <Td>{renderJSONShort(e.payoutBreakdown)}</Td>
-                                                                <Td>{e.paymentDate ? new Date(e.paymentDate).toLocaleString() : '—'}</Td>
-                                                                <Td>{e.createdAt ? new Date(e.createdAt).toLocaleString() : '—'}</Td>
-                                                                <Td>{e.updatedAt ? new Date(e.updatedAt).toLocaleString() : '—'}</Td>
-                                                                <Td>{e.walletTransaction ?? '—'}</Td>
-                                                                <Td>{(e.transfers && e.transfers.length) ? e.transfers.length : 0}</Td>
-                                                                <Td>{(e.timeline && e.timeline.length) ? e.timeline.length : 0}</Td>
-                                                                <Td>{e.__v ?? '—'}</Td>
-                                                            </Tr>
-                                                            <Tr>
-                                                                <Td colSpan={20} p={0}>
-                                                                    <Collapse in={isOpen} animateOpacity>
-                                                                        <Box p={3} bg="gray.50" borderTop="1px solid" borderColor="gray.100">
-                                                                            <Box as="pre" whiteSpace="pre-wrap" fontSize="12px">{JSON.stringify(e, null, 2)}</Box>
-                                                                        </Box>
-                                                                    </Collapse>
-                                                                </Td>
-                                                            </Tr>
-                                                        </React.Fragment>
-                                                    );
-                                                })}
-                                            </Tbody>
-                                        </Table>
-                                    </TableContainer>
+                <Card>
+                    <CardHeader><Heading size="sm">Escrows</Heading></CardHeader>
+                    <CardBody>
+                        {escrowsLoading ? (
+                            <Spinner />
+                        ) : (
+                            <Box>
+                                <TableContainer>
+                                    <Table variant="simple">
+                                        <Thead>
+                                            <Tr>
+                                                <Th></Th>
+                                                <Th>_id</Th>
+                                                <Th>reference</Th>
+                                                <Th>amount</Th>
+                                                <Th>status</Th>
+                                                <Th>escrowType</Th>
+                                                <Th>payoutStatus</Th>
+                                                <Th>releasedAmount</Th>
+                                                <Th>releasedAt</Th>
+                                                <Th>landlord</Th>
+                                                <Th>tenant</Th>
+                                                <Th>property</Th>
+                                                <Th>payoutBreakdown</Th>
+                                                <Th>paymentDate</Th>
+                                                <Th>createdAt</Th>
+                                                <Th>updatedAt</Th>
+                                                <Th>walletTransaction</Th>
+                                                <Th>transfers</Th>
+                                                <Th>timeline</Th>
+                                                <Th>__v</Th>
+                                            </Tr>
+                                        </Thead>
+                                        <Tbody>
+                                            {escrows.length === 0 && (
+                                                <Tr><Td colSpan={20}>No escrows found</Td></Tr>
+                                            )}
+                                            {escrows.map((e, i) => {
+                                                const id = e._id ?? e.id ?? `${escrowsPageInfo.page}-${i}`;
+                                                const isOpen = escrowsExpandedIds.includes(id);
+                                                return (
+                                                    <React.Fragment key={id}>
+                                                        <Tr>
+                                                            <Td>
+                                                                <IconButton size="sm" variant="ghost" aria-label={isOpen ? 'collapse' : 'expand'} icon={isOpen ? <ChevronUpIcon /> : <ChevronDownIcon />} onClick={() => toggleEscrowExpanded(id)} />
+                                                            </Td>
+                                                            <Td>{e._id ?? e.id ?? `#${(escrowsPageInfo.page - 1) * escrowsPageInfo.limit + i + 1}`}</Td>
+                                                            <Td>{e.reference ?? '—'}</Td>
+                                                            <Td>{formatCurrency(e.amount ?? e.totalPaid ?? 0)}</Td>
+                                                            <Td>{e.status ?? '—'}</Td>
+                                                            <Td>{e.escrowType ?? '—'}</Td>
+                                                            <Td>{e.payoutStatus ?? '—'}</Td>
+                                                            <Td>{formatCurrency(e.releasedAmount ?? 0)}</Td>
+                                                            <Td>{e.releasedAt ? new Date(e.releasedAt).toLocaleString() : '—'}</Td>
+                                                            <Td>{renderJSONShort(e.landlord ?? e.landlordDetails)}</Td>
+                                                            <Td>{renderJSONShort(e.tenant)}</Td>
+                                                            <Td>{renderJSONShort(e.property?.title ?? e.property)}</Td>
+                                                            <Td>{renderJSONShort(e.payoutBreakdown)}</Td>
+                                                            <Td>{e.paymentDate ? new Date(e.paymentDate).toLocaleString() : '—'}</Td>
+                                                            <Td>{e.createdAt ? new Date(e.createdAt).toLocaleString() : '—'}</Td>
+                                                            <Td>{e.updatedAt ? new Date(e.updatedAt).toLocaleString() : '—'}</Td>
+                                                            <Td>{e.walletTransaction ?? '—'}</Td>
+                                                            <Td>{(e.transfers && e.transfers.length) ? e.transfers.length : 0}</Td>
+                                                            <Td>{(e.timeline && e.timeline.length) ? e.timeline.length : 0}</Td>
+                                                            <Td>{e.__v ?? '—'}</Td>
+                                                        </Tr>
+                                                        <Tr>
+                                                            <Td colSpan={20} p={0}>
+                                                                <Collapse in={isOpen} animateOpacity>
+                                                                    <Box p={3} bg="gray.50" borderTop="1px solid" borderColor="gray.100">
+                                                                        <Box as="pre" whiteSpace="pre-wrap" fontSize="12px">{JSON.stringify(e, null, 2)}</Box>
+                                                                    </Box>
+                                                                </Collapse>
+                                                            </Td>
+                                                        </Tr>
+                                                    </React.Fragment>
+                                                );
+                                            })}
+                                        </Tbody>
+                                    </Table>
+                                </TableContainer>
 
-                                    {/* Escrows pagination controls */}
-                                    <Flex mt={3} justify="space-between" align="center">
-                                        <HStack spacing={3}>
-                                            <Text fontSize="sm">Rows per page:</Text>
-                                            <Select size="sm" width="80px" value={String(escrowsPageInfo.limit)} onChange={(e) => { fetchEscrowsPage(1, Number(e.target.value)); }}>
-                                                <option value="5">5</option>
-                                                <option value="6">6</option>
-                                                <option value="10">10</option>
-                                                <option value="20">20</option>
-                                            </Select>
-                                            <Text fontSize="sm" color="gray.600">Showing {escrowsPageInfo.total === 0 ? 0 : ((escrowsPageInfo.page - 1) * escrowsPageInfo.limit + 1)} - {Math.min(escrowsPageInfo.page * escrowsPageInfo.limit, escrowsPageInfo.total)} of {escrowsPageInfo.total}</Text>
-                                        </HStack>
+                                {/* Escrows pagination controls */}
+                                <Flex mt={3} justify="space-between" align="center">
+                                    <HStack spacing={3}>
+                                        <Text fontSize="sm">Rows per page:</Text>
+                                        <Select size="sm" width="80px" value={String(escrowsPageInfo.limit)} onChange={(e) => { fetchEscrowsPage(1, Number(e.target.value)); }}>
+                                            <option value="5">5</option>
+                                            <option value="6">6</option>
+                                            <option value="10">10</option>
+                                            <option value="20">20</option>
+                                        </Select>
+                                        <Text fontSize="sm" color="gray.600">Showing {escrowsPageInfo.total === 0 ? 0 : ((escrowsPageInfo.page - 1) * escrowsPageInfo.limit + 1)} - {Math.min(escrowsPageInfo.page * escrowsPageInfo.limit, escrowsPageInfo.total)} of {escrowsPageInfo.total}</Text>
+                                    </HStack>
 
-                                        <HStack>
-                                            <Button size="sm" onClick={() => fetchEscrowsPage(Math.max(1, escrowsPageInfo.page - 1), escrowsPageInfo.limit)} isDisabled={escrowsPageInfo.page <= 1 || escrowsLoading}>Prev</Button>
-                                            <Text fontSize="sm">Page {escrowsPageInfo.page} / {escrowsPageInfo.pages}</Text>
-                                            <Button size="sm" onClick={() => fetchEscrowsPage(Math.min(escrowsPageInfo.pages, escrowsPageInfo.page + 1), escrowsPageInfo.limit)} isDisabled={escrowsPageInfo.page >= escrowsPageInfo.pages || escrowsLoading}>Next</Button>
-                                        </HStack>
-                                    </Flex>
-                                </Box>
-                            )}
-                        </CardBody>
-                    </Card>
+                                    <HStack>
+                                        <Button size="sm" onClick={() => fetchEscrowsPage(Math.max(1, escrowsPageInfo.page - 1), escrowsPageInfo.limit)} isDisabled={escrowsPageInfo.page <= 1 || escrowsLoading}>Prev</Button>
+                                        <Text fontSize="sm">Page {escrowsPageInfo.page} / {escrowsPageInfo.pages}</Text>
+                                        <Button size="sm" onClick={() => fetchEscrowsPage(Math.min(escrowsPageInfo.pages, escrowsPageInfo.page + 1), escrowsPageInfo.limit)} isDisabled={escrowsPageInfo.page >= escrowsPageInfo.pages || escrowsLoading}>Next</Button>
+                                    </HStack>
+                                </Flex>
+                            </Box>
+                        )}
+                    </CardBody>
+                </Card>
 
-                    {/* Wallet Fundings Table */}
-                    <Card>
-                        <CardHeader><Heading size="sm">Wallet Fundings</Heading></CardHeader>
-                        <CardBody>
-                            {walletLoading || loading ? (
-                                <Spinner />
-                            ) : (
-                                <Box>
-                                    <TableContainer>
-                                        <Table variant="simple">
-                                            <Thead>
-                                                <Tr>
-                                                    <Th></Th>
-                                                    <Th>_id</Th>
-                                                    <Th>amount</Th>
-                                                    <Th>netAmount</Th>
-                                                    <Th>fee</Th>
-                                                    <Th>status</Th>
-                                                    <Th>reference</Th>
-                                                    <Th>wallet</Th>
-                                                    <Th>user</Th>
-                                                    <Th>createdAt</Th>
-                                                    <Th>completedAt</Th>
-                                                    <Th>metadata</Th>
-                                                </Tr>
-                                            </Thead>
-                                            <Tbody>
-                                                {walletFundings.length === 0 && (
-                                                    <Tr><Td colSpan={12}>No wallet fundings found</Td></Tr>
-                                                )}
-                                                {walletPaginated.map((w, idx) => {
-                                                    const id = w._id ?? w.id ?? ((walletCurrentPage - 1) * walletPageSize) + idx;
-                                                    const isOpen = walletExpandedIds.includes(id);
-                                                    return (
-                                                        <React.Fragment key={id}>
-                                                            <Tr>
-                                                                <Td>
-                                                                    <IconButton size="sm" variant="ghost" aria-label={isOpen ? 'collapse' : 'expand'} icon={isOpen ? <ChevronUpIcon /> : <ChevronDownIcon />} onClick={() => toggleWalletExpanded(id)} />
-                                                                </Td>
-                                                                <Td>{w._id ?? w.id ?? `#${(walletCurrentPage - 1) * walletPageSize + idx + 1}`}</Td>
-                                                                <Td>{formatCurrency((w.amount ?? w.value ?? 0) / 100)}</Td>
-                                                                <Td>{formatCurrency((w.netAmount ?? 0) / 100)}</Td>
-                                                                <Td>{formatCurrency((w.fee ?? 0) / 100)}</Td>
-                                                                <Td><Badge colorScheme={w.status === 'failed' ? 'red' : w.status === 'completed' ? 'green' : 'gray'}>{w.status ?? 'unknown'}</Badge></Td>
-                                                                <Td>{w.reference ?? '—'}</Td>
-                                                                <Td>{renderJSONShort(w.wallet)}</Td>
-                                                                <Td>{renderJSONShort(w.user)}</Td>
-                                                                <Td>{w.createdAt ? new Date(w.createdAt).toLocaleString() : '—'}</Td>
-                                                                <Td>{w.completedAt ? new Date(w.completedAt).toLocaleString() : '—'}</Td>
-                                                                <Td>{renderJSONShort(w.metadata)}</Td>
-                                                            </Tr>
-                                                            <Tr>
-                                                                <Td colSpan={12} p={0}>
-                                                                    <Collapse in={isOpen} animateOpacity>
-                                                                        <Box p={3} bg="gray.50" borderTop="1px solid" borderColor="gray.100">
-                                                                            <Box as="pre" whiteSpace="pre-wrap" fontSize="12px">{JSON.stringify(w, null, 2)}</Box>
-                                                                        </Box>
-                                                                    </Collapse>
-                                                                </Td>
-                                                            </Tr>
-                                                        </React.Fragment>
-                                                    );
-                                                })}
-                                            </Tbody>
-                                        </Table>
-                                    </TableContainer>
+                {/* Wallet Fundings Table */}
+                <Card>
+                    <CardHeader><Heading size="sm">Wallet Fundings</Heading></CardHeader>
+                    <CardBody>
+                        {walletLoading || loading ? (
+                            <Spinner />
+                        ) : (
+                            <Box>
+                                <TableContainer>
+                                    <Table variant="simple">
+                                        <Thead>
+                                            <Tr>
+                                                <Th></Th>
+                                                <Th>_id</Th>
+                                                <Th>amount</Th>
+                                                <Th>netAmount</Th>
+                                                <Th>fee</Th>
+                                                <Th>status</Th>
+                                                <Th>reference</Th>
+                                                <Th>wallet</Th>
+                                                <Th>user</Th>
+                                                <Th>createdAt</Th>
+                                                <Th>completedAt</Th>
+                                                <Th>metadata</Th>
+                                            </Tr>
+                                        </Thead>
+                                        <Tbody>
+                                            {walletFundings.length === 0 && (
+                                                <Tr><Td colSpan={12}>No wallet fundings found</Td></Tr>
+                                            )}
+                                            {walletPaginated.map((w, idx) => {
+                                                const id = w._id ?? w.id ?? ((walletCurrentPage - 1) * walletPageSize) + idx;
+                                                const isOpen = walletExpandedIds.includes(id);
+                                                return (
+                                                    <React.Fragment key={id}>
+                                                        <Tr>
+                                                            <Td>
+                                                                <IconButton size="sm" variant="ghost" aria-label={isOpen ? 'collapse' : 'expand'} icon={isOpen ? <ChevronUpIcon /> : <ChevronDownIcon />} onClick={() => toggleWalletExpanded(id)} />
+                                                            </Td>
+                                                            <Td>{w._id ?? w.id ?? `#${(walletCurrentPage - 1) * walletPageSize + idx + 1}`}</Td>
+                                                            <Td>{formatCurrency((w.amount ?? w.value ?? 0) / 100)}</Td>
+                                                            <Td>{formatCurrency((w.netAmount ?? 0) / 100)}</Td>
+                                                            <Td>{formatCurrency((w.fee ?? 0) / 100)}</Td>
+                                                            <Td><Badge colorScheme={w.status === 'failed' ? 'red' : w.status === 'completed' ? 'green' : 'gray'}>{w.status ?? 'unknown'}</Badge></Td>
+                                                            <Td>{w.reference ?? '—'}</Td>
+                                                            <Td>{renderJSONShort(w.wallet)}</Td>
+                                                            <Td>{renderJSONShort(w.user)}</Td>
+                                                            <Td>{w.createdAt ? new Date(w.createdAt).toLocaleString() : '—'}</Td>
+                                                            <Td>{w.completedAt ? new Date(w.completedAt).toLocaleString() : '—'}</Td>
+                                                            <Td>{renderJSONShort(w.metadata)}</Td>
+                                                        </Tr>
+                                                        <Tr>
+                                                            <Td colSpan={12} p={0}>
+                                                                <Collapse in={isOpen} animateOpacity>
+                                                                    <Box p={3} bg="gray.50" borderTop="1px solid" borderColor="gray.100">
+                                                                        <Box as="pre" whiteSpace="pre-wrap" fontSize="12px">{JSON.stringify(w, null, 2)}</Box>
+                                                                    </Box>
+                                                                </Collapse>
+                                                            </Td>
+                                                        </Tr>
+                                                    </React.Fragment>
+                                                );
+                                            })}
+                                        </Tbody>
+                                    </Table>
+                                </TableContainer>
 
-                                    <Flex mt={3} justify="space-between" align="center">
-                                        <HStack spacing={3}>
-                                            <Text fontSize="sm">Rows per page:</Text>
-                                            <Select size="sm" width="80px" value={String(walletPageSize)} onChange={(e) => { setWalletPageSize(Number(e.target.value)); setWalletCurrentPage(1); }}>
-                                                <option value="5">5</option>
-                                                <option value="10">10</option>
-                                                <option value="25">25</option>
-                                            </Select>
-                                            <Text fontSize="sm" color="gray.600">Showing {(walletFundings.length === 0) ? 0 : ((walletCurrentPage - 1) * walletPageSize + 1)} - {Math.min(walletCurrentPage * walletPageSize, walletFundings.length)} of {walletFundings.length}</Text>
-                                        </HStack>
+                                <Flex mt={3} justify="space-between" align="center">
+                                    <HStack spacing={3}>
+                                        <Text fontSize="sm">Rows per page:</Text>
+                                        <Select size="sm" width="80px" value={String(walletPageSize)} onChange={(e) => { setWalletPageSize(Number(e.target.value)); setWalletCurrentPage(1); }}>
+                                            <option value="5">5</option>
+                                            <option value="10">10</option>
+                                            <option value="25">25</option>
+                                        </Select>
+                                        <Text fontSize="sm" color="gray.600">Showing {(walletFundings.length === 0) ? 0 : ((walletCurrentPage - 1) * walletPageSize + 1)} - {Math.min(walletCurrentPage * walletPageSize, walletFundings.length)} of {walletFundings.length}</Text>
+                                    </HStack>
 
-                                        <HStack>
-                                            <Button size="sm" onClick={() => setWalletCurrentPage((p) => Math.max(1, p - 1))} isDisabled={walletCurrentPage <= 1}>Prev</Button>
-                                            <Text fontSize="sm">Page {walletCurrentPage} / {walletTotalPages}</Text>
-                                            <Button size="sm" onClick={() => setWalletCurrentPage((p) => Math.min(walletTotalPages, p + 1))} isDisabled={walletCurrentPage >= walletTotalPages}>Next</Button>
-                                        </HStack>
-                                    </Flex>
-                                </Box>
-                            )}
-                        </CardBody>
-                    </Card>
+                                    <HStack>
+                                        <Button size="sm" onClick={() => setWalletCurrentPage((p) => Math.max(1, p - 1))} isDisabled={walletCurrentPage <= 1}>Prev</Button>
+                                        <Text fontSize="sm">Page {walletCurrentPage} / {walletTotalPages}</Text>
+                                        <Button size="sm" onClick={() => setWalletCurrentPage((p) => Math.min(walletTotalPages, p + 1))} isDisabled={walletCurrentPage >= walletTotalPages}>Next</Button>
+                                    </HStack>
+                                </Flex>
+                            </Box>
+                        )}
+                    </CardBody>
+                </Card>
 
 
                 {/* Reconciliation Data */}
@@ -747,36 +831,121 @@ export default function AdminFinancialSummary() {
                             </Stat>
                         </SimpleGrid>
 
-                        {/* Issues table */}
-                        <Heading size="sm" mb={3}>Issues</Heading>
-                        {(!reconciliation?.issues || reconciliation.issues.length === 0) ? (
-                            <Text color="gray.500">No issues found</Text>
+                        {/* Escrow Issues table */}
+                        <Heading size="sm" mb={3}>Escrow Issues</Heading>
+                        {escrowIssues.length === 0 ? (
+                            <Text color="gray.500">No escrow issues found</Text>
                         ) : (
-                            <Table variant="striped" size="sm">
-                                <Thead>
-                                    <Tr>
-                                        <Th>ID</Th>
-                                        <Th>Description</Th>
-                                        <Th>Severity</Th>
-                                        <Th>Date</Th>
-                                    </Tr>
-                                </Thead>
-                                <Tbody>
-                                    {reconciliation.issues.map((issue, idx) => (
-                                        <Tr key={issue.id ?? idx}>
-                                            <Td>{issue.id ?? `#${idx + 1}`}</Td>
-                                            <Td>{issue.description ?? "n/a"}</Td>
-                                            <Td>{issue.severity ?? "n/a"}</Td>
-                                            <Td>{new Date(issue.date ?? Date.now()).toLocaleString()}</Td>
+                            <TableContainer mb={8}>
+                                <Table variant="striped" size="sm">
+                                    <Thead>
+                                        <Tr>
+                                            <Th>Escrow ID</Th>
+                                            <Th>Message</Th>
+                                            <Th>Reference</Th>
+                                            <Th>Severity</Th>
+                                            <Th>Status</Th>
+                                            <Th>Type</Th>
+                                            <Th>Action</Th>
                                         </Tr>
-                                    ))}
-                                </Tbody>
-                            </Table>
+                                    </Thead>
+                                    <Tbody>
+                                        {escrowIssues.map((issue, idx) => {
+                                            const key = issue?.reference || issue?.escrowId || issue?.id || issue?.type || idx;
+                                            const isResolved = (issue?.status || '').toLowerCase() === 'resolved' || resolvedIssueRefs.includes(key);
+
+                                            return (
+                                                <Tr key={key}>
+                                                    <Td>{issue?.escrowId ?? issue?.escrow_id ?? '—'}</Td>
+                                                    <Td>{issue?.message ?? issue?.description ?? 'n/a'}</Td>
+                                                    <Td>{issue?.reference ?? '—'}</Td>
+                                                    <Td>
+                                                        <Badge colorScheme={
+                                                            (issue?.severity || '').toLowerCase() === 'critical' ? 'red' :
+                                                                (issue?.severity || '').toLowerCase() === 'high' ? 'orange' :
+                                                                    (issue?.severity || '').toLowerCase() === 'medium' ? 'yellow' : 'gray'
+                                                        }>
+                                                            {issue?.severity ?? 'n/a'}
+                                                        </Badge>
+                                                    </Td>
+                                                    <Td>
+                                                        <Badge colorScheme={isResolved ? 'green' : 'blue'}>
+                                                            {isResolved ? 'resolved' : (issue?.status ?? 'open')}
+                                                        </Badge>
+                                                    </Td>
+                                                    <Td>{issue?.type ?? '—'}</Td>
+                                                    <Td>
+                                                        <Button
+                                                            size="sm"
+                                                            colorScheme={isResolved ? 'gray' : 'green'}
+                                                            variant={isResolved ? 'outline' : 'solid'}
+                                                            isDisabled={isResolved}
+                                                            onClick={() => handleResolveIssue(issue)}
+                                                        >
+                                                            {isResolved ? 'Resolved' : 'Resolve'}
+                                                        </Button>
+                                                    </Td>
+                                                </Tr>
+                                            );
+                                        })}
+                                    </Tbody>
+                                </Table>
+                            </TableContainer>
+                        )}
+
+                        {/* Wallet Funding Issues table */}
+                        <Heading size="sm" mb={3}>Wallet Funding Issues</Heading>
+                        {fundingIssues.length === 0 ? (
+                            <Text color="gray.500">No wallet funding issues found</Text>
+                        ) : (
+                            <TableContainer>
+                                <Table variant="striped" size="sm">
+                                    <Thead>
+                                        <Tr>
+                                            <Th>Funding ID</Th>
+                                            <Th>Error</Th>
+                                            <Th>Reference</Th>
+                                            <Th>Status</Th>
+                                            <Th>Action</Th>
+                                        </Tr>
+                                    </Thead>
+                                    <Tbody>
+                                        {fundingIssues.map((issue, idx) => {
+                                            const key = issue?.reference || issue?.fundingId || issue?.id || issue?.type || idx;
+                                            const isResolved = (issue?.status || '').toLowerCase() === 'resolved' || resolvedFundingIssueRefs.includes(key);
+
+                                            return (
+                                                <Tr key={key}>
+                                                    <Td>{issue?.fundingId ?? '—'}</Td>
+                                                    <Td>{issue?.error ?? issue?.message ?? 'n/a'}</Td>
+                                                    <Td>{issue?.reference ?? '—'}</Td>
+                                                    <Td>
+                                                        <Badge colorScheme={isResolved ? 'green' : 'orange'}>
+                                                            {isResolved ? 'resolved' : (issue?.status ?? 'open')}
+                                                        </Badge>
+                                                    </Td>
+                                                    <Td>
+                                                        <Button
+                                                            size="sm"
+                                                            colorScheme={isResolved ? 'gray' : 'green'}
+                                                            variant={isResolved ? 'outline' : 'solid'}
+                                                            isDisabled={isResolved}
+                                                            onClick={() => handleResolveFundingIssue(issue)}
+                                                        >
+                                                            {isResolved ? 'Resolved' : 'Resolve'}
+                                                        </Button>
+                                                    </Td>
+                                                </Tr>
+                                            );
+                                        })}
+                                    </Tbody>
+                                </Table>
+                            </TableContainer>
                         )}
                     </CardBody>
                 </Card>
             </VStack>
-            <AdminNavbar active= "Finance" />
+            <AdminNavbar active="Finance" />
         </Box>
     );
 }

@@ -281,7 +281,6 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                 break;
             case 'inspected':
                 handleInspected(escrow)
-                toast({ title: 'Inspection confirmed', status: 'success' });
                 break;
             default:
                 toast({ title: 'Action triggered', status: 'info' });
@@ -294,27 +293,36 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
     }
 
     const handleReleasedKeys = async (id) => {
+        console.log("testing response", id);
         try {
             const res = await releaseKeys(id);
-            console.log(res)
-            toast({ title: 'Release confirmation', discription: res.data.data.message || res.data.message, status: 'success' });
+
+            toast({
+                title: "Release confirmation",
+                description: res.data?.message || "Keys released successfully",
+                status: "success",
+                duration: 5000,
+                isClosable: true,
+            });
         } catch (error) {
-            console.log(error)
-            toast({ title: 'Release confirmation', discription: error.response.data.message, status: 'info' });
+            console.log("testing response", error.response);
+
+            toast({
+                title: "Release confirmation",
+                description: error.response?.data?.message || "Something went wrong",
+                status: "error",
+                duration: 5000,
+                isClosable: true,
+            });
         }
-    }
+    };
+
 
     const handleInspected = async (escrow) => {
         console.log("called inspect");
         try {
             const res = await confirmInspection(escrow._id);
             console.log(res?.data?.data?.message);
-
-            toast({
-                title: 'Inspection confirmation',
-                description: res?.data?.data?.message,
-                status: 'success',
-            });
 
             setEscrowTransactions(prev =>
                 prev.map(item =>
@@ -323,12 +331,22 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                         : item
                 )
             );
-        } catch (error) {
-            console.log("this is the error response:", error?.response?.data?.message);
+
             toast({
-                title: 'Release confirmation',
+                title: 'Inspection confirmation',
+                description: res?.response?.data?.data?.message,
+                status: 'success',
+                duration: 5000,
+                isClosable: true,
+            });
+        } catch (error) {
+            // console.log("this is the error response:", error?.response?.data?.message);
+            toast({
+                title: 'Release Info',
                 description: error?.response?.data?.message,
-                status: 'info',
+                status: 'error',
+                duration: 5000,
+                isClosable: true,
             });
         }
     };
@@ -336,39 +354,71 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
 
     const submitRefund = async (escrow) => {
         if (!selectedEscrowAction) return;
+
         if (!refundReason || refundReason.trim().length < 5) {
-            toast({ title: 'Enter a valid reason for refund (min 5 chars)', status: 'warning' });
+            toast({
+                title: "Refund Request",
+                description: "Enter a valid reason for refund (min 5 chars)",
+                status: "warning",
+                duration: 5000,
+                isClosable: true,
+            });
             return;
         }
+
         if (!refundAuthCode || refundAuthCode.trim().length < 4) {
-            toast({ title: 'Enter your authenticator code', status: 'warning' });
+            toast({
+                title: "Refund Request",
+                description: "Enter your authenticator code",
+                status: "warning",
+                duration: 5000,
+                isClosable: true,
+            });
             return;
         }
 
         setRefunding(true);
         try {
-            const id = selectedEscrowAction._id || selectedEscrowAction.id || selectedEscrowAction.reference;
+            const id =
+                selectedEscrowAction._id ||
+                selectedEscrowAction.id ||
+                selectedEscrowAction.reference;
+
             const res = await refundEscrow(id, refundReason, refundAuthCode);
-            toast({ title: res?.data?.message || 'Refund requested', status: 'success' });
+
+            toast({
+                title: "Refund Request",
+                description: res?.data?.message || "Refund requested successfully",
+                status: "success",
+                duration: 5000,
+                isClosable: true,
+            });
 
             onCloseRefund();
             setSelectedEscrowAction(null);
-            setRefundReason('');
-            setRefundAuthCode('');
-            setEscrowTransactions(prev =>
-                prev.map(item =>
+            setRefundReason("");
+            setRefundAuthCode("");
+            setEscrowTransactions((prev) =>
+                prev.map((item) =>
                     item._id === selectedEscrowAction._id
                         ? { ...item, status: "refunded" }
                         : item
                 )
             );
         } catch (err) {
-            console.error('Refund failed', err);
-            toast({ title: err?.response?.data?.message || 'Failed to request refund', status: 'error' });
+            console.error("Refund failed", err);
+            toast({
+                title: "Refund Request",
+                description: err?.response?.data?.message || "Failed to request refund",
+                status: "error",
+                duration: 5000,
+                isClosable: true,
+            });
         } finally {
             setRefunding(false);
         }
-    }
+    };
+
 
     const downloadAgreement = async (escrowId) => {
         setDownloading(true);
@@ -464,35 +514,36 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                             <Link to="/notifications" >
                                 <Box position="relative" display="flex" alignItems="center" justifyContent="center">
                                     <HStack spacing={2} align="center">
-                                    {user.role === 'admin' || "super_admin" && 
-                                        <Link to="/financial-dashboard" style={{ textDecoration: 'none', }}>
-                                    <Box
-                                        bg="whiteAlpha.200"
-                                        border="1px solid"
-                                        borderColor="whiteAlpha.300"
-                                        borderRadius="full"
-                                        p={2.5}
-                                        display="flex"
-                                        alignItems="center"
-                                        justifyContent="center"
-                                        cursor="pointer"
-                                    >
-                                            <Icon as={Shield} color="white" boxSize={4} />
-                                    </Box></Link>}
-                                        
-                                    <Box
-                                        bg="whiteAlpha.200"
-                                        border="1px solid"
-                                        borderColor="whiteAlpha.300"
-                                        borderRadius="full"
-                                        p={2.5}
-                                        display="flex"
-                                        alignItems="center"
-                                        justifyContent="center"
-                                        cursor="pointer"
-                                    >
-                                        <Icon as={Bell} color="white" boxSize={4} />
-                                    </Box>
+                                        {user.role !== 'user' &&
+                                            (<Link to="/financial-dashboard" style={{ textDecoration: 'none', }}>
+                                                <Box
+                                                    bg="whiteAlpha.200"
+                                                    border="1px solid"
+                                                    borderColor="whiteAlpha.300"
+                                                    borderRadius="full"
+                                                    p={2.5}
+                                                    display="flex"
+                                                    alignItems="center"
+                                                    justifyContent="center"
+                                                    cursor="pointer"
+                                                >
+                                                    <Icon as={Shield} color="white" boxSize={4} />
+                                                </Box>
+                                            </Link>)}
+
+                                        <Box
+                                            bg="whiteAlpha.200"
+                                            border="1px solid"
+                                            borderColor="whiteAlpha.300"
+                                            borderRadius="full"
+                                            p={2.5}
+                                            display="flex"
+                                            alignItems="center"
+                                            justifyContent="center"
+                                            cursor="pointer"
+                                        >
+                                            <Icon as={Bell} color="white" boxSize={4} />
+                                        </Box>
                                     </HStack>
                                     <Badge
                                         position="absolute"
@@ -1204,39 +1255,66 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                             isLoading={releasing}
                             onClick={async () => {
                                 if (!releaseCode || releaseCode.trim().length === 0) {
-                                    toast({ title: 'Enter release code', status: 'warning' });
+                                    toast({
+                                        title: "Release Funds",
+                                        description: "Enter release code",
+                                        status: "warning",
+                                        duration: 5000,
+                                        isClosable: true,
+                                    });
                                     return;
                                 }
+
                                 if (!authCode || authCode.trim().length < 6) {
-                                    toast({ title: 'Enter authenticator code', status: 'warning' });
+                                    toast({
+                                        title: "Release Funds",
+                                        description: "Enter authenticator code",
+                                        status: "warning",
+                                        duration: 5000,
+                                        isClosable: true,
+                                    });
                                     return;
                                 }
+
                                 setReleasing(true);
                                 try {
-                                    console.log(selectedEscrowAction, "authcode is:", authCode)
-                                    // TODO: call real API to release funds with code and escrow id
-                                    const res = await releaseFunds(selectedEscrowAction._id, releaseCode, authCode)
+                                    console.log(selectedEscrowAction, "authcode is:", authCode);
 
-                                    console.log('Submitting release code', res);
-                                    toast({ title: 'Release code submitted', status: 'success' });
+                                    const res = await releaseFunds(selectedEscrowAction._id, releaseCode, authCode);
+                                    console.log("Submitting release code", res);
+
+                                    toast({
+                                        title: "Release Funds",
+                                        description: res?.data?.message || "Release code submitted successfully",
+                                        status: "success",
+                                        duration: 5000,
+                                        isClosable: true,
+                                    });
 
                                     onCloseRelease();
                                     setSelectedEscrowAction(null);
-                                    setReleaseCode('');
-                                    setEscrowTransactions(prev =>
-                                        prev.map(item =>
+                                    setReleaseCode("");
+                                    setEscrowTransactions((prev) =>
+                                        prev.map((item) =>
                                             item._id === selectedEscrowAction._id
                                                 ? { ...item, status: "released" }
                                                 : item
                                         )
                                     );
                                 } catch (err) {
-                                    console.log('Failed to submit release code', err);
-                                    toast({ title: `${err.response.data.message}`, status: 'error' });
+                                    console.log("Failed to submit release code", err);
+                                    toast({
+                                        title: "Release Funds",
+                                        description: err?.response?.data?.message || "Failed to submit release code",
+                                        status: "error",
+                                        duration: 5000,
+                                        isClosable: true,
+                                    });
                                 } finally {
                                     setReleasing(false);
                                 }
                             }}
+
                         >
                             Submit
                         </Button>
