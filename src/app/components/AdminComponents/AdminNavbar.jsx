@@ -18,12 +18,12 @@ export default function AdminNavbar({ active }) {
         boxShadow="lg"
       >
         <HStack justify="space-around">
-            <Link to="/home" style={{ textDecoration: 'none' }}>
+            {/* <Link to="/home" style={{ textDecoration: 'none' }}>
                 <VStack spacing={1} cursor="pointer" color={active === 'home' ? 'brand.primary' : 'brand.gray.400'}>
                     <Home size={24} />
                     <Text fontSize="xs" fontWeight="600">Home</Text>
                 </VStack>
-            </Link>
+            </Link> */}
             <Link to="/dashboard" style={{ textDecoration: 'none' }}>
               <VStack spacing={1} cursor="pointer" color={active === 'Dashboard' ? 'brand.primary' : 'brand.gray.400'}>
                 <LayoutDashboard size={24} />
@@ -45,7 +45,7 @@ export default function AdminNavbar({ active }) {
             <Link to="/user-management" style={{ textDecoration: 'none' }}>
               <VStack spacing={1} cursor="pointer" color={active === 'User Management' ? 'brand.primary' : 'brand.gray.400'}>
                 <User size={24} />
-                <Text fontSize="xs" fontWeight="600">User Management</Text>
+                <Text fontSize="xs" fontWeight="600" maxW="100px">User/property Management</Text>
               </VStack>
             </Link>
         </HStack>

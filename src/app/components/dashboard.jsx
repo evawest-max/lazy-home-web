@@ -515,7 +515,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                                 <Box position="relative" display="flex" alignItems="center" justifyContent="center">
                                     <HStack spacing={2} align="center">
                                         {user.role !== 'user' &&
-                                            (<Link to="/financial-dashboard" style={{ textDecoration: 'none', }}>
+                                            (<Link to="/user-management" style={{ textDecoration: 'none', }}>
                                                 <Box
                                                     bg="whiteAlpha.200"
                                                     border="1px solid"

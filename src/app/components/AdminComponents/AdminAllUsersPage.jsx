@@ -37,7 +37,7 @@ import {
 import { ChevronDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import AdminNavbar from './AdminNavbar';
-import { getAllUsers, getUserDetails, suspendUser, unSuspendUser } from '../../../../api';
+import { getAllUsers, getUserDetails, suspendUser, unSuspendUser, changeUserRole } from '../../../../api';
 
 const formatDate = (value) => {
   if (!value) return '—';
@@ -81,13 +81,15 @@ export default function AdminAllUsersPage() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [userLookup, setUserLookup] = useState('');
   const [userLookupLoading, setUserLookupLoading] = useState(false);
+  const [roleUpdating, setRoleUpdating] = useState(false);
+  const [roleDraft, setRoleDraft] = useState('user');
 
-  const fetchUsers = async () => {
+  const fetchUsers = async (page = 1, limit = 10) => {
     setLoading(true);
     setError('');
 
     try {
-      const res = await getAllUsers();
+      const res = await getAllUsers({ page, limit });
       const payload = res?.data?.data ?? res?.data ?? res ?? {};
       const userList = Array.isArray(payload?.users) ? payload.users : [];
       const pageInfo = payload?.pagination ?? {
@@ -112,8 +114,18 @@ export default function AdminAllUsersPage() {
     }
   };
 
+  const goToPage = async (nextPage) => {
+        const targetPage = Math.max(1, Number(nextPage) || 1);
+        await fetchUsers(targetPage, pagination.limit);
+    };
+
+    const changeLimit = async (nextLimit) => {
+        const safeLimit = Number(nextLimit) || 10;
+        await fetchUsers(1, safeLimit);
+    };
+
   useEffect(() => {
-    fetchUsers();
+    fetchUsers(1, pagination.limit);
   }, []);
 
   const filterDefinitions = [
@@ -254,10 +266,18 @@ export default function AdminAllUsersPage() {
     try {
       const res = await getUserDetails(query);
       const payload = res?.data?.data ?? res?.data ?? res ?? {};
+      const user = payload?.user ?? null;
+
       setSelectedUserDetails({
-        user: payload?.user ?? null,
+        user,
         stats: payload?.stats ?? {},
       });
+
+      const currentRole = (user?.role || 'user').toLowerCase();
+      const normalizedRole = ['user', 'admin', 'moderator'].includes(currentRole)
+        ? currentRole
+        : 'user';
+      setRoleDraft(normalizedRole);
     } catch (err) {
       console.error('Failed to fetch user details', err);
       toast({
@@ -279,10 +299,54 @@ export default function AdminAllUsersPage() {
     await loadUserDetailsByIdentifier(user._id);
   };
 
+  const handleChangeUserRole = async () => {
+    const targetUser = selectedUserDetails?.user;
+    const nextRole = roleDraft;
+
+    if (!targetUser?._id) return;
+
+    setRoleUpdating(true);
+
+    try {
+      await changeUserRole(targetUser._id, nextRole);
+
+      setUsers((prevUsers) =>
+        prevUsers.map((item) =>
+          item._id === targetUser._id ? { ...item, role: nextRole } : item
+        )
+      );
+
+      setSelectedUserDetails((prev) => ({
+        ...prev,
+        user: { ...prev.user, role: nextRole },
+      }));
+
+      toast({
+        title: 'Role updated',
+        description: `${targetUser.fullName || targetUser.email || 'This user'} is now a ${nextRole}.`,
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+    } catch (err) {
+      console.error('Failed to change user role', err);
+      toast({
+        title: 'Role update failed',
+        description: err?.response?.data?.message || 'Unable to update this user role.',
+        status: 'error',
+        duration: 4000,
+        isClosable: true,
+      });
+    } finally {
+      setRoleUpdating(false);
+    }
+  };
+
   const closeUserDetailModal = () => {
     setIsDetailModalOpen(false);
     setSelectedUserDetails(null);
     setDetailLoading(false);
+    setRoleDraft('user');
   };
 
   return (
@@ -420,7 +484,7 @@ export default function AdminAllUsersPage() {
                             <MenuList>
                               <MenuItem onClick={() => handleViewUser(user)}>View</MenuItem>
                               {/* <MenuItem onClick={() => handleUserAction('Wallet', user)}>Wallet</MenuItem> */}
-                              {/* <MenuItem onClick={() => handleUserAction('Edit', user)}>Edit</MenuItem> */}
+                              <MenuItem onClick={() => handleUserAction('Restore account', user)}>Restore User Account</MenuItem>
                               {user?.isSuspended ? (
                                 <MenuItem onClick={() => handleUnsuspendUser(user)}>Unsuspend</MenuItem>
                               ) : (
@@ -455,10 +519,10 @@ export default function AdminAllUsersPage() {
                   <option value={20}>20</option>
                   <option value={50}>50</option>
                 </Select>
-                <Button size="sm" variant="outline" onClick={() => fetchUsers()}>
+                <Button size="sm" variant="outline" isDisabled={pagination.page <= 1} onClick={() => goToPage(pagination.page - 1)}>
                   Prev
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => fetchUsers()}>
+                <Button size="sm" variant="outline" isDisabled={pagination.page >= pagination.pages} onClick={() => goToPage(pagination.page + 1)}>
                   Next
                 </Button>
               </HStack>
@@ -489,7 +553,7 @@ export default function AdminAllUsersPage() {
                     <MenuList>
                       <MenuItem onClick={() => handleViewUser(selectedUserDetails?.user)}>View</MenuItem>
                       <MenuItem onClick={() => handleUserAction('Wallet', selectedUserDetails?.user)}>Wallet</MenuItem>
-                      <MenuItem onClick={() => handleUserAction('Edit', selectedUserDetails?.user)}>Edit</MenuItem>
+                      <MenuItem onClick={() => handleUserAction('Restore account', selectedUserDetails?.user)}>Restore User Account</MenuItem>
                       {selectedUserDetails?.user?.isSuspended ? (
                         <MenuItem onClick={() => handleUnsuspendUser(selectedUserDetails?.user)}>Unsuspend</MenuItem>
                       ) : (
@@ -530,6 +594,28 @@ export default function AdminAllUsersPage() {
                       </Badge>
                     </Box>
                   </SimpleGrid>
+                </Box>
+
+                <Box border="1px solid" borderColor="gray.200" borderRadius="md" p={4}>
+                  <Heading size="sm" mb={3}>Role Management</Heading>
+                  <Flex gap={3} align="center" wrap="wrap">
+                    <Select
+                      value={roleDraft}
+                      onChange={(e) => setRoleDraft(e.target.value)}
+                      maxW="180px"
+                    >
+                      <option value="user">User</option>
+                      <option value="admin">Admin</option>
+                      <option value="moderator">Moderator</option>
+                    </Select>
+                    <Button
+                      colorScheme="teal"
+                      onClick={handleChangeUserRole}
+                      isLoading={roleUpdating}
+                    >
+                      Change Role
+                    </Button>
+                  </Flex>
                 </Box>
 
                 <Box border="1px solid" borderColor="gray.200" borderRadius="md" p={4}>

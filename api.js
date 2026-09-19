@@ -134,19 +134,28 @@ export const updateProfile = (formData) =>
     },
   });
 
-
+  
+  
 
 
 // ======================================================
 // ================== VERIFICATION ======================
 // ======================================================
 
-export const submitVerification = (formData) =>
-  API.post("/api/v1/verifications", formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
-  });
+export const createLivenessVerification = (formData) => {
+  if (!(formData instanceof FormData)) {
+    return Promise.reject(new Error('createLivenessVerification expects a FormData instance'));
+  }
+
+  return API.post(`/api/v1/verification/identityVerifications/liveness`, formData);
+};
+
+// export const submitVerification = (formData) =>
+//   API.post("/api/v1/verifications", formData, {
+//     headers: {
+//       "Content-Type": "multipart/form-data",
+//     },
+//   });
 
 export const getVerificationStatus = () =>
   API.get("/api/v1/verifications/status");
@@ -183,6 +192,32 @@ export const deleteProperty = (id) =>
 
 export const getAllProperties = () =>
   API.get("/api/v1/properties");
+
+export const updatePropertyStatus = async (id, status) => {
+  const payload = { listingStatus: status };
+
+  const attempts = [
+    () => API.patch(`/api/v1/properties/${id}/status`, payload),
+    () => API.patch(`/api/v1/properties/${id}`, payload),
+    () => API.put(`/api/v1/properties/${id}`, payload),
+  ];
+
+  let lastError;
+
+  for (const attempt of attempts) {
+    try {
+      return await attempt();
+    } catch (error) {
+      lastError = error;
+      const statusCode = error?.response?.status;
+      if (statusCode !== 404 && statusCode !== 405) {
+        throw error;
+      }
+    }
+  }
+
+  throw lastError;
+};
 
 export const getFeaturedProperties = () =>
   API.get("/api/v1/properties/featured");
@@ -494,9 +529,10 @@ export const getfinancialSummary =
       "/api/v1/admin/finance/summary"
     );
 export const getWithdrawals =
-  () =>
+  (params = {}) =>
     API.get(
-      "/api/v1/admin/finance/withdrawals"
+      "/api/v1/admin/finance/withdrawals",
+      { params }
     );
 export const getWithdrawal =
   (withdrawalId) =>
@@ -504,9 +540,10 @@ export const getWithdrawal =
       `/api/v1/admin/finance/withdrawals/${withdrawalId}`
     );
 export const getEscrows =
-  () =>
+  (params = {}) =>
     API.get(
-      "/api/v1/admin/finance/escrows"
+      "/api/v1/admin/finance/escrows",
+      { params }
     );
 export const getEscrow =
   (escrowId) =>
@@ -514,9 +551,10 @@ export const getEscrow =
       `/api/v1/admin/finance/escrows/${escrowId}`
     );
 export const getWalletFundings =
-  () =>
+  (params = {}) =>
     API.get(
-      "/api/v1/admin/finance/fundings"
+      "/api/v1/admin/finance/fundings",
+      { params }
     );
 
 // export const getUserwallets = (params = {}) =>
@@ -543,28 +581,19 @@ export const moderateProperty = (
 
 
 export const getUsersWallets =
-  () =>
+  (params = {}) =>
     API.get(
-      "/api/v1/admin/finance/wallets"
+      "/api/v1/admin/finance/wallets",
+      { params }
     );
 
-export const getWalletDetailsByWalletId =
-  (walletId) =>
+export const getWalletDetailsByWalletIdUserIdOrEmail =
+  (query, params = {}) =>
     API.get(
-      `/api/v1/admin/finance/wallets/${walletId}`
+      `/api/v1/admin/finance/wallets/${query}`,
+      { params }
     );
 
-export const getWalletByUserId =
-  (userId) =>
-    API.get(
-      `/api/v1/admin/finance/users/${userId}/wallet`
-    );
-
-export const getWalletDetailsByUserId =
-  (userId) =>
-    API.get(
-      `/api/v1/admin/finance/users/${userId}/wallet/details`
-    );
 
 export const freezeWallet = (
   walletId, reason = "Suspicious activity detected"
@@ -635,9 +664,9 @@ export const getDisputes =
     );
 
 export const getAuditLogs =
-  () =>
+  (params) =>
     API.get(
-      "/api/v1/admin/audit-logs"
+      "/api/v1/admin/audit-logs",{ params }
     );
 
 export const moderateDispute = (
@@ -650,15 +679,17 @@ export const moderateDispute = (
   );
 
 export const getAllUsers =
-  () =>
+  (params = {}) =>
     API.get(
-      "/api/v1/admin/users"
+      "/api/v1/admin/users",
+      { params }
     );
 
 export const getAllUsersProperties =
-  () =>
+  (params = {}) =>
     API.get(
-      "/api/v1/admin/properties"
+      "/api/v1/admin/properties",
+      { params }
     );
 
 export const getUserDetails =
@@ -667,6 +698,23 @@ export const getUserDetails =
       `/api/v1/admin/users/${userId}`
     );
 
+export const changeUserRole =
+  (userId, role) =>
+    API.patch(
+      `/api/v1/admin/users/${userId}/role`, { role }
+    );
+
+export const getAllVerifications =
+  (params) =>
+    API.get(
+      "/api/v1/admin/verifications", { params }
+    );
+
+export const getVerificationDetails =
+  (verificationId) =>
+    API.get(
+      `/api/v1/admin/verifications/${verificationId}`
+    );
 
 
 export const getPropertyDetails =

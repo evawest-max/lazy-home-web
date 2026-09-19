@@ -63,8 +63,12 @@ export default function AdminFinancialSummary() {
     const [walletLoading, setWalletLoading] = useState(false);
     const [walletCurrentPage, setWalletCurrentPage] = useState(1);
     const [walletPageSize, setWalletPageSize] = useState(10);
-    const walletTotalPages = Math.max(1, Math.ceil((walletFundings?.length ?? 0) / walletPageSize));
-    const walletPaginated = walletFundings.slice((walletCurrentPage - 1) * walletPageSize, walletCurrentPage * walletPageSize);
+    const [walletPageInfo, setWalletPageInfo] = useState({ page: 1, limit: 10, pages: 1, total: 0 });
+    const [withdrawalCurrentPage, setWithdrawalCurrentPage] = useState(1);
+    const [withdrawalPageSize, setWithdrawalPageSize] = useState(10);
+    const [withdrawalsPageInfo, setWithdrawalsPageInfo] = useState({ page: 1, limit: 10, pages: 1, total: 0 });
+    const walletTotalPages = Math.max(1, Number(walletPageInfo.pages ?? 1));
+    const walletPaginated = walletFundings;
     const [walletExpandedIds, setWalletExpandedIds] = useState([]);
 
     const toggleWalletExpanded = (id) => {
@@ -190,11 +194,8 @@ export default function AdminFinancialSummary() {
         }
     };
 
-    // pagination state for withdrawals table
-    const [currentPage, setCurrentPage] = useState(1);
-    const [pageSize, setPageSize] = useState(10);
-    const totalPages = Math.max(1, Math.ceil((withdrawals?.length ?? 0) / pageSize));
-    const paginatedWithdrawals = withdrawals.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+    const totalPages = Math.max(1, Number(withdrawalsPageInfo.pages ?? 1));
+    const paginatedWithdrawals = withdrawals;
     const [expandedIds, setExpandedIds] = useState([]);
 
     const [escrowsExpandedIds, setEscrowsExpandedIds] = useState([]);
@@ -205,6 +206,49 @@ export default function AdminFinancialSummary() {
             if (exists) return prev.filter((x) => x !== id);
             return [...prev, id];
         });
+    };
+
+    const fetchWithdrawalsPage = async (page = withdrawalCurrentPage, limit = withdrawalPageSize) => {
+        try {
+            const res = await getWithdrawals({ page, limit });
+            const withdrawalData = res?.data?.data ?? res?.data ?? res ?? {};
+            const items = asArray(withdrawalData?.withdrawals ?? withdrawalData?.items ?? withdrawalData?.data ?? withdrawalData);
+            const pageInfo = {
+                page: Number(withdrawalData?.page ?? withdrawalData?.pagination?.page ?? page),
+                limit: Number(withdrawalData?.limit ?? withdrawalData?.pagination?.limit ?? limit),
+                pages: Number(withdrawalData?.pages ?? withdrawalData?.pagination?.pages ?? Math.max(1, Math.ceil((withdrawalData?.total ?? items.length) / (withdrawalData?.limit ?? limit)))),
+                total: Number(withdrawalData?.total ?? withdrawalData?.pagination?.total ?? items.length),
+            };
+            setWithdrawals(items);
+            setWithdrawalsPageInfo(pageInfo);
+            setWithdrawalCurrentPage(pageInfo.page);
+            setWithdrawalPageSize(pageInfo.limit);
+        } catch (err) {
+            console.error('Failed to fetch withdrawals page', err);
+        }
+    };
+
+    const fetchWalletFundingsPage = async (page = walletCurrentPage, limit = walletPageSize) => {
+        setWalletLoading(true);
+        try {
+            const res = await getWalletFundings({ page, limit });
+            const walletFundingsData = res?.data?.data ?? res?.data ?? res ?? {};
+            const items = asArray(walletFundingsData?.fundings ?? walletFundingsData?.items ?? walletFundingsData?.data ?? walletFundingsData);
+            const pageInfo = {
+                page: Number(walletFundingsData?.page ?? walletFundingsData?.pagination?.page ?? page),
+                limit: Number(walletFundingsData?.limit ?? walletFundingsData?.pagination?.limit ?? limit),
+                pages: Number(walletFundingsData?.pages ?? walletFundingsData?.pagination?.pages ?? Math.max(1, Math.ceil((walletFundingsData?.total ?? items.length) / (walletFundingsData?.limit ?? limit)))),
+                total: Number(walletFundingsData?.total ?? walletFundingsData?.pagination?.total ?? items.length),
+            };
+            setWalletFundings(items);
+            setWalletPageInfo(pageInfo);
+            setWalletCurrentPage(pageInfo.page);
+            setWalletPageSize(pageInfo.limit);
+        } catch (err) {
+            console.error('Failed to fetch wallet fundings page', err);
+        } finally {
+            setWalletLoading(false);
+        }
     };
 
     const toggleExpanded = (id) => {
@@ -222,10 +266,10 @@ export default function AdminFinancialSummary() {
             try {
                 const [summaryRes, withdrawalsRes, escrowsRes, reconciliationRes, walletFundingsRes] = await Promise.all([
                     getfinancialSummary(),
-                    getWithdrawals(),
-                    getEscrows(),
+                    getWithdrawals({ page: withdrawalCurrentPage, limit: withdrawalPageSize }),
+                    getEscrows({ page: escrowsPageInfo.page, limit: escrowsPageInfo.limit }),
                     getFinanceReconcilation(),
-                    getWalletFundings()
+                    getWalletFundings({ page: walletCurrentPage, limit: walletPageSize })
                 ]);
 
                 const summaryData = summaryRes?.data?.data ?? summaryRes?.data ?? summaryRes ?? {};
@@ -233,20 +277,35 @@ export default function AdminFinancialSummary() {
                 const escrowData = escrowsRes?.data?.data ?? escrowsRes?.data ?? escrowsRes ?? {};
                 const reconciliationData = reconciliationRes?.data?.data ?? reconciliationRes?.data ?? reconciliationRes ?? {};
                 const walletFundingsData = walletFundingsRes?.data?.data ?? walletFundingsRes?.data ?? walletFundingsRes ?? {};
-                console.log('Fetched financial data:', { summaryData, withdrawalData, escrowData, reconciliationData, walletFundingsData });
+
                 setSummary(summaryData);
-                setWithdrawals(asArray(withdrawalData?.withdrawals ?? withdrawalData?.items ?? withdrawalData?.data ?? withdrawalData));
-                // process escrows response: items + pagination if present
+                const withdrawalItems = asArray(withdrawalData?.withdrawals ?? withdrawalData?.items ?? withdrawalData?.data ?? withdrawalData);
+                setWithdrawals(withdrawalItems);
+                setWithdrawalsPageInfo({
+                    page: Number(withdrawalData?.page ?? withdrawalData?.pagination?.page ?? withdrawalCurrentPage),
+                    limit: Number(withdrawalData?.limit ?? withdrawalData?.pagination?.limit ?? withdrawalPageSize),
+                    pages: Number(withdrawalData?.pages ?? withdrawalData?.pagination?.pages ?? Math.max(1, Math.ceil((withdrawalData?.total ?? withdrawalItems.length) / (withdrawalData?.limit ?? withdrawalPageSize)))),
+                    total: Number(withdrawalData?.total ?? withdrawalData?.pagination?.total ?? withdrawalItems.length),
+                });
+
                 const escItems = asArray(escrowData?.escrows ?? escrowData?.items ?? escrowData?.data ?? escrowData);
                 const escPageInfo = {
-                    page: escrowData?.page ?? escrowData?.pagination?.page ?? escrowsPageInfo.page,
-                    limit: escrowData?.limit ?? escrowData?.pagination?.limit ?? escrowsPageInfo.limit,
-                    pages: escrowData?.pages ?? escrowData?.pagination?.pages ?? Math.max(1, Math.ceil((escrowData?.total ?? escItems.length) / (escrowData?.limit ?? escrowsPageInfo.limit))),
-                    total: escrowData?.total ?? escrowData?.pagination?.total ?? escItems.length,
+                    page: Number(escrowData?.page ?? escrowData?.pagination?.page ?? escrowsPageInfo.page),
+                    limit: Number(escrowData?.limit ?? escrowData?.pagination?.limit ?? escrowsPageInfo.limit),
+                    pages: Number(escrowData?.pages ?? escrowData?.pagination?.pages ?? Math.max(1, Math.ceil((escrowData?.total ?? escItems.length) / (escrowData?.limit ?? escrowsPageInfo.limit)))),
+                    total: Number(escrowData?.total ?? escrowData?.pagination?.total ?? escItems.length),
                 };
                 setEscrows(escItems);
                 setEscrowsPageInfo(escPageInfo);
-                setWalletFundings(asArray(walletFundingsData?.fundings ?? walletFundingsData?.items ?? walletFundingsData?.data ?? walletFundingsData));
+
+                const walletItems = asArray(walletFundingsData?.fundings ?? walletFundingsData?.items ?? walletFundingsData?.data ?? walletFundingsData);
+                setWalletFundings(walletItems);
+                setWalletPageInfo({
+                    page: Number(walletFundingsData?.page ?? walletFundingsData?.pagination?.page ?? walletCurrentPage),
+                    limit: Number(walletFundingsData?.limit ?? walletFundingsData?.pagination?.limit ?? walletPageSize),
+                    pages: Number(walletFundingsData?.pages ?? walletFundingsData?.pagination?.pages ?? Math.max(1, Math.ceil((walletFundingsData?.total ?? walletItems.length) / (walletFundingsData?.limit ?? walletPageSize)))),
+                    total: Number(walletFundingsData?.total ?? walletFundingsData?.pagination?.total ?? walletItems.length),
+                });
                 setReconciliation(reconciliationData);
             } catch (err) {
                 console.error('Failed to load admin financial data', err);
@@ -256,7 +315,7 @@ export default function AdminFinancialSummary() {
             }
         };
         fetchFinancialData();
-    }, []);
+    }, [walletCurrentPage, walletPageSize, withdrawalCurrentPage, withdrawalPageSize, escrowsPageInfo.page, escrowsPageInfo.limit]);
 
     const formatCurrency = (v) => {
         const n = Number(v || 0);
@@ -384,7 +443,7 @@ export default function AdminFinancialSummary() {
             title: 'Totals',
             rows: [
                 { label: 'Held in escrow', value: formatCurrency((summary?.totals?.heldInEscrow ?? 0) / 100) },
-                { label: 'Wallet balance', value: formatCurrency(summary?.totals?.totalWalletBalance ?? (summary?.wallets?.totalBalance ?? 0) / 100) },
+                { label: 'Wallet balance', value: formatCurrency((summary?.totals?.totalWalletBalance ?? summary?.wallets?.totalBalance ?? 0) / 100) },
                 { label: 'Total liability', value: formatCurrency((summary?.totals?.totalLiability ?? 0) / 100) },
                 { label: 'Total revenue', value: formatCurrency(summary?.totals?.totalRevenue ?? 0) },
                 { label: 'Commissions paid', value: formatCurrency((summary?.totals?.totalCommissionsPaid ?? 0)) },
@@ -530,7 +589,7 @@ export default function AdminFinancialSummary() {
                                                 <Tr><Td colSpan={22}>No withdrawals found</Td></Tr>
                                             )}
                                             {paginatedWithdrawals.map((w, idx) => {
-                                                const id = w._id ?? w.id ?? ((currentPage - 1) * pageSize) + idx;
+                                                const id = w._id ?? w.id ?? ((withdrawalCurrentPage - 1) * withdrawalPageSize) + idx;
                                                 const isOpen = expandedIds.includes(id);
                                                 return (
                                                     <>
@@ -538,7 +597,7 @@ export default function AdminFinancialSummary() {
                                                             <Td>
                                                                 <IconButton size="sm" variant="ghost" aria-label={isOpen ? 'collapse' : 'expand'} icon={isOpen ? <ChevronUpIcon /> : <ChevronDownIcon />} onClick={() => toggleExpanded(id)} />
                                                             </Td>
-                                                            <Td>{w._id ?? w.id ?? `#${(currentPage - 1) * pageSize + idx + 1}`}</Td>
+                                                            <Td>{w._id ?? w.id ?? `#${(withdrawalCurrentPage - 1) * withdrawalPageSize + idx + 1}`}</Td>
                                                             <Td>{w.reference ?? '—'}</Td>
                                                             <Td>{formatCurrency((w.amount ?? w.value ?? 0) / 100)}</Td>
                                                             <Td>{formatCurrency((w.netAmount ?? 0) / 100)}</Td>
@@ -579,18 +638,18 @@ export default function AdminFinancialSummary() {
                                 <Flex mt={3} justify="space-between" align="center">
                                     <HStack spacing={3}>
                                         <Text fontSize="sm">Rows per page:</Text>
-                                        <Select size="sm" width="80px" value={String(pageSize)} onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}>
+                                        <Select size="sm" width="80px" value={String(withdrawalPageSize)} onChange={(e) => { const nextLimit = Number(e.target.value); setWithdrawalPageSize(nextLimit); setWithdrawalCurrentPage(1); fetchWithdrawalsPage(1, nextLimit); }}>
                                             <option value="5">5</option>
                                             <option value="10">10</option>
                                             <option value="25">25</option>
                                         </Select>
-                                        <Text fontSize="sm" color="gray.600">Showing {(withdrawals.length === 0) ? 0 : ((currentPage - 1) * pageSize + 1)} - {Math.min(currentPage * pageSize, withdrawals.length)} of {withdrawals.length}</Text>
+                                        <Text fontSize="sm" color="gray.600">Showing {withdrawalsPageInfo.total === 0 ? 0 : ((withdrawalsPageInfo.page - 1) * withdrawalsPageInfo.limit + 1)} - {Math.min(withdrawalsPageInfo.page * withdrawalsPageInfo.limit, withdrawalsPageInfo.total)} of {withdrawalsPageInfo.total}</Text>
                                     </HStack>
 
                                     <HStack>
-                                        <Button size="sm" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} isDisabled={currentPage <= 1}>Prev</Button>
-                                        <Text fontSize="sm">Page {currentPage} / {totalPages}</Text>
-                                        <Button size="sm" onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} isDisabled={currentPage >= totalPages}>Next</Button>
+                                        <Button size="sm" onClick={() => fetchWithdrawalsPage(Math.max(1, withdrawalCurrentPage - 1), withdrawalPageSize)} isDisabled={withdrawalCurrentPage <= 1}>Prev</Button>
+                                        <Text fontSize="sm">Page {withdrawalCurrentPage} / {totalPages}</Text>
+                                        <Button size="sm" onClick={() => fetchWithdrawalsPage(Math.min(totalPages, withdrawalCurrentPage + 1), withdrawalPageSize)} isDisabled={withdrawalCurrentPage >= totalPages}>Next</Button>
                                     </HStack>
                                 </Flex>
                             </Box>
@@ -775,18 +834,18 @@ export default function AdminFinancialSummary() {
                                 <Flex mt={3} justify="space-between" align="center">
                                     <HStack spacing={3}>
                                         <Text fontSize="sm">Rows per page:</Text>
-                                        <Select size="sm" width="80px" value={String(walletPageSize)} onChange={(e) => { setWalletPageSize(Number(e.target.value)); setWalletCurrentPage(1); }}>
+                                        <Select size="sm" width="80px" value={String(walletPageSize)} onChange={(e) => { const nextLimit = Number(e.target.value); setWalletPageSize(nextLimit); setWalletCurrentPage(1); fetchWalletFundingsPage(1, nextLimit); }}>
                                             <option value="5">5</option>
                                             <option value="10">10</option>
                                             <option value="25">25</option>
                                         </Select>
-                                        <Text fontSize="sm" color="gray.600">Showing {(walletFundings.length === 0) ? 0 : ((walletCurrentPage - 1) * walletPageSize + 1)} - {Math.min(walletCurrentPage * walletPageSize, walletFundings.length)} of {walletFundings.length}</Text>
+                                        <Text fontSize="sm" color="gray.600">Showing {walletPageInfo.total === 0 ? 0 : ((walletPageInfo.page - 1) * walletPageInfo.limit + 1)} - {Math.min(walletPageInfo.page * walletPageInfo.limit, walletPageInfo.total)} of {walletPageInfo.total}</Text>
                                     </HStack>
 
                                     <HStack>
-                                        <Button size="sm" onClick={() => setWalletCurrentPage((p) => Math.max(1, p - 1))} isDisabled={walletCurrentPage <= 1}>Prev</Button>
+                                        <Button size="sm" onClick={() => fetchWalletFundingsPage(Math.max(1, walletCurrentPage - 1), walletPageSize)} isDisabled={walletCurrentPage <= 1}>Prev</Button>
                                         <Text fontSize="sm">Page {walletCurrentPage} / {walletTotalPages}</Text>
-                                        <Button size="sm" onClick={() => setWalletCurrentPage((p) => Math.min(walletTotalPages, p + 1))} isDisabled={walletCurrentPage >= walletTotalPages}>Next</Button>
+                                        <Button size="sm" onClick={() => fetchWalletFundingsPage(Math.min(walletTotalPages, walletCurrentPage + 1), walletPageSize)} isDisabled={walletCurrentPage >= walletTotalPages}>Next</Button>
                                     </HStack>
                                 </Flex>
                             </Box>

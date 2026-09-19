@@ -37,6 +37,7 @@ import AdminAllUsersPage from './components/AdminComponents/AdminAllUsersPage';
 import AdminAllPropertiesPage from './components/AdminComponents/AdminAllPropertiesPage';
 import AdminWalletManagement from './components/AdminComponents/AdminWalletManagement';
 import AdminViewSingleUserWallet from './components/AdminComponents/AdminViewSingleUserWallet';
+import AdminUserVerificationPage from './components/AdminComponents/AdminUserVerificationPage';
 
 const LISTING_DRAFT_KEY = 'listingFormData';
 
@@ -405,11 +406,12 @@ export default function App() {
             <Route path="/settings" element={user ? <ListProperty /> : <Navigate to="/login" />} />
             <Route path="/support" element={user ? <SupportChat /> : <Navigate to="/login" />} />
               <Route path="/financial-dashboard" element={ loadingUser ? (<Spinner />) : user && user.role == "super_admin" ? (<AdminFinancialSummary onLogout={logout} user={user} />  ) : (<Navigate to="/login" /> ) } />
-              <Route path="/wallet-management" element={ loadingUser ? (<Spinner />) : user && user.role == "super_admin" ? (<AdminWalletManagement onLogout={logout} user={user} />  ) : (<Navigate to="/login" /> ) } />
-              <Route path="/view-user-wallet" element={ loadingUser ? (<Spinner />) : user && user.role == "super_admin" ? (<AdminViewSingleUserWallet onLogout={logout} user={user} />  ) : (<Navigate to="/login" /> ) } />
-              <Route path="/user-management" element={ loadingUser ? (<Spinner />) : user && user.role == "super_admin" ? (<AdminUserManagementDashboard onLogout={logout} user={user} />  ) : (<Navigate to="/login" /> ) } />
+              <Route path="/wallet-management" element={ loadingUser ? (<Spinner />) : user && (user.role == "super_admin" || user.role == "admin") ? (<AdminWalletManagement onLogout={logout} user={user} />  ) : (<Navigate to="/login" /> ) } />
+              <Route path="/view-user-wallet" element={ loadingUser ? (<Spinner />) : user && (user.role == "super_admin" || user.role == "admin") ? (<AdminViewSingleUserWallet onLogout={logout} user={user} />  ) : (<Navigate to="/login" /> ) } />
+              <Route path="/user-management" element={ loadingUser ? (<Spinner />) : user && (user.role == "super_admin" || user.role == "admin" || user.role == "moderator") ? (<AdminUserManagementDashboard onLogout={logout} user={user} />  ) : (<Navigate to="/login" /> ) } />
               <Route path="/all-users" element={ loadingUser ? (<Spinner />) : user && user.role == "super_admin" ? (<AdminAllUsersPage onLogout={logout} user={user} />  ) : (<Navigate to="/login" /> ) } />
               <Route path="/all-properties" element={ loadingUser ? (<Spinner />) : user && user.role == "super_admin" ? (<AdminAllPropertiesPage onLogout={logout} user={user} />  ) : (<Navigate to="/login" /> ) } />
+              <Route path="/admin-user-verification" element={ loadingUser ? (<Spinner />) : user && (user.role == "super_admin" || user.role == "admin" || user.role == "moderator") ? (<AdminUserVerificationPage onLogout={logout} user={user} />  ) : (<Navigate to="/login" /> ) } />
             {/* Add more routes here */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
