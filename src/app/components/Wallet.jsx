@@ -22,7 +22,7 @@ import {
     ButtonGroup,
 } from '@chakra-ui/react';
 import { useEffect, useState } from 'react';
-import { getSingleTransaction, getwallet, getwalletTransactions, initializeFundwallet, requestWalletWithdrawal } from '../../../api';
+import { getActiveSettlementAccount, getBankcodes, getSingleTransaction, getwallet, getwalletTransactions, initializeFundwallet, requestWalletWithdrawal } from '../../../api';
 import Navbar from './Navbar';
 
 const formatCurrency = (v) => {
@@ -46,7 +46,21 @@ export default function Wallet() {
     const [loadingTx, setLoadingTx] = useState(false);
     const [transactionPagination, setTransactionPagination] = useState({});
     const [currentPage, setCurrentPage] = useState(1);
+    const [settlementAccountLoading, setSettlementAccountLoading] = useState(false);
+    const [activeSettlementAccount, setActiveSettlementAccount] = useState(null);
     const toast = useToast();
+    const [banks, setBanks] = useState([]);
+
+    useEffect(async() => {
+        const res = await getBankcodes();
+                setBanks(res.data.data);
+    }, []);
+
+    const getBankName = (code) => {
+        const bank = banks.find(b => b.code === code);
+        return bank ? bank.name : code;
+    };
+
 
     useEffect(() => {
         let mounted = true;
@@ -220,6 +234,23 @@ export default function Wallet() {
         }
     };
 
+    const getsettlementAccount = async () => {
+        setSettlementAccountLoading(true);
+        try {
+
+            const response = await getActiveSettlementAccount()
+            setActiveSettlementAccount(response.data.data)
+            console.log(activeSettlementAccount)
+            toast({ title: "Settlement Bank account fetched successfully", status: "success", duration: 4000 })
+        } catch (err) {
+            toast({ title: "Failed to fetch settlement account", status: "error" })
+        } finally {
+            setSettlementAccountLoading(false)
+        }
+
+    }
+
+
     return (
         <Box minH="100vh" bg="brand.background" p={6}
             pb={20}>
@@ -232,7 +263,7 @@ export default function Wallet() {
                         </VStack>
                         <Box display="flex" gap={3} flexWrap="wrap" w={{ base: '100%', md: 'auto' }} justifyContent={{ base: 'space-between', md: 'flex-end' }}>
                             <Button w={{ base: '100%', sm: 'auto' }} size="lg" colorScheme="teal" onClick={openFund}>Fund Wallet</Button>
-                            <Button w={{ base: '100%', sm: 'auto' }} size="lg" colorScheme="teal" onClick={openWithdraw}>Withdraw Funds</Button>
+                            <Button w={{ base: '100%', sm: 'auto' }} size="lg" colorScheme="teal" onClick={() => { openWithdraw(); getsettlementAccount() }}>Withdraw Funds</Button>
                         </Box>
                     </Stack>
                 </Box>
@@ -251,7 +282,7 @@ export default function Wallet() {
                                         <Stack direction={{ base: 'column', md: 'row' }} justify="space-between" align="flex-start" spacing={4}>
                                             <VStack align="start" spacing={1} flex={1} minW={0}>
                                                 <Text fontSize="sm" color="brand.gray.500">{new Date(t.createdAt || t.date || Date.now()).toLocaleString()}</Text>
-                                                <Text fontSize="md" wordBreak="break-all"  fontWeight="600" noOfLines={3}>{t.reference || t.txRef || t._id}</Text>
+                                                <Text fontSize="md" wordBreak="break-all" fontWeight="600" noOfLines={3}>{t.reference || t.txRef || t._id}</Text>
                                                 <Text fontSize="sm" color="brand.gray.600">{t.type ? `${t.type} transaction` : 'Transaction'}</Text>
                                             </VStack>
                                             <VStack align={{ base: 'start', md: 'end' }} spacing={1} flexShrink={0}>
@@ -345,31 +376,76 @@ export default function Wallet() {
                     </ModalBody>
                     <ModalFooter flexDirection={{ base: 'column', sm: 'row' }} gap={3}>
                         <Button w={{ base: '100%', sm: 'auto' }} variant="ghost" onClick={closeFund}>Cancel</Button>
-                        <Button 
-    w={{ base: '100%', sm: 'auto' }} 
-    colorScheme="teal" 
-    onClick={handleFund}
-    disabled={!fundAmount} // Optional: disables button if input is empty
->
-    Fund {fundAmount ? Number(fundAmount).toLocaleString('en-NG', {
-        style: 'currency',
-        currency: 'NGN',
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-    }) : '₦0.00'}
-</Button>
+                        <Button
+                            w={{ base: '100%', sm: 'auto' }}
+                            colorScheme="teal"
+                            onClick={handleFund}
+                            disabled={!fundAmount} // Optional: disables button if input is empty
+                        >
+                            Fund {fundAmount ? Number(fundAmount).toLocaleString('en-NG', {
+                                style: 'currency',
+                                currency: 'NGN',
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2
+                            }) : '₦0.00'}
+                        </Button>
 
                     </ModalFooter>
                 </ModalContent>
             </Modal>
 
             {/* Withdraw wallet modal */}
-            <Modal isOpen={withdrawOpen} onClose={() => { setWithdrawAmount(''); setWithdrawPin(''); closeWithdraw(); }} isCentered>
+            <Modal
+                isOpen={withdrawOpen}
+                onClose={() => {
+                    setWithdrawAmount('');
+                    setWithdrawPin('');
+                    closeWithdraw();
+                }}
+                isCentered
+            >
                 <ModalOverlay />
                 <ModalContent>
                     <ModalHeader>Withdraw Funds</ModalHeader>
                     <ModalCloseButton />
                     <ModalBody>
+                        {/* Settlement Account Info */}
+                        {activeSettlementAccount && (
+                            <Box
+                                borderWidth="1px"
+                                borderRadius="md"
+                                p={4}
+                                mb={4}
+                                bg="gray.50"
+                            >
+                                <Text fontWeight="bold" mb={2}>
+                                    Settlement Account
+                                </Text>
+                                <Text>
+                                    <strong>Account Name:</strong> {activeSettlementAccount.accountName}
+                                </Text>
+                                <Text>
+                                    <strong>Account Number:</strong> {activeSettlementAccount.accountNumber}
+                                </Text>
+                                {/* <Text>
+            <strong>Bank:</strong> {activeSettlementAccount.bankName}
+          </Text> */}
+                                <Text>
+                                    <strong>Bank:</strong> {getBankName(activeSettlementAccount.bankCode)}
+                                </Text>
+
+                                <Text>
+                                    <strong>Currency:</strong> {activeSettlementAccount.currency}
+                                </Text>
+                                {activeSettlementAccount.isDefault && (
+                                    <Badge colorScheme="green" mt={2}>
+                                        Default Account
+                                    </Badge>
+                                )}
+                            </Box>
+                        )}
+
+                        {/* Withdrawal Form */}
                         <FormControl mb={4}>
                             <FormLabel>Amount</FormLabel>
                             <Input
@@ -392,11 +468,37 @@ export default function Wallet() {
                         </FormControl>
                     </ModalBody>
                     <ModalFooter flexDirection={{ base: 'column', sm: 'row' }} gap={3}>
-                        <Button w={{ base: '100%', sm: 'auto' }} variant="ghost" onClick={() => { setWithdrawAmount(''); setWithdrawPin(''); closeWithdraw(); }}>Cancel</Button>
-                        <Button w={{ base: '100%', sm: 'auto' }} colorScheme="teal" isLoading={withdrawing} onClick={handleWithdraw}>Request Withdrawal</Button>
+                        <Button
+                            w={{ base: '100%', sm: 'auto' }}
+                            variant="ghost"
+                            onClick={() => {
+                                setWithdrawAmount('');
+                                setWithdrawPin('');
+                                closeWithdraw();
+                            }}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            w={{ base: '100%', sm: 'auto' }}
+                            colorScheme="teal"
+                            isLoading={withdrawing}
+                            onClick={handleWithdraw}
+                        >
+                            Request Withdrawal{' '}
+                            {withdrawAmount
+                                ? Number(withdrawAmount).toLocaleString('en-NG', {
+                                    style: 'currency',
+                                    currency: 'NGN',
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                })
+                                : '₦0.00'}
+                        </Button>
                     </ModalFooter>
                 </ModalContent>
             </Modal>
+
             <Navbar active="profile" />
         </Box>
     );
