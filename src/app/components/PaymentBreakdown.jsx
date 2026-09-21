@@ -488,10 +488,10 @@ export default function PaymentBreakdown() {
                 </AlertDialogHeader>
 
                 <AlertDialogBody>
-                  Are you sure you want to pay this amount into escrow for this property? This action will reserve this property for you and alert the agent or landloard. 
-                  <Text color="red">
-                    Note: only release fund after you have inspected and recieved the keys.
-                  </Text>
+                  Are you sure you want to proceed with the escrow payment for this property? This action will reserve this property for you and alert the agent or landlord.
+                  {/* <Text color="red">
+                    if yes, after payin to Escrow, only release fund after you have inspected and recieved the keys.
+                  </Text> */}
                 </AlertDialogBody>
 
                 <AlertDialogFooter>

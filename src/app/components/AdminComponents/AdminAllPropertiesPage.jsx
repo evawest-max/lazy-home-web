@@ -197,7 +197,7 @@ export default function AdminAllPropertiesPage() {
         { value: 'under_offer', label: 'Under Offer' },
         { value: 'rented', label: 'Rented' },
         { value: 'archive', label: 'Archive' },
-        { value: 'restore', label: 'Restore' },
+        // { value: 'restore', label: 'Restore' },
     ];
 
     const filterCounts = useMemo(() => {
@@ -233,7 +233,8 @@ export default function AdminAllPropertiesPage() {
         });
     }, [properties, search, selectedFilter]);
 
-    const handleModerateProperty = async (status) => {
+    const handleModerateProperty = async (status, property) => {
+        setSelectedProperty(property);
         const propertyId = selectedProperty?._id || selectedProperty?.id;
         if (!propertyId) return;
 
@@ -613,7 +614,7 @@ export default function AdminAllPropertiesPage() {
                                                                 {statusOptions.map((status) => (
                                                                     <MenuItem
                                                                         key={status.value}
-                                                                        onClick={() => handleModerateProperty( status.value)}
+                                                                        onClick={() => handleModerateProperty(status.value, property)}
                                                                         isDisabled={updatingStatusId === (property?._id || property?.id)}
                                                                     >
                                                                         Set: {status.label}

@@ -230,6 +230,7 @@ export default function AdminViewSingleUserWallet() {
                                 {(walletData.wallet?.status || '').toLowerCase() === 'frozen' ? 'Unfreeze Wallet' : 'Freeze Wallet'}
                             </Button>
                             <Button colorScheme="green">Top Up Wallet</Button>
+                            <Button colorScheme="red" bg="red.500" _hover={{ bg: "red.600" }}>Debit Wallet</Button>
                         </HStack>
                     </VStack>
                 </Flex>

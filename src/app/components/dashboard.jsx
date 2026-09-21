@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
     Box,
     VStack,
@@ -75,6 +75,8 @@ import Navbar from './Navbar';
 import { confirmInspection, deleteProperty, getAllEscrowPayments, getAnalyticsDashboardAndProperties, getUnreadCount, getUserProperties, releaseFunds, releaseKeys, refundEscrow, downloadTenancyDoc } from '../../../api';
 import { reference } from '@popperjs/core';
 import DownloadAgreementButton from './downloadAgreementButton';
+import DualRatingPopover from './leaveReviewsButton';
+import DualReviewModal from './leaveReviewsButton';
 // import DownloadAgreementButton from './downloadAgreementButton';
 
 
@@ -108,6 +110,10 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
     const [totalProperties, setTotalProperties] = useState(0)
     const [downloading, setDownloading] = useState(false);
     const [unreadNotificationsCount, setUnreadNotificationsCount] = useState("0")
+    const [propertyStatusFilter, setPropertyStatusFilter] = useState('all');
+    const [propertyTitleFilter, setPropertyTitleFilter] = useState('');
+    const [escrowStatusFilter, setEscrowStatusFilter] = useState('all');
+    const [escrowTitleFilter, setEscrowTitleFilter] = useState('');
 
     const location = useLocation();
 
@@ -122,13 +128,82 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
 
     const itemsPerPage = 4;
     const { isOpen: isPinOpen, onOpen: onOpenPin, onClose: onClosePin } = useDisclosure();
+    const escrowStatusOptions = [
+        'all',
+        'pending',
+        'funded',
+        'handover_requested',
+        'landlord_confirmed',
+        'inspection_confirmed',
+        'releasing',
+        'released',
+        'release_failed',
+        'refund_failed',
+        'refunded',
+        'disputed',
+        'cancelled',
+        'awaiting_transfer_otp',
+        'awaiting_manual_transfer',
+        'refund_requested',
+    ];
 
-    const listingsTotalPages = Math.ceil(mockProperties.length / itemsPerPage);
+    const escrowStatusCounts = useMemo(() => {
+        const counts = { all: escrowTransactions.length };
+
+        escrowStatusOptions.forEach((status) => {
+            if (status === 'all') return;
+            counts[status] = escrowTransactions.filter((escrow) => {
+                const currentStatus = String(escrow?.status || escrow?.state || 'unknown').toLowerCase();
+                return currentStatus === status;
+            }).length;
+        });
+
+        return counts;
+    }, [escrowTransactions]);
+
+    const filteredEscrowTransactions = useMemo(() => {
+        const titleQuery = escrowTitleFilter.trim().toLowerCase();
+
+        return escrowTransactions.filter((escrow) => {
+            const currentStatus = String(escrow?.status || escrow?.state || 'unknown').toLowerCase();
+            const propertyTitle = String(
+                escrow?.title ||
+                escrow?.propertyTitle ||
+                escrow?.property?.title ||
+                escrow?.property?.name ||
+                ''
+            ).toLowerCase();
+
+            const matchesStatus = escrowStatusFilter === 'all' || currentStatus === escrowStatusFilter;
+            const matchesTitle = !titleQuery || propertyTitle.includes(titleQuery);
+
+            return matchesStatus && matchesTitle;
+        });
+    }, [escrowTransactions, escrowStatusFilter, escrowTitleFilter]);
+
+    const propertyStatusOptions = ['all', 'available', 'under_offer', 'rented', 'archived'];
+
+    const filteredPropertyListings = useMemo(() => {
+        const searchQuery = propertyTitleFilter.trim().toLowerCase();
+
+        return myProperties.filter((item) => {
+            const currentStatus = String(item?.listingStatus || item?.status || 'available').toLowerCase();
+            const title = String(item?.title || '').toLowerCase();
+            const matchesStatus = propertyStatusFilter === 'all'
+                || (propertyStatusFilter === 'archived' ? ['archive', 'archived'].includes(currentStatus) : currentStatus === propertyStatusFilter);
+            const matchesTitle = !searchQuery || title.includes(searchQuery);
+
+            return matchesStatus && matchesTitle;
+        });
+    }, [myProperties, propertyStatusFilter, propertyTitleFilter]);
+
+    const listingsTotalPages = Math.max(1, Math.ceil(filteredPropertyListings.length / itemsPerPage));
     const navigate = useNavigate()
     // Pagination calculations for listings
-    const listingsStartIndex = (listingsPage - 1) * itemsPerPage;
+    const safeListingsPage = Math.min(listingsPage, listingsTotalPages);
+    const listingsStartIndex = (safeListingsPage - 1) * itemsPerPage;
     const listingsEndIndex = listingsStartIndex + itemsPerPage;
-    const paginatedListings = myProperties.slice(listingsStartIndex, listingsEndIndex);
+    const paginatedListings = filteredPropertyListings.slice(listingsStartIndex, listingsEndIndex);
 
 
     // Pagination calculations for transactions
@@ -816,115 +891,148 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                         <Text fontSize="lg" fontWeight="600" color="brand.gray.800">
                             My Property Listings
                         </Text>
-                        <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={4}>
-                            {paginatedListings.map((item, index) => (
-                                <Stack
-                                    p={4}
-                                    bg="white"
-                                    borderRadius="lg"
-                                    spacing={4}
-                                    boxShadow="sm"
-                                    cursor="pointer"
-                                    _hover={{ boxShadow: 'md' }}
-                                    direction={{ base: 'column', md: 'row' }}
-                                >
-                                    <Image
-                                        src={item.media.images[0].url}
-                                        alt="item"
-                                        borderRadius="lg"
-                                        h={{ base: '180px', md: '100px' }}
-                                        w={{ base: '100%', md: '100px' }}
-                                        objectFit="cover"
-                                    />
 
-                                    <VStack align="start" flex={1} spacing={1}>
-                                        <Text fontWeight="600" fontSize="sm">
-                                            {item.title} {item.verificationStatus == "fully_verified" && (
-                                                <Badge
-                                                    colorScheme="green"
-                                                    variant="default"
-                                                    borderRadius="full"
-                                                    p={0.5}
-                                                >
-                                                    <Icon as={VerifiedIcon} boxSize={3.5} />
-                                                </Badge>
-                                            )}
-                                        </Text>
-                                        <Text fontSize="xs" color="brand.gray.600">
-                                            {item.address.area}, {item.address.state}
-                                        </Text>
-                                        <HStack>
-                                            {item.listingStatus == "rented" ? (
-                                                <Badge variant="verified" fontSize="xs">Rent Paid</Badge>
-                                            ) : (
-                                                <Text fontSize="xs" color="brand.gray.600">{item.listingStatus}</Text>
-                                            )}
-                                        </HStack>
-                                        <Text fontSize="xs" color="brand.gray.600">₦{item.rentAmount.toLocaleString()} {item.rentDuration}</Text>
-                                    </VStack>
+                        <Box bg="white" p={3} borderRadius="lg" boxShadow="sm">
+                            <VStack align="stretch" spacing={3}>
+                                <Input
+                                    placeholder="Filter by title"
+                                    value={propertyTitleFilter}
+                                    onChange={(e) => setPropertyTitleFilter(e.target.value)}
+                                    maxW="320px"
+                                />
+                                <HStack spacing={2} wrap="wrap">
+                                    {propertyStatusOptions.map((status) => (
+                                        <Button
+                                            key={status}
+                                            size="sm"
+                                            variant={propertyStatusFilter === status ? 'solid' : 'outline'}
+                                            colorScheme={propertyStatusFilter === status ? 'green' : 'gray'}
+                                            onClick={() => setPropertyStatusFilter(status)}
+                                        >
+                                            {status === 'all' ? 'All' : status.replace(/_/g, ' ')}
+                                        </Button>
+                                    ))}
+                                </HStack>
+                            </VStack>
+                        </Box>
 
-                                    <VStack align={{ base: 'start', md: 'stretch' }} spacing={1} textAlign={{ base: 'left', md: 'right' }}>
-                                        <Menu>
-                                            <HStack gap={1} width={{ base: '100%', md: 'auto' }}>
-                                                <Button onClick={() => openPropertyDetails(item)} width={{ base: '100%', md: 'auto' }} size="sm">
-                                                    Details
-                                                </Button>
-                                                <MenuButton size="sm" as={Button} rightIcon={<ChevronDownIcon />} >
+                        {filteredPropertyListings.length === 0 ? (
+                            <Box bg="white" p={6} borderRadius="lg" textAlign="center" color="gray.500">
+                                No properties match the current filters.
+                            </Box>
+                        ) : (
+                            <>
+                                <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={4}>
+                                    {paginatedListings.map((item, index) => (
+                                        <Stack
+                                            p={4}
+                                            bg="white"
+                                            borderRadius="lg"
+                                            spacing={4}
+                                            boxShadow="sm"
+                                            cursor="pointer"
+                                            _hover={{ boxShadow: 'md' }}
+                                            direction={{ base: 'column', md: 'row' }}
+                                        >
+                                            <Image
+                                                src={item.media.images[0].url}
+                                                alt="item"
+                                                borderRadius="lg"
+                                                h={{ base: '180px', md: '100px' }}
+                                                w={{ base: '100%', md: '100px' }}
+                                                objectFit="cover"
+                                            />
 
-                                                </MenuButton>
-                                            </HStack>
-                                            <MenuList>
-                                                {item.listingStatus == "under_offer" && (
-                                                    <MenuItem onClick={() => handleReleasedKeys(item._id)}>Released keys</MenuItem>
-                                                )}
-                                                <MenuItem >Decline Offer</MenuItem>
-                                                <MenuItem>Share Property</MenuItem>
-                                                <MenuItem onClick={() => editProperty(item)}>Edit property</MenuItem>
-                                                <MenuItem onClick={() => deleteMyProperty(item._id)}>Delete Property</MenuItem>
-                                            </MenuList>
-                                        </Menu>
-                                        <Text fontSize="xs" color="brand.gray.500">
-                                            {item.approved ? 'Approved' : 'Pending Approval'}
-                                        </Text>
-                                        <Text fontSize="xs" color="brand.gray.500">
-                                            {item.inquiries.length} new inquiries
-                                        </Text>
-                                        <Text fontSize="xs" color="red.500">
-                                            {allData.disputedProperties.reduce((count, prop) => prop._id === item._id ? count + 1 : count, 0)} new dispute
-                                        </Text>
-                                    </VStack>
-                                </Stack>
-                            ))}
-                        </Grid>
+                                            <VStack align="start" flex={1} spacing={1}>
+                                                <Text fontWeight="600" fontSize="sm">
+                                                    {item.title} {item.verificationStatus == "fully_verified" && (
+                                                        <Badge
+                                                            colorScheme="green"
+                                                            variant="default"
+                                                            borderRadius="full"
+                                                            p={0.5}
+                                                        >
+                                                            <Icon as={VerifiedIcon} boxSize={3.5} />
+                                                        </Badge>
+                                                    )}
+                                                </Text>
+                                                <Text fontSize="xs" color="brand.gray.600">
+                                                    {item.address.area}, {item.address.state}
+                                                </Text>
+                                                <HStack>
+                                                    {item.listingStatus == "rented" ? (
+                                                        <Badge variant="verified" fontSize="xs">Rent Paid</Badge>
+                                                    ) : (
+                                                        <Text fontSize="xs" color="brand.gray.600">{item.listingStatus}</Text>
+                                                    )}
+                                                </HStack>
+                                                <Text fontSize="xs" color="brand.gray.600">₦{item.rentAmount.toLocaleString()} {item.rentDuration}</Text>
+                                            </VStack>
 
-                        <HStack justify="center" spacing={2} mt={4}>
-                            <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => setListingsPage((prev) => Math.max(prev - 1, 1))}
-                                isDisabled={listingsPage === 1}
-                            >
-                                Previous
-                            </Button>
-                            {Array.from({ length: totalProperties }, (_, i) => i + 1).map((page) => (
-                                <Button
-                                    key={page}
-                                    size="sm"
-                                    variant={listingsPage === page ? 'primary' : 'outline'}
-                                    onClick={() => setListingsPage(page)}
-                                >
-                                    {page}
-                                </Button>
-                            ))}
-                            <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => setListingsPage((prev) => Math.min(prev + 1, totalProperties))}
-                                isDisabled={listingsPage === totalProperties}
-                            >
-                                Next
-                            </Button>
-                        </HStack>
+                                            <VStack align={{ base: 'start', md: 'stretch' }} spacing={1} textAlign={{ base: 'left', md: 'right' }}>
+                                                <Menu>
+                                                    <HStack gap={1} width={{ base: '100%', md: 'auto' }}>
+                                                        <Button onClick={() => openPropertyDetails(item)} width={{ base: '100%', md: 'auto' }} size="sm">
+                                                            Details
+                                                        </Button>
+                                                        <MenuButton size="sm" as={Button} rightIcon={<ChevronDownIcon />} >
+
+                                                        </MenuButton>
+                                                    </HStack>
+                                                    <MenuList>
+                                                        {item.listingStatus == "under_offer" && (
+                                                            <MenuItem onClick={() => handleReleasedKeys(item._id)}>Released keys</MenuItem>
+                                                        )}
+                                                        <MenuItem >Decline Offer</MenuItem>
+                                                        <MenuItem>Share Property</MenuItem>
+                                                        <MenuItem onClick={() => editProperty(item)}>Edit property</MenuItem>
+                                                        <MenuItem onClick={() => deleteMyProperty(item._id)}>Delete Property</MenuItem>
+                                                    </MenuList>
+                                                </Menu>
+                                                <Text fontSize="xs" color="brand.gray.500">
+                                                    {item.approved ? 'Approved' : 'Pending Approval'}
+                                                </Text>
+                                                <Text fontSize="xs" color="brand.gray.500">
+                                                    {item.inquiries.length} new inquiries
+                                                </Text>
+                                                <Text fontSize="xs" color="red.500">
+                                                    {allData.disputedProperties.reduce((count, prop) => prop._id === item._id ? count + 1 : count, 0)} new dispute
+                                                </Text>
+                                            </VStack>
+                                        </Stack>
+                                    ))}
+                                </Grid>
+
+                                <HStack justify="center" spacing={2} mt={4}>
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => setListingsPage((prev) => Math.max(prev - 1, 1))}
+                                        isDisabled={safeListingsPage === 1}
+                                    >
+                                        Previous
+                                    </Button>
+                                    {Array.from({ length: listingsTotalPages }, (_, i) => i + 1).map((page) => (
+                                        <Button
+                                            key={page}
+                                            size="sm"
+                                            variant={safeListingsPage === page ? 'primary' : 'outline'}
+                                            onClick={() => setListingsPage(page)}
+                                        >
+                                            {page}
+                                        </Button>
+                                    ))}
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => setListingsPage((prev) => Math.min(prev + 1, listingsTotalPages))}
+                                        isDisabled={safeListingsPage === listingsTotalPages}
+                                    >
+                                        Next
+                                    </Button>
+                                </HStack>
+                            </>
+                        )}
 
 
                     </VStack>
@@ -937,8 +1045,36 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                         </Text>
 
                         <VStack align="stretch" spacing={3}>
+                            <Box bg="white" p={3} borderRadius="lg" boxShadow="sm">
+                                <VStack align="stretch" spacing={3}>
+                                    <Input
+                                        placeholder="Filter by title"
+                                        value={escrowTitleFilter}
+                                        onChange={(e) => setEscrowTitleFilter(e.target.value)}
+                                        maxW="320px"
+                                    />
+                                    <HStack spacing={2} wrap="wrap">
+                                        {escrowStatusOptions.map((status) => (
+                                            <Button
+                                                key={status}
+                                                size="sm"
+                                                variant={escrowStatusFilter === status ? 'solid' : 'outline'}
+                                                colorScheme={escrowStatusFilter === status ? 'green' : 'gray'}
+                                                onClick={() => setEscrowStatusFilter(status)}
+                                            >
+                                                {status === 'all' ? 'All' : status.replace(/_/g, ' ')} ({escrowStatusCounts[status] ?? 0})
+                                            </Button>
+                                        ))}
+                                    </HStack>
+                                </VStack>
+                            </Box>
+
                             <Grid templateColumns={{ sm: "repeat(1, 1fr)", md: "repeat(2, 1fr)", lg: "repeat(3, 1fr)" }} gap={4}>
-                                {escrowTransactions.map((escrow) => {
+                                {filteredEscrowTransactions.length === 0 ? (
+                                    <Box gridColumn="1 / -1" bg="white" p={6} borderRadius="lg" textAlign="center" color="gray.500">
+                                        No escrow transactions match the current filters.
+                                    </Box>
+                                ) : filteredEscrowTransactions.map((escrow) => {
                                     const id = escrow._id || escrow.id || escrow.transactionId || escrow.reference;
                                     const title = 'Escrow Transaction';
                                     const status = escrow.status || escrow.state || 'unknown';
@@ -1004,8 +1140,8 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                                                                             I have inspected
                                                                         </MenuItem>
                                                                     )}
-                                                                    {escrow.tenantConfirmedInspection &&
-                                                                        escrow.status !== "released" && (
+                                                                    {//escrow.tenantConfirmedInspection &&
+                                                                        escrow.status === "inspection_confirmed" && (
                                                                             <MenuItem onClick={() => handleEscrowAction('release', escrow)}>
                                                                                 Release funds
                                                                             </MenuItem>
@@ -1016,7 +1152,14 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                                                             </Menu>
                                                         )}
                                                         {escrow.status === "released" && (
-                                                            <DownloadAgreementButton escrowid={escrow._id} />
+                                                            <VStack align="end" spacing={0}>
+                                                                <Text fontSize="xs" color="brand.gray.600">Released on</Text>
+                                                                <Text fontSize="xs" color="brand.gray.600">{new Date(escrow.releasedAt || escrow.updatedAt || Date.now()).toLocaleString()}</Text>
+                                                                <VStack align="end" spacing={2}>
+                                                                    <DownloadAgreementButton escrowid={escrow._id} />
+                                                                    {!escrow.reviewSubmitted &&<DualReviewModal transactionSuccess={false} onSubmit={handleInspected} />}
+                                                                </VStack>
+                                                            </VStack>
                                                             // <Button
                                                             //     size="sm"
                                                             //     onClick={() => downloadAgreement(escrow._id)}

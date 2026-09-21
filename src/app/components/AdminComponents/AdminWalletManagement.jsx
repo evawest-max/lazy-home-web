@@ -385,7 +385,7 @@ export default function AdminWalletManagement() {
                                     </Box>
                                     <Box>
                                         <Text fontSize="xs" color="gray.500">Balance</Text>
-                                        <Text fontWeight="bold">{formatCurrency(singleUserWallet.balance ?? 0)}</Text>
+                                        <Text fontWeight="bold">{formatCurrency((singleUserWallet.balance ?? 0) / 100)}</Text>
                                     </Box>
                                 </SimpleGrid>
 
@@ -423,6 +423,9 @@ export default function AdminWalletManagement() {
                                             </Button>
                                             <Button size="sm" colorScheme="green">
                                                 Top Up
+                                            </Button>
+                                            <Button size="sm" colorScheme="red" bg="red.500" _hover={{ bg: "red.600" }}>
+                                                Debit wallet
                                             </Button>
                                         </HStack>
                                     </Flex>
@@ -556,6 +559,12 @@ export default function AdminWalletManagement() {
                                                     <Td>{formatDate(wallet.createdAt)}</Td>
                                                     <Td>
                                                         <VStack align="stretch" spacing={2}>
+                                                                <Input
+                                                                    size="sm"
+                                                                    placeholder="Reason"
+                                                                    value={walletReasons[wallet._id] ?? ''}
+                                                                    onChange={(e) => setWalletReasons((prev) => ({ ...prev, [wallet._id]: e.target.value }))}
+                                                                />
                                                             <HStack spacing={2}>
                                                                 <Button
                                                                     as={Link}
@@ -577,14 +586,12 @@ export default function AdminWalletManagement() {
                                                                     {(wallet.status || '').toLowerCase() === 'frozen' ? 'Unfreeze' : 'Freeze'}
                                                                 </Button>
                                                             </HStack>
-                                                            <Input
-                                                                size="sm"
-                                                                placeholder="Reason"
-                                                                value={walletReasons[wallet._id] ?? ''}
-                                                                onChange={(e) => setWalletReasons((prev) => ({ ...prev, [wallet._id]: e.target.value }))}
-                                                            />
+
                                                             <Button size="sm" colorScheme="green" variant="solid" onClick={() => handleWalletAction('Top up', wallet)}>
                                                                 Top Up
+                                                            </Button>
+                                                            <Button size="sm" colorScheme="red" bg="red.500" _hover={{ bg: "red.600" }} onClick={() => handleWalletAction('Top up', wallet)}>
+                                                                Debit Wallet
                                                             </Button>
                                                         </VStack>
                                                     </Td>

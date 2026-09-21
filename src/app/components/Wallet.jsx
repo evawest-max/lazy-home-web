@@ -345,7 +345,20 @@ export default function Wallet() {
                     </ModalBody>
                     <ModalFooter flexDirection={{ base: 'column', sm: 'row' }} gap={3}>
                         <Button w={{ base: '100%', sm: 'auto' }} variant="ghost" onClick={closeFund}>Cancel</Button>
-                        <Button w={{ base: '100%', sm: 'auto' }} colorScheme="teal" onClick={handleFund}>Fund</Button>
+                        <Button 
+    w={{ base: '100%', sm: 'auto' }} 
+    colorScheme="teal" 
+    onClick={handleFund}
+    disabled={!fundAmount} // Optional: disables button if input is empty
+>
+    Fund {fundAmount ? Number(fundAmount).toLocaleString('en-NG', {
+        style: 'currency',
+        currency: 'NGN',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    }) : '₦0.00'}
+</Button>
+
                     </ModalFooter>
                 </ModalContent>
             </Modal>

@@ -27,6 +27,10 @@ import {
     Select,
     IconButton,
     Collapse,
+    InputGroup,
+    Input,
+    InputRightElement,
+    CloseButton,
 } from '@chakra-ui/react';
 import { ChevronDownIcon, ChevronUpIcon } from '@chakra-ui/icons';
 import {
@@ -66,7 +70,10 @@ export default function AdminFinancialSummary() {
     const [walletPageInfo, setWalletPageInfo] = useState({ page: 1, limit: 10, pages: 1, total: 0 });
     const [withdrawalCurrentPage, setWithdrawalCurrentPage] = useState(1);
     const [withdrawalPageSize, setWithdrawalPageSize] = useState(10);
+    const [withdrawalSearch, setWithdrawalSearch] = useState('');
     const [withdrawalsPageInfo, setWithdrawalsPageInfo] = useState({ page: 1, limit: 10, pages: 1, total: 0 });
+    const [escrowSearch, setEscrowSearch] = useState('');
+    const [walletFundingSearch, setWalletFundingSearch] = useState('');
     const walletTotalPages = Math.max(1, Number(walletPageInfo.pages ?? 1));
     const walletPaginated = walletFundings;
     const [walletExpandedIds, setWalletExpandedIds] = useState([]);
@@ -171,10 +178,12 @@ export default function AdminFinancialSummary() {
     };
 
     // Fetch a specific page of escrows (supports APIs that accept page & limit)
-    const fetchEscrowsPage = async (page = 1, limit = 6) => {
+    const fetchEscrowsPage = async (page = 1, limit = 6, searchTerm = escrowSearch) => {
         setEscrowsLoading(true);
         try {
-            const res = await getEscrows({ page, limit });
+            const params = { page, limit };
+  if (searchTerm.trim()) params.search = searchTerm.trim(); // backend checks title + reference
+  const res = await getEscrows(params);
             const escData = res?.data?.data ?? res?.data ?? res ?? {};
             const items = asArray(escData?.escrows ?? escData?.items ?? escData?.data ?? escData);
 
@@ -208,9 +217,11 @@ export default function AdminFinancialSummary() {
         });
     };
 
-    const fetchWithdrawalsPage = async (page = withdrawalCurrentPage, limit = withdrawalPageSize) => {
+    const fetchWithdrawalsPage = async (page = 1, limit = withdrawalPageSize, searchTerm = withdrawalSearch) => {
         try {
-            const res = await getWithdrawals({ page, limit });
+            const params = { page, limit };
+  if (searchTerm.trim()) params.search = searchTerm.trim(); // backend checks reference + paystackTransferId
+  const res = await getWithdrawals(params);
             const withdrawalData = res?.data?.data ?? res?.data ?? res ?? {};
             const items = asArray(withdrawalData?.withdrawals ?? withdrawalData?.items ?? withdrawalData?.data ?? withdrawalData);
             const pageInfo = {
@@ -228,10 +239,12 @@ export default function AdminFinancialSummary() {
         }
     };
 
-    const fetchWalletFundingsPage = async (page = walletCurrentPage, limit = walletPageSize) => {
+    const fetchWalletFundingsPage = async (page = 1, limit = walletPageSize, searchTerm = walletFundingSearch) => {
         setWalletLoading(true);
         try {
-            const res = await getWalletFundings({ page, limit });
+            const params = { page, limit };
+  if (searchTerm.trim()) params.search = searchTerm.trim(); // backend checks reference + walletId
+  const res = await getWalletFundings(params);
             const walletFundingsData = res?.data?.data ?? res?.data ?? res ?? {};
             const items = asArray(walletFundingsData?.fundings ?? walletFundingsData?.items ?? walletFundingsData?.data ?? walletFundingsData);
             const pageInfo = {
@@ -251,6 +264,37 @@ export default function AdminFinancialSummary() {
         }
     };
 
+    // WITHDRAWALS
+const handleWithdrawalSearch = () => {
+  setWithdrawalCurrentPage(1);
+  fetchWithdrawalsPage(1, withdrawalPageSize, withdrawalSearch);
+};
+const handleWithdrawalClear = () => {
+  setWithdrawalSearch('');
+  setWithdrawalCurrentPage(1);
+  fetchWithdrawalsPage(1, withdrawalPageSize, '');
+};
+
+// ESCROWS
+const handleEscrowSearch = () => {
+  fetchEscrowsPage(1, escrowsPageInfo.limit, escrowSearch);
+};
+const handleEscrowClear = () => {
+  setEscrowSearch('');
+  fetchEscrowsPage(1, escrowsPageInfo.limit, '');
+};
+
+// WALLET FUNDINGS
+const handleWalletFundingSearch = () => {
+  setWalletCurrentPage(1);
+  fetchWalletFundingsPage(1, walletPageSize, walletFundingSearch);
+};
+const handleWalletFundingClear = () => {
+  setWalletFundingSearch('');
+  setWalletCurrentPage(1);
+  fetchWalletFundingsPage(1, walletPageSize, '');
+};
+
     const toggleExpanded = (id) => {
         setExpandedIds((prev) => {
             const exists = prev.includes(id);
@@ -266,10 +310,10 @@ export default function AdminFinancialSummary() {
             try {
                 const [summaryRes, withdrawalsRes, escrowsRes, reconciliationRes, walletFundingsRes] = await Promise.all([
                     getfinancialSummary(),
-                    getWithdrawals({ page: withdrawalCurrentPage, limit: withdrawalPageSize }),
-                    getEscrows({ page: escrowsPageInfo.page, limit: escrowsPageInfo.limit }),
+                    getWithdrawals({ page: withdrawalCurrentPage, limit: withdrawalPageSize, ...(withdrawalSearch ? { search: withdrawalSearch } : {}) }),
+                    getEscrows({ page: escrowsPageInfo.page, limit: escrowsPageInfo.limit, ...(escrowSearch ? { search: escrowSearch } : {}) }),
                     getFinanceReconcilation(),
-                    getWalletFundings({ page: walletCurrentPage, limit: walletPageSize })
+                    getWalletFundings({ page: walletCurrentPage, limit: walletPageSize, ...(walletFundingSearch ? { search: walletFundingSearch } : {}) })
                 ]);
 
                 const summaryData = summaryRes?.data?.data ?? summaryRes?.data ?? summaryRes ?? {};
@@ -315,7 +359,7 @@ export default function AdminFinancialSummary() {
             }
         };
         fetchFinancialData();
-    }, [walletCurrentPage, walletPageSize, withdrawalCurrentPage, withdrawalPageSize, escrowsPageInfo.page, escrowsPageInfo.limit]);
+    }, []);
 
     const formatCurrency = (v) => {
         const n = Number(v || 0);
@@ -550,7 +594,28 @@ export default function AdminFinancialSummary() {
 
                 {/* Recent Withdrawals Table */}
                 <Card>
-                    <CardHeader><Heading size="sm">Recent Withdrawals</Heading></CardHeader>
+                    <CardHeader>
+  <VStack spacing={3} align="stretch">
+    <Heading size="sm">Recent Withdrawals</Heading>
+    <HStack spacing={2}>
+      <InputGroup maxW="320px">
+        <Input
+          placeholder="Search by reference, transferId, paystack ID..."
+          value={withdrawalSearch}
+          onChange={(e) => setWithdrawalSearch(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleWithdrawalSearch()}
+        />
+        {withdrawalSearch && (
+          <InputRightElement>
+            <CloseButton size="sm" onClick={handleWithdrawalClear} />
+          </InputRightElement>
+        )}
+      </InputGroup>
+      <Button size="sm" colorScheme="teal" onClick={handleWithdrawalSearch}>Search</Button>
+      <Button size="sm" variant="outline" onClick={handleWithdrawalClear}>Clear</Button>
+    </HStack>
+  </VStack>
+</CardHeader>
                     <CardBody>
                         {loading ? (
                             <Spinner />
@@ -659,7 +724,28 @@ export default function AdminFinancialSummary() {
 
                 {/* Escrows List */}
                 <Card>
-                    <CardHeader><Heading size="sm">Escrows</Heading></CardHeader>
+                    <CardHeader>
+  <VStack spacing={3} align="stretch">
+    <Heading size="sm">Escrows</Heading>
+    <HStack spacing={2}>
+      <InputGroup maxW="320px">
+        <Input
+          placeholder="Search by title or reference..."
+          value={escrowSearch}
+          onChange={(e) => setEscrowSearch(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleEscrowSearch()}
+        />
+        {escrowSearch && (
+          <InputRightElement>
+            <CloseButton size="sm" onClick={handleEscrowClear} />
+          </InputRightElement>
+        )}
+      </InputGroup>
+      <Button size="sm" colorScheme="teal" onClick={handleEscrowSearch}>Search</Button>
+      <Button size="sm" variant="outline" onClick={handleEscrowClear}>Clear</Button>
+    </HStack>
+  </VStack>
+</CardHeader>
                     <CardBody>
                         {escrowsLoading ? (
                             <Spinner />
@@ -766,7 +852,28 @@ export default function AdminFinancialSummary() {
 
                 {/* Wallet Fundings Table */}
                 <Card>
-                    <CardHeader><Heading size="sm">Wallet Fundings</Heading></CardHeader>
+                    <CardHeader>
+  <VStack spacing={3} align="stretch">
+    <Heading size="sm">Wallet Fundings</Heading>
+    <HStack spacing={2}>
+      <InputGroup maxW="320px">
+        <Input
+          placeholder="Search by reference or wallet ID..."
+          value={walletFundingSearch}
+          onChange={(e) => setWalletFundingSearch(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleWalletFundingSearch()}
+        />
+        {walletFundingSearch && (
+          <InputRightElement>
+            <CloseButton size="sm" onClick={handleWalletFundingClear} />
+          </InputRightElement>
+        )}
+      </InputGroup>
+      <Button size="sm" colorScheme="teal" onClick={handleWalletFundingSearch}>Search</Button>
+      <Button size="sm" variant="outline" onClick={handleWalletFundingClear}>Clear</Button>
+    </HStack>
+  </VStack>
+</CardHeader>
                     <CardBody>
                         {walletLoading || loading ? (
                             <Spinner />
