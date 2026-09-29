@@ -29,13 +29,6 @@ import {
     ModalBody,
     ModalFooter,
     ModalCloseButton,
-    Drawer,
-    DrawerOverlay,
-    DrawerContent,
-    DrawerHeader,
-    DrawerBody,
-    DrawerFooter,
-    DrawerCloseButton,
     useToast,
     useDisclosure,
     PinInput,
@@ -77,6 +70,8 @@ import { reference } from '@popperjs/core';
 import DownloadAgreementButton from './downloadAgreementButton';
 import DualRatingPopover from './leaveReviewsButton';
 import DualReviewModal from './leaveReviewsButton';
+import EscrowDetailsModal from './EscrowDetailsModal';
+import PropertyDetailsModal from './PropertyDetailsModal';
 // import DownloadAgreementButton from './downloadAgreementButton';
 
 
@@ -103,6 +98,8 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
     const [refunding, setRefunding] = useState(false);
     const { isOpen: isDetailOpen, onOpen: onOpenDetails, onClose: onCloseDetails } = useDisclosure();
     const [selectedPropertyDetails, setSelectedPropertyDetails] = useState(null);
+    const { isOpen: isEscrowDetailOpen, onOpen: onOpenEscrowDetails, onClose: onCloseEscrowDetails } = useDisclosure();
+    const [selectedEscrowDetails, setSelectedEscrowDetails] = useState(null);
     const [releasedEscrows, setReleasedEscrows] = useState("0")
     const [releasingEscrows, setReleasingEscrows] = useState("0")
     const [releaseFailedEscrows, setReleaseFailedEscrows] = useState("0")
@@ -120,6 +117,11 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
     const openPropertyDetails = (property) => {
         setSelectedPropertyDetails(property);
         onOpenDetails();
+    };
+
+    const openEscrowDetails = (escrow) => {
+        setSelectedEscrowDetails(escrow);
+        onOpenEscrowDetails();
     };
 
     const { parameter } = location.state || {};
@@ -363,8 +365,8 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
     };
 
     const editProperty = (data) => {
-        setUpdatedFormdata(data);
-        navigate("/update-listing/steps", { state: { propertyId: data._id } })
+        // setUpdatedFormdata(data);
+        navigate("/update-listing/steps", { state: { property: data } })
     }
 
     const handleReleasedKeys = async (id) => {
@@ -573,10 +575,11 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
     return (
         <Box minH="100vh" bg="brand.background" pb="80px">
             <VStack spacing={0} align="stretch">
-                <Box bg="brand.primary" px={6} pt={12} pb={4}>
-                    <HStack justify="space-between" mb={4}>
+                <Box bg="brand.primary" px={{ base: 4, sm: 6, md: 8, lg: 12 }} pt={{ base: 10, md: 12 }} pb={4}>
+                    <Box maxW="1400px" mx="auto" w="100%">
+                    <HStack justify="space-between" mb={4} flexWrap="wrap" rowGap={3}>
                         <VStack align="start" spacing={0}>
-                            <Text fontSize="2xl" fontWeight="bold" color="white">
+                            <Text fontSize={{ base: 'xl', md: '2xl' }} fontWeight="bold" color="white">
                                 SafeTenants
                             </Text>
                             <Text fontSize="xs" color="whiteAlpha.800">
@@ -741,9 +744,9 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                                     </Button>
 
                                     <Box bg="white" borderRadius="lg" p={4}>
-                                        <HStack justify="space-between">
+                                        <HStack justify="space-between" flexWrap="wrap" rowGap={3}>
                                             <VStack align="start" spacing={0}>
-                                                <Text fontSize="2xl" fontWeight="bold" color="brand.primary">
+                                                <Text fontSize={{ base: 'lg', md: '2xl' }} fontWeight="bold" color="brand.primary">
                                                     {myProperties.reduce((total, property) => total + (property.approved ? 1 : 0), 0)}
                                                 </Text>
                                                 <Text fontSize="xs" color="brand.gray.600">
@@ -751,7 +754,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                                                 </Text>
                                             </VStack>
                                             <VStack align="start" spacing={0}>
-                                                <Text fontSize="2xl" fontWeight="bold" color="brand.success">
+                                                <Text fontSize={{ base: 'lg', md: '2xl' }} fontWeight="bold" color="brand.success">
                                                     ₦{myProperties.reduce((total, property) => total + property.rentAmount, 0).toLocaleString()}
                                                 </Text>
                                                 <Text fontSize="xs" color="brand.gray.600">
@@ -759,7 +762,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                                                 </Text>
                                             </VStack>
                                             <VStack align="start" spacing={0}>
-                                                <Text fontSize="2xl" fontWeight="bold" color="brand.warning">
+                                                <Text fontSize={{ base: 'lg', md: '2xl' }} fontWeight="bold" color="brand.warning">
                                                     {myProperties.reduce((total, property) => total + (property.approved === false ? 1 : 0), 0)}
                                                 </Text>
                                                 <Text fontSize="xs" color="brand.gray.600">
@@ -774,7 +777,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                             {/* MY DEALS TAB */}
                             <TabPanel p={0}>
                                 <VStack spacing={4} align="stretch" pt={4}>
-                                    <Grid templateColumns="repeat(2, 1fr)" gap={3}>
+                                    <Grid templateColumns={{ base: "repeat(2, 1fr)", lg: "repeat(4, 1fr)" }} gap={3}>
                                         <Box bg="white" borderRadius="lg" p={4} textAlign="center">
                                             <Text fontSize="2xl" fontWeight="bold" color="brand.primary">
                                                 {releasedEscrows}
@@ -818,7 +821,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                             {/* STATS TAB */}
                             <TabPanel p={0}>
                                 <VStack spacing={4} align="stretch" pt={4}>
-                                    <Grid templateColumns="repeat(2, 1fr)" gap={3}>
+                                    <Grid templateColumns={{ base: "repeat(2, 1fr)", lg: "repeat(4, 1fr)" }} gap={3}>
                                         <Box bg="white" borderRadius="lg" p={4}>
                                             <Stat>
                                                 <StatLabel color="brand.gray.600" fontSize="xs">
@@ -883,11 +886,12 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                             </TabPanel>
                         </TabPanels>
                     </Tabs>
+                    </Box>
                 </Box>
 
 
                 {activeTab === 0 && (
-                    <VStack align="stretch" px={6} pt={6} spacing={4}>
+                    <VStack align="stretch" px={{ base: 4, sm: 6, md: 8, lg: 12 }} pt={6} spacing={4} maxW="1400px" mx="auto" w="100%">
                         <Text fontSize="lg" fontWeight="600" color="brand.gray.800">
                             My Property Listings
                         </Text>
@@ -922,9 +926,10 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                             </Box>
                         ) : (
                             <>
-                                <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={4}>
+                                <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)", xl: "repeat(3, 1fr)" }} gap={4}>
                                     {paginatedListings.map((item, index) => (
                                         <Stack
+                                            key={index}
                                             p={4}
                                             bg="white"
                                             borderRadius="lg"
@@ -985,7 +990,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                                                         )}
                                                         <MenuItem >Decline Offer</MenuItem>
                                                         <MenuItem>Share Property</MenuItem>
-                                                        <MenuItem onClick={() => editProperty(item)}>Edit property</MenuItem>
+                                                        <MenuItem onClick={() => editProperty(item)}>Update property</MenuItem>
                                                         <MenuItem onClick={() => deleteMyProperty(item._id)}>Delete Property</MenuItem>
                                                     </MenuList>
                                                 </Menu>
@@ -1003,7 +1008,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                                     ))}
                                 </Grid>
 
-                                <HStack justify="center" spacing={2} mt={4}>
+                                <HStack justify="center" spacing={2} mt={4} flexWrap="wrap" rowGap={2}>
                                     <Button
                                         size="sm"
                                         variant="outline"
@@ -1012,9 +1017,9 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                                     >
                                         Previous
                                     </Button>
-                                    {Array.from({ length: listingsTotalPages }, (_, i) => i + 1).map((page) => (
+                                    {Array.from({ length: listingsTotalPages }, (_, i) => i + 1).map((page, index) => (
                                         <Button
-                                            key={page}
+                                            key={index}
                                             size="sm"
                                             variant={safeListingsPage === page ? 'primary' : 'outline'}
                                             onClick={() => setListingsPage(page)}
@@ -1039,7 +1044,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                 )}
 
                 {activeTab === 1 && (
-                    <VStack align="stretch" px={6} pt={6} spacing={4}>
+                    <VStack align="stretch" px={{ base: 4, sm: 6, md: 8, lg: 12 }} pt={6} spacing={4} maxW="1400px" mx="auto" w="100%">
                         <Text fontSize="lg" fontWeight="600" color="brand.gray.800">
                             Escrow Transactions
                         </Text>
@@ -1069,7 +1074,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                                 </VStack>
                             </Box>
 
-                            <Grid templateColumns={{ sm: "repeat(1, 1fr)", md: "repeat(2, 1fr)", lg: "repeat(3, 1fr)" }} gap={4}>
+                            <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)", lg: "repeat(3, 1fr)" }} gap={4}>
                                 {filteredEscrowTransactions.length === 0 ? (
                                     <Box gridColumn="1 / -1" bg="white" p={6} borderRadius="lg" textAlign="center" color="gray.500">
                                         No escrow transactions match the current filters.
@@ -1093,20 +1098,28 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                                     return (
                                         <Box key={id} bg="white" p={4} borderRadius="lg" boxShadow="sm">
                                             <VStack align="stretch" spacing={3}>
-                                                <HStack justify="space-between">
+                                                <HStack justify="space-between" flexWrap="wrap" rowGap={2}>
                                                     <HStack>
-                                                        <Box boxSize="60px" borderRadius="md" bg="brand.background" >
+                                                        <Box
+                                                            boxSize="60px"
+                                                            flexShrink={0}
+                                                            borderRadius="md"
+                                                            bg="brand.background"
+                                                            cursor="pointer"
+                                                            onClick={() => openEscrowDetails(escrow)}
+                                                        >
                                                             <Image
                                                                 src={escrow?.images?.[0]?.url || escrow?.propertyImages?.[0]?.url || "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTpjDOEMVVmUKWc44itg3SRb8byRB3wlGPCqOL5ETrLKnTGSvGBBNWdOoSY&s=10"}
                                                                 objectFit="cover"
                                                                 alt="Escrow property image"
                                                                 h="100%"
                                                                 w="100%"
+                                                                borderRadius="md"
                                                             />
 
                                                         </Box>
-                                                        <VStack align="start" spacing={0}>
-                                                            <Text fontSize="sm" fontWeight="600">{title}</Text>
+                                                        <VStack align="start" spacing={0} cursor="pointer" onClick={() => openEscrowDetails(escrow)}>
+                                                            <Text fontSize="sm" fontWeight="600" _hover={{ textDecoration: 'underline' }}>{title}</Text>
                                                             <Text fontSize="xs" color="brand.gray.600">{propertyTitle}</Text>
                                                             {/* <Text fontSize="xs" color="brand.gray.500">{payer}</Text> */}
                                                         </VStack>
@@ -1120,7 +1133,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                                                     </VStack>
                                                 </HStack>
 
-                                                <HStack justify="space-between">
+                                                <HStack justify="space-between" flexWrap="wrap" rowGap={2}>
                                                     <VStack align="start" spacing={0}>
                                                         <Text fontSize="xs" color="brand.gray.600">Ref: {escrow.reference || escrow.txRef || id}</Text>
                                                         {escrow.purpose && <Text fontSize="xs" color="brand.gray.600">Purpose: {escrow.purpose}</Text>}
@@ -1128,7 +1141,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                                                         {escrow.landlordConfirmedHandover && <Text fontSize="xs" color="brand.gray.600">landlord has Confirmed Handover</Text>}
                                                     </VStack>
 
-                                                    <HStack>
+                                                    <HStack flexWrap="wrap" justify="flex-end" rowGap={2}>
                                                         {(escrow.status !== "released" && escrow.status !== "refunded") && (
                                                             <Menu>
                                                                 <MenuButton as={Button} size="sm" variant="outline">
@@ -1157,7 +1170,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                                                                 <Text fontSize="xs" color="brand.gray.600">{new Date(escrow.releasedAt || escrow.updatedAt || Date.now()).toLocaleString()}</Text>
                                                                 <VStack align="end" spacing={2}>
                                                                     <DownloadAgreementButton escrowid={escrow._id} />
-                                                                    {!escrow.reviewSubmitted &&<DualReviewModal transactionSuccess={false} onSubmit={handleInspected} />}
+                                                                    {!escrow.reviewSubmitted && <DualReviewModal transactionSuccess={false} onSubmit={handleInspected} />}
                                                                 </VStack>
                                                             </VStack>
                                                             // <Button
@@ -1198,7 +1211,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                                 })}
                             </Grid>
 
-                            <HStack justify="center" spacing={2} mt={4}>
+                            <HStack justify="center" spacing={2} mt={4} flexWrap="wrap" rowGap={2}>
                                 <Button
                                     size="sm"
                                     variant="outline"
@@ -1207,9 +1220,9 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                                 >
                                     Previous
                                 </Button>
-                                {Array.from({ length: transactionsTotalPages }, (_, i) => i + 1).map((page) => (
+                                {Array.from({ length: transactionsTotalPages }, (_, i) => i + 1).map((page, index) => (
                                     <Button
-                                        key={page}
+                                        key={index}
                                         size="sm"
                                         variant={transactionsPage === page ? 'primary' : 'outline'}
                                         onClick={() => setTransactionsPage(page)}
@@ -1232,7 +1245,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                 )}
 
                 {activeTab === 2 && (
-                    <VStack align="stretch" px={6} pt={6} spacing={4}>
+                    <VStack align="stretch" px={{ base: 4, sm: 6, md: 8, lg: 12 }} pt={6} spacing={4} maxW="1400px" mx="auto" w="100%">
                         <Text fontSize="lg" fontWeight="600" color="brand.gray.800">
                             Performance Metrics
                         </Text>
@@ -1285,7 +1298,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
 
             <Modal isOpen={isPinOpen} onClose={onClosePin} isCentered>
                 <ModalOverlay />
-                <ModalContent borderRadius="2xl" overflow="hidden">
+                <ModalContent borderRadius="2xl" overflow="hidden" mx={4}>
                     <ModalHeader>Enter Transaction PIN</ModalHeader>
                     <ModalCloseButton />
                     <ModalBody pb={6}>
@@ -1353,7 +1366,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
 
             <Modal isOpen={isReleaseOpen} onClose={() => { onCloseRelease(); setSelectedEscrowAction(null); setReleaseCode(''); }} isCentered>
                 <ModalOverlay />
-                <ModalContent borderRadius="2xl" overflow="hidden">
+                <ModalContent borderRadius="2xl" overflow="hidden" mx={4}>
                     <ModalHeader>Release Funds</ModalHeader>
                     <ModalCloseButton />
                     <ModalBody pb={6}>
@@ -1426,6 +1439,8 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                                     const res = await releaseFunds(selectedEscrowAction._id, releaseCode, authCode);
                                     console.log("Submitting release code", res);
 
+                                    
+
                                     toast({
                                         title: "Release Funds",
                                         description: res?.data?.message || "Release code submitted successfully",
@@ -1467,7 +1482,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
 
             <Modal isOpen={isRefundOpen} onClose={() => { onCloseRefund(); setSelectedEscrowAction(null); setRefundReason(''); setRefundAuthCode(''); }} isCentered>
                 <ModalOverlay />
-                <ModalContent borderRadius="2xl" overflow="hidden">
+                <ModalContent borderRadius="2xl" overflow="hidden" mx={4}>
                     <ModalHeader>Request Refund</ModalHeader>
                     <ModalCloseButton />
                     <ModalBody pb={6}>
@@ -1498,91 +1513,17 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                 </ModalContent>
             </Modal>
 
-            <Drawer isOpen={isDetailOpen} placement="right" onClose={() => { onCloseDetails(); setSelectedPropertyDetails(null); }} size="xl">
-                <DrawerOverlay />
-                <DrawerContent>
-                    <DrawerCloseButton />
-                    <DrawerHeader pb={0}>
-                        {selectedPropertyDetails?.title || 'Property details'}
-                    </DrawerHeader>
-                    <DrawerBody pt={2} px={6} pb={6} overflowY="auto">
-                        <VStack align="stretch" spacing={4}>
-                            <Image
-                                src={selectedPropertyDetails?.media?.images?.[0]?.url || selectedPropertyDetails?.images?.[0]?.url || selectedPropertyDetails?.image || ''}
-                                alt={selectedPropertyDetails?.title || 'Property image'}
-                                borderRadius="xl"
-                                objectFit="cover"
-                                h="240px"
-                                w="100%"
-                            />
+            <PropertyDetailsModal
+                isOpen={isDetailOpen}
+                onClose={() => { onCloseDetails(); setSelectedPropertyDetails(null); }}
+                property={selectedPropertyDetails}
+            />
 
-                            <Box>
-                                <Text fontSize="md" fontWeight="bold" mb={1}>{selectedPropertyDetails?.title}</Text>
-                                <Text fontSize="sm" color="brand.gray.600">
-                                    {selectedPropertyDetails?.address?.area}, {selectedPropertyDetails?.address?.state}
-                                </Text>
-                            </Box>
-
-                            <Grid templateColumns="repeat(2, minmax(0, 1fr))" gap={3}>
-                                <Box bg="brand.background" p={4} borderRadius="xl">
-                                    <Text fontSize="xs" color="brand.gray.600">Rent</Text>
-                                    <Text fontSize="lg" fontWeight="bold">₦{Number(selectedPropertyDetails?.rentAmount || selectedPropertyDetails?.price || 0).toLocaleString()}</Text>
-                                </Box>
-                                <Box bg="brand.background" p={4} borderRadius="xl">
-                                    <Text fontSize="xs" color="brand.gray.600">Status</Text>
-                                    <Text fontSize="lg" fontWeight="bold">{selectedPropertyDetails?.listingStatus || 'N/A'}</Text>
-                                </Box>
-                                <Box bg="brand.background" p={4} borderRadius="xl">
-                                    <Text fontSize="xs" color="brand.gray.600">Bedrooms</Text>
-                                    <Text fontSize="lg" fontWeight="bold">{selectedPropertyDetails?.bedrooms ?? selectedPropertyDetails?.bedCount ?? 'N/A'}</Text>
-                                </Box>
-                                <Box bg="brand.background" p={4} borderRadius="xl">
-                                    <Text fontSize="xs" color="brand.gray.600">Bathrooms</Text>
-                                    <Text fontSize="lg" fontWeight="bold">{selectedPropertyDetails?.bathrooms ?? selectedPropertyDetails?.bathCount ?? 'N/A'}</Text>
-                                </Box>
-                            </Grid>
-
-                            <Box bg="white" p={4} borderRadius="xl" boxShadow="sm">
-                                <Text fontSize="sm" fontWeight="600" mb={2}>Description</Text>
-                                <Text fontSize="sm" color="brand.gray.700">
-                                    {selectedPropertyDetails?.description || selectedPropertyDetails?.overview || 'No description available.'}
-                                </Text>
-                            </Box>
-
-                            <Box bg="white" p={4} borderRadius="xl" boxShadow="sm">
-                                <Text fontSize="sm" fontWeight="600" mb={2}>Property details</Text>
-                                <VStack align="stretch" spacing={3}>
-                                    {selectedPropertyDetails?.amenities && selectedPropertyDetails.amenities.length > 0 ? (
-                                        <Text fontSize="sm" color="brand.gray.700">
-                                            Amenities: {selectedPropertyDetails.amenities.join(', ')}
-                                        </Text>
-                                    ) : null}
-                                    {selectedPropertyDetails?.houseType && (
-                                        <Text fontSize="sm" color="brand.gray.700">Type: {selectedPropertyDetails.houseType}</Text>
-                                    )}
-                                    {selectedPropertyDetails?.landmark && (
-                                        <Text fontSize="sm" color="brand.gray.700">Landmark: {selectedPropertyDetails.landmark}</Text>
-                                    )}
-                                    {selectedPropertyDetails?.verificationStatus && (
-                                        <Text fontSize="sm" color="brand.gray.700">Verification: {selectedPropertyDetails.verificationStatus}</Text>
-                                    )}
-                                    {selectedPropertyDetails?.inquiries && (
-                                        <Text fontSize="sm" color="brand.gray.700">Inquiries: {selectedPropertyDetails.inquiries.length}</Text>
-                                    )}
-                                </VStack>
-                            </Box>
-                        </VStack>
-                    </DrawerBody>
-                    <DrawerFooter>
-                        <Button variant="outline" mr={3} onClick={() => { onCloseDetails(); setSelectedPropertyDetails(null); }}>
-                            Close
-                        </Button>
-                        <Button variant="primary" onClick={() => { onCloseDetails(); setSelectedPropertyDetails(null); }}>
-                            Done
-                        </Button>
-                    </DrawerFooter>
-                </DrawerContent>
-            </Drawer>
+            <EscrowDetailsModal
+                isOpen={isEscrowDetailOpen}
+                onClose={() => { onCloseEscrowDetails(); setSelectedEscrowDetails(null); }}
+                escrow={selectedEscrowDetails}
+            />
 
             <Navbar active="dashboard" />
         </Box>

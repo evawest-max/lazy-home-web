@@ -45,7 +45,7 @@ export default function AdminNavbar({ active }) {
             <Link to="/user-management" style={{ textDecoration: 'none' }}>
               <VStack spacing={1} cursor="pointer" color={active === 'User Management' ? 'brand.primary' : 'brand.gray.400'}>
                 <User size={24} />
-                <Text fontSize="xs" fontWeight="600" maxW="100px">User/property Management</Text>
+                <Text fontSize="xs" fontWeight="600" maxW="100px">User/property</Text>
               </VStack>
             </Link>
         </HStack>

@@ -34,7 +34,7 @@ import { Link } from 'react-router-dom';
 export default function UpdatePropertyStep3({ updatedFormdata, setUpdatedFormdata, onBack, onNext }) {
   const currentStep = 3;
   const totalSteps = 4;
-  const draftKey = 'listingFormData';
+  const draftKey = 'UpdateListingFormData';
 
   const [formError, setFormError] = useState('');
 

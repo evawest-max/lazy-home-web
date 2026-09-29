@@ -36,7 +36,7 @@ function UpdatePropertyStep4({ updatedFormdata, setUpdatedFormdata, onBack, onSu
     const currentStep = 4;
     const totalSteps = 4;
     const landlordDetails = updatedFormdata?.landlordDetails ?? {};
-    const draftKey = 'listingFormData';
+    const draftKey = 'UpdateListingFormData';
     const toast = useToast()
     const navigate = useNavigate()
 
@@ -82,11 +82,14 @@ function UpdatePropertyStep4({ updatedFormdata, setUpdatedFormdata, onBack, onSu
             formData.append('toilets', updatedFormdata.toilets || updatedFormdata.toilet || '');
             formData.append('size', updatedFormdata.size || '');
 
-            // Address - flat, backend merges
-            formData.append('state', updatedFormdata.address?.state || '');
-            formData.append('city', updatedFormdata.address?.area || '');
-            formData.append('address', updatedFormdata.address?.streetAddress || '');
-            formData.append('landmarks', updatedFormdata.address?.landmark || '');
+            formData.append('address', 
+                JSON.stringify({
+                    landmark: updatedFormdata.address?.landmark || '',
+                    state: updatedFormdata.address?.state || '',
+                    lga: updatedFormdata.address?.lga || '',
+                    area: updatedFormdata.address?.area || '',
+                    streetAddress: updatedFormdata.address?.streetAddress || ''
+                }));
 
             // Landlord - send nested JSON as single fields, easier to parse
             formData.append('landlordDetails', JSON.stringify({
@@ -176,52 +179,6 @@ function UpdatePropertyStep4({ updatedFormdata, setUpdatedFormdata, onBack, onSu
 
     return (
         <Box minH="100vh" bg="brand.background" pb="120px">
-            {/* <Box bg="brand.primary" px={6} pt={12} pb={8}>
-                <HStack mb={6}>
-                    <Link to="/create-listing/step-3">
-                    <IconButton
-                        icon={<ArrowLeft size={20} />}
-                        variant="ghost"
-                        color="white"
-                        _hover={{ bg: 'whiteAlpha.200' }}
-                        aria-label="Back"
-                    />
-                    </Link>
-                    <Text fontSize="xl" fontWeight="bold" color="white" flex={1}>
-                        List Your Property
-                    </Text>
-                </HStack>
-
-                <VStack spacing={3} align="stretch">
-                    <HStack justify="space-between">
-                        <Text fontSize="sm" color="whiteAlpha.900">
-                            Step {currentStep} of {totalSteps}
-                        </Text>
-                        <Text fontSize="sm" color="whiteAlpha.900">
-                            {Math.round((currentStep / totalSteps) * 100)}% Complete
-                        </Text>
-                    </HStack>
-                    <Progress
-                        value={(currentStep / totalSteps) * 100}
-                        size="sm"
-                        colorScheme="green"
-                        borderRadius="full"
-                        bg="whiteAlpha.300"
-                    />
-
-                    <HStack spacing={2} justify="center" mt={2}>
-                        {[1, 2, 3, 4].map((step) => (
-                            <Box
-                                key={step}
-                                w="8px"
-                                h="8px"
-                                borderRadius="full"
-                                bg={step <= currentStep ? 'white' : 'whiteAlpha.400'}
-                            />
-                        ))}
-                    </HStack>
-                </VStack>
-            </Box> */}
 
             <VStack align="stretch" px={6} mt={-4} spacing={6}>
                 <Box bg="white" borderRadius="xl" p={6} boxShadow="md" border="2px solid" borderColor="brand.success">

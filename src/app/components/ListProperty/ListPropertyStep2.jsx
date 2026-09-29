@@ -241,7 +241,7 @@ export default function ListPropertyStep2({ formData, setFormData, onBack, onNex
 
         <Box bg="white" borderRadius="xl" p={6} boxShadow="sm">
           <VStack align="stretch" spacing={5}>
-            <HStack spacing={3} justify="space-between" isRequired>
+            <HStack spacing={3} justify="space-between">
               <HStack spacing={3}>
                 <Box bg="brand.primary" p={2} borderRadius="full">
                   <ImageIcon size={20} color="white" />

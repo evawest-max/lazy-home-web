@@ -33,11 +33,13 @@ import {
   Plus,
   CheckCircle,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ListPropertyStep2 from './ListPropertyStep2';
 import ListPropertyStep3 from './ListPropertyStep3';
 import ListPropertyStep4 from './ListPropertyStep4';
+import { stateToLgas, getAreasForLga } from '../StateToLgas';
+import { lgaToAreas } from '../LgaToAreas';
 
 export default function ListProperty({ formData, setFormData, onSubmit, initialStep = 1, isLoading, setIsLoading }) {
   const navigate = useNavigate();
@@ -58,6 +60,15 @@ export default function ListProperty({ formData, setFormData, onSubmit, initialS
     'Gym',
     'Elevator',
   ];
+//   const lgasForState = useMemo(() => {
+//   return formData.state ? stateToLgas[formData.state] || [] : [];
+// }, [formData.state]);
+
+const areasForLga = useMemo(() => {
+  return lgaToAreas[formData.lga] || [];
+}, [formData.lga]);
+const lgas = formData.state? stateToLgas[formData.state] : [];
+const areas = getAreasForLga(formData.lga);
 
   const toggleAmenity = (amenity) => {
     setFormData((prev) => ({
@@ -87,7 +98,7 @@ export default function ListProperty({ formData, setFormData, onSubmit, initialS
     'bathrooms',
     'description',
     'state',
-    'city',
+    'area',
     'address',
   ];
 
@@ -475,38 +486,89 @@ export default function ListProperty({ formData, setFormData, onSubmit, initialS
                   </Text>
                 </HStack>
 
-                <FormControl isRequired>
-                  <FormLabel color="brand.gray.700" fontSize="sm" fontWeight="600">
-                    State
-                  </FormLabel>
-                  <Select
-                    placeholder="Select state"
-                    size="lg"
-                    value={formData.state}
-                    onChange={(e) => setFormData(prev => ({ ...prev, state: e.target.value }))}
-                    _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
-                  >
-                    <option>Lagos</option>
-                    <option>Abuja FCT</option>
-                    <option>Rivers</option>
-                    <option>Oyo</option>
-                    <option>Kano</option>
-                    <option>Enugu</option>
-                  </Select>
-                </FormControl>
+<FormControl isRequired>
+  <FormLabel color="brand.gray.700" fontSize="sm" fontWeight="600">
+    State
+  </FormLabel>
+  <Select
+    placeholder="Select state"
+    size="lg"
+    value={formData.state}
+    onChange={(e) => setFormData(prev => ({ 
+      ...prev, 
+      state: e.target.value,
+      lga: '',  // reset dependent fields
+      area: '' 
+    }))}
+    _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
+  >
+    {Object.keys(stateToLgas).sort().map((state) => (
+      <option key={state} value={state}>{state}</option>
+    ))}
+  </Select>
+</FormControl>
 
-                <FormControl isRequired>
-                  <FormLabel color="brand.gray.700" fontSize="sm" fontWeight="600">
-                    City/Area
-                  </FormLabel>
-                  <Input
-                    placeholder="e.g. Lekki, Victoria Island, Ikoyi"
-                    size="lg"
-                    value={formData.city}
-                    onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
-                    _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
-                  />
-                </FormControl>
+<FormControl isRequired>
+  <FormLabel color="brand.gray.700" fontSize="sm" fontWeight="600">
+    LGA / City
+  </FormLabel>
+  <Select
+    placeholder={formData.state ? `Select LGA in ${formData.state}` : "Select state first"}
+    size="lg"
+    value={formData.lga}
+    isDisabled={!formData.state}
+    onChange={(e) => setFormData(prev => ({ 
+      ...prev, 
+      lga: e.target.value,
+      area: '' 
+    }))}
+    _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
+  >
+    {lgas.map((lga) => (
+      <option key={lga} value={lga}>{lga}</option>
+    ))}
+  </Select>
+</FormControl>
+
+<FormControl isRequired>
+  <FormLabel color="brand.gray.700" fontSize="sm" fontWeight="600">
+    Area / Neighborhood
+  </FormLabel>
+  {areasForLga.length  ? (
+    <Select
+      placeholder={`Select area in ${formData.lga}`}
+      size="lg"
+      value={formData.area}
+      onChange={(e) => setFormData(prev => ({ ...prev, area: e.target.value }))}
+      _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
+    >
+      {areas.map((area) => (
+        <option key={area} value={area}>{area}</option>
+      ))}
+      <option value="Other">Other (type manually)</option>
+    </Select>
+  ) : (
+    <Input
+      placeholder="e.g. Lekki Phase 1, GRA, Wuse 2, Bodija"
+      size="lg"
+      value={formData.area}
+      onChange={(e) => setFormData(prev => ({ ...prev, area: e.target.value }))}
+      _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
+    />
+  )}
+</FormControl>
+
+{/* If they selected "Other" show input */}
+{formData.area === "Other" && (
+  <FormControl isRequired mt={3}>
+    <Input
+      placeholder="Type your area"
+      size="lg"
+      onBlur={(e) => setFormData(prev => ({ ...prev, area: e.target.value }))}
+      autoFocus
+    />
+  </FormControl>
+)}
 
                 <FormControl isRequired>
                   <FormLabel color="brand.gray.700" fontSize="sm" fontWeight="600">

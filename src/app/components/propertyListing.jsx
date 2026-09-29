@@ -24,11 +24,16 @@ import FilterSearch from './FilterSearch';
 import { useEffect, useState } from 'react';
 import { advancedPropertySearch, getAllProperties, getUnreadCount } from '../../../api';
 import { Link } from 'react-router-dom';
+import { stateToLgas } from './StateToLgas';
+
 
 
 export default function PropertyListing({ user }) {
     const [properties, setProperties] = useState([]);
     const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [loading, setLoading] = useState(true);
+
     const [searchText, setSearchText] = useState('');
     const [locationFilter, setLocationFilter] = useState('');
     const [areaFilter, setAreaFilter] = useState('');
@@ -38,18 +43,119 @@ export default function PropertyListing({ user }) {
     const [propertyType, setPropertyType] = useState('');
     const [furnished, setFurnished] = useState('');
     const [amenities, setAmenities] = useState([]);
-    const [totalPages, setTotalPages] = useState(1);
-    const [loading, setLoading] = useState(true);
     const [isFiltered, setIsFiltered] = useState(false);
     const [filterPayload, setFilterPayload] = useState({});
     const [unreadNotificationsCount, setUnreadNotificationsCount] = useState("0")
     const itemsPerPage = 10;
+    const [filters, setFilters] = useState({
+        search: '',
+        state: '',
+        area: '',
+        propertyType: '',
+        minPrice: '',
+        maxPrice: '',
+        bedrooms: '',
+        bathrooms: '',
+        toilets: '',
+        amenities: [],
+        rentDuration: '',
+        sortBy: 'createdAt',
+        sortOrder: 'desc',
+    });
 
-    const filteredProperties = properties
+const lgasForFilter = filters.state ? stateToLgas[filters.state] || [] : [];
+
+    const hasActiveFilters = Object.values(filters).some(v =>
+        Array.isArray(v)? v.length > 0 : v!== '' && v!= null
+    );
+    const fetchProperties = async (page = 1, activeFilters = filters) => {
+        try {
+            setLoading(true);
+            // clean empty values
+            const clean = {};
+            Object.entries(activeFilters).forEach(([k,v]) => {
+                if (Array.isArray(v)? v.length : v!== '' && v!= null) clean[k] = v;
+            });
+
+            const apiCall = Object.keys(clean).length > 0
+               ? advancedPropertySearch
+                : getAllProperties;
+
+            const res = await apiCall({ page, limit: itemsPerPage,...clean });
+            const data = res?.data?.data?? {};
+
+            setProperties(data.properties?? data.data?? []);
+            setTotalPages(data.pages?? data.totalPages?? 1);
+            setCurrentPage(page);
+        } catch (err) {
+            console.error(err);
+            setProperties([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // search with debounce
+    useEffect(() => {
+        const t = setTimeout(() => {
+            fetchProperties(1, filters);
+        }, 500);
+        return () => clearTimeout(t);
+    }, [filters.state, filters.area, filters.propertyType, filters.minPrice, filters.maxPrice, filters.bedrooms, filters.bathrooms, filters.toilets, filters.amenities, filters.rentDuration, filters.sortBy, filters.sortOrder]); // add filters to dependency if you want to fetch on filter change, but we already handle that in updateFilter
+
+
+    // pagination
+    useEffect(() => {
+        fetchProperties(currentPage, filters);
+    }, [currentPage]);
+
+    const updateFilter = (key, value) => {
+        setFilters(prev => ({...prev, [key]: value }));
+        setCurrentPage(1);
+    };
+    // handlers for top bar
+    const handleSearchChange = (e) => {
+        setSearchText(e.target.value); // just update local state
+        updateFilter('search', e.target.value);
+    };
+
+const handleLocationChange = (e) => {
+  const val = e.target.value; // "Lekki" is now "Eti-Osa" or "Port Harcourt"
+  if (!val) {
+    setFilters(prev => ({ ...prev, state: '', area: '' }));
+    fetchProperties(1, { ...filters, state: '', area: '' });
+    return;
+  }
+  // if grouped select returns "LGA, State"
+  if (val.includes(',')) {
+    const [area, state] = val.split(',').map(s => s.trim());
+    const next = { ...filters, area, state };
+    setFilters(next);
+    fetchProperties(1, next);
+  } else {
+    // state only select
+    const next = { ...filters, state: val, area: '' };
+    setFilters(next);
+    fetchProperties(1, next);
+  }
+};
+
+    const handleApplyAdvancedFilters = (payload) => {
+        // payload from FilterSearch drawer
+        setFilters(prev => ({...prev,...payload }));
+        setCurrentPage(1);
+    };
+    const handleClearAll = () => {
+        setFilters({
+            search: '', state: '', area: '', propertyType: '',
+            minPrice: '', maxPrice: '', bedrooms: '', bathrooms: '',
+            toilets: '', amenities: [], rentDuration: '', sortBy: 'createdAt', sortOrder: 'desc'
+        });
+        setCurrentPage(1);
+    };
 
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
-    const paginatedProperties = filteredProperties.slice(startIndex, endIndex);
 
     const handlePrevPage = () => {
         setCurrentPage((prev) => Math.max(prev - 1, 1));
@@ -59,62 +165,7 @@ export default function PropertyListing({ user }) {
         setCurrentPage((prev) => Math.min(prev + 1, totalPages));
     };
 
-    const handleSearchChange = (e) => {
-        setSearchText(e.target.value);
-        if (e.target.value === '') {
-            setIsFiltered(false);
-
-        } else {
-            setIsFiltered(true);
-            setCurrentPage(1);
-        }
-        setCurrentPage(1);
-    };
-
-    const handleLocationChange = async (e) => {
-        setLocationFilter(e.target.value);
-        if (e.target.value == "" || e.target.value == null || e.target.value == undefined || e.target.value == "All Locations") {
-            fetchProperties(1);
-            // setFilterPayload((prev) => ({ ...prev, state: e.target.value }));
-        }
-        setFilterPayload((prev) => ({ ...prev, area: e.target.value }));
-        const res = await advancedPropertySearch({
-            page: currentPage,
-            limit: itemsPerPage,
-            area: e.target.value,
-            state: e.target.value,
-        });
-        setProperties(res?.data?.data || []);
-        console.log('Fetched properties:', res);
-        setCurrentPage(1);
-    };
-
-
-    const fetchProperties = async (page = currentPage) => {
-        try {
-            setLoading(true);
-            const response = isFiltered
-                ? await advancedPropertySearch({
-                    page,
-                    limit: itemsPerPage,
-                    keyword: searchText,
-                    // state: locationFilter,
-                    // area: areaFilter,
-                    // ...filterPayload
-                })
-                : await getAllProperties({ page, limit: itemsPerPage });
-
-            setProperties(response?.data?.data?.properties || []);
-            setTotalPages(response?.data?.data?.pages || 1);
-
-        } catch (error) {
-            console.error('Failed to fetch properties:', error);
-            setProperties([]);
-            setTotalPages(1);
-        } finally {
-            setLoading(false);
-        }
-    };
+    
 
     const fetchUnreadCount = async () => {
         console.log("counting unread")
@@ -269,24 +320,46 @@ export default function PropertyListing({ user }) {
                             />
                         </InputGroup>
 
-                        <HStack spacing={3}>
-                            <Select
-                                bg="white"
-                                placeholder="Location"
-                                icon={<MapPin size={18} />}
-                                flex={1}
-                                value={locationFilter}
-                                onChange={handleLocationChange}
-                            >
-                                <option value="">All Locations</option>
-                                <option value="Lekki, Lagos">Lekki, Lagos</option>
-                                <option value="Victoria Island, Lagos">Victoria Island, Lagos</option>
-                                <option value="Ikoyi, Lagos">Ikoyi, Lagos</option>
-                                <option value="Surulere, Lagos">Surulere, Lagos</option>
-                                <option value="Port Harcourt, Rivers State">Port Harcourt, Rivers State</option>
-                            </Select>
-                            <FilterSearch setProperties={setProperties} fetchProperties={fetchProperties} setFilterPayload={setFilterPayload} />
-                        </HStack>
+<HStack spacing={3}>
+  <Select
+    bg="white"
+    placeholder="All States"
+    flex={1}
+    value={filters.state}
+    onChange={(e) => {
+      const state = e.target.value;
+      const next = { ...filters, state, area: '' };
+      setFilters(next);
+      fetchProperties(1, next);
+    }}
+  >
+    <option value="">All States</option>
+    {Object.keys(stateToLgas).sort().map((state) => (
+      <option key={state} value={state}>{state}</option>
+    ))}
+  </Select>
+
+  <Select
+    bg="white"
+    placeholder={filters.state ? `All in ${filters.state}` : "Select State first"}
+    flex={1}
+    value={filters.area ? `${filters.area}, ${filters.state}` : ''}
+    onChange={handleLocationChange}
+    isDisabled={!filters.state}
+  >
+    <option value="">All Areas</option>
+    {lgasForFilter.map((lga) => (
+      <option key={lga} value={`${lga}, ${filters.state}`}>{lga}</option>
+    ))}
+  </Select>
+
+  <FilterSearch 
+    setProperties={setProperties} 
+    fetchProperties={fetchProperties} 
+    setFilterPayload={setFilterPayload}
+    stateToLgas={stateToLgas}
+  />
+</HStack>
                     </VStack>
                 </Box>
 

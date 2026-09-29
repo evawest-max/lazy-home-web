@@ -31,6 +31,7 @@ import {
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getBankcodes, verifyBankAccount } from '../../../../api';
+import { WarningIcon } from '@chakra-ui/icons';
 
 export default function ListPropertyStep4({ formData, setFormData, onBack, onSubmit, isLoading, setIsLoading }) {
     const toast = useToast();
@@ -42,6 +43,7 @@ export default function ListPropertyStep4({ formData, setFormData, onBack, onSub
     const [accountVerified, setAccountVerified] = useState(false);
     const [formError, setFormError] = useState('');
     const [isVerifying, setIsVerifying] = useState(false);
+    const [accountIsLoading, setAccountIsLoading] = useState(false);
     const [banks, setBanks] = useState([]);
 
     const requiredFields = ['fullName', 'bankName', 'accountNumber'];
@@ -150,6 +152,7 @@ export default function ListPropertyStep4({ formData, setFormData, onBack, onSub
     };
 
     const verifyAccountDetails = async () => {
+        setAccountIsLoading(true)
         const accountNumber = String(landlordDetails.accountNumber ?? '');
 
         if (!landlordDetails.bankCode || accountNumber.length !== 10) {
@@ -341,8 +344,8 @@ export default function ListPropertyStep4({ formData, setFormData, onBack, onSub
                                 _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
                             >
 
-                                {banks.map((bank) => (
-                                    <option key={bank.code} value={bank.code}>
+                                {banks.map((bank, index) => (
+                                    <option key={index} value={bank.code}>
                                         {bank.name}
                                     </option>
                                 ))}
@@ -376,7 +379,9 @@ export default function ListPropertyStep4({ formData, setFormData, onBack, onSub
                             <FormErrorMessage>Required (10 digits)</FormErrorMessage>
                         </FormControl>
 
-                        <Button onClick={ verifyAccountDetails}>Verify account</Button>
+                        <Button isLoading={accountIsLoading} onClick={verifyAccountDetails}>
+                            Verify account
+                        </Button>
 
                         {accountVerified ? (
                             <Box bg="brand.background" p={4} borderRadius="lg">
@@ -395,7 +400,7 @@ export default function ListPropertyStep4({ formData, setFormData, onBack, onSub
                         ) : (
                             <Box bg="brand.background" p={4} borderRadius="lg">
                                 <HStack spacing={3}>
-                                    <Warning size={20} color="#FF9800" />
+                                    <WarningIcon size={20} color="#FF9800" />
                                     <Text fontSize="sm" fontWeight="600" color="brand.warning">
                                          invalid Account. Please check the recipient account details before submitting.
                                     </Text>

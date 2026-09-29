@@ -375,10 +375,10 @@ export default function AdminViewSingleUserWallet() {
                                                         <Td>{tx.description || '—'}</Td>
                                                         <Td>{tx.reference || '—'}</Td>
                                                         <Td fontWeight="bold" color={tx.type === 'credit' ? 'green.600' : 'red.600'}>
-                                                            {tx.type === 'credit' ? '+' : '-'}{formatCurrency(tx.amount ?? 0)}
+                                                            {tx.type === 'credit' ? '+' : '-'}{formatCurrency((tx.amount ?? 0)/ 100)}
                                                         </Td>
-                                                        <Td>{formatCurrency(tx.balanceBefore ?? 0)}</Td>
-                                                        <Td>{formatCurrency(tx.balanceAfter ?? 0)}</Td>
+                                                        <Td>{formatCurrency((tx.balanceBefore ?? 0)/ 100)}</Td>
+                                                        <Td>{formatCurrency((tx.balanceAfter ?? 0)/ 100)}</Td>
                                                         <Td>
                                                             <Badge colorScheme={getStatusColor(tx.status)}>{tx.status || 'unknown'}</Badge>
                                                         </Td>

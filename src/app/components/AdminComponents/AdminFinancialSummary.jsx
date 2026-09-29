@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     Badge,
     Box,
@@ -31,6 +32,18 @@ import {
     Input,
     InputRightElement,
     CloseButton,
+    Modal,
+    ModalOverlay,
+    ModalContent,
+    ModalHeader,
+    ModalBody,
+    ModalFooter,
+    ModalCloseButton,
+    useDisclosure,
+    useToast,
+    FormControl,
+    FormLabel,
+    Switch,
 } from '@chakra-ui/react';
 import { ChevronDownIcon, ChevronUpIcon } from '@chakra-ui/icons';
 import {
@@ -51,12 +64,17 @@ import {
     getfinancialSummary,
     getWalletFundings,
     getWithdrawals,
+    getTransferOTPStatus,
+    disableTransferOTP,
+    finalizeDisableTransferOTP,
+    EnableTransferOTP,
 } from '../../../../api';
 import AdminNavbar from './AdminNavbar';
 
 const COLORS = ["#3182CE", "#38A169", "#E53E3E", "#D69E2E", "#805AD5"];
 
 export default function AdminFinancialSummary() {
+    const navigate = useNavigate();
     const [summary, setSummary] = useState({});
     const [withdrawals, setWithdrawals] = useState([]);
     const [escrows, setEscrows] = useState([]);
@@ -77,6 +95,133 @@ export default function AdminFinancialSummary() {
     const walletTotalPages = Math.max(1, Number(walletPageInfo.pages ?? 1));
     const walletPaginated = walletFundings;
     const [walletExpandedIds, setWalletExpandedIds] = useState([]);
+
+    const toast = useToast();
+    const otpModal = useDisclosure();
+
+    // OTP Control states
+    const [otpStatus, setOtpStatus] = useState(null);
+    const [otpStatusLoading, setOtpStatusLoading] = useState(true);
+    const [otpAction, setOtpAction] = useState('disable'); // disable | finalize_disable | enable
+    const [authCode, setAuthCode] = useState('');
+    const [paystackOTP, setPaystackOTP] = useState('');
+    const [otpSubmitting, setOtpSubmitting] = useState(false);
+
+    const loadOTPStatus = async () => {
+        try {
+            setOtpStatusLoading(true);
+            const res = await getTransferOTPStatus();
+            const data = res?.data?.data ?? res?.data ?? {};
+            setOtpStatus(data);
+        } catch (err) {
+            console.error("Failed to load OTP status", err);
+        } finally {
+            setOtpStatusLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        loadOTPStatus();
+    }, []);
+
+    const handleInitiateDisable = async () => {
+        if (!authCode) {
+            toast({ title: "Authenticator required", status: "warning", duration: 3000, position: "top-right" });
+            return;
+        }
+        try {
+            setOtpSubmitting(true);
+            const res = await disableTransferOTP(authCode);
+            toast({
+                title: "OTP Sent",
+                description: res?.data?.message || "Paystack sent OTP to owner email/phone. Enter it to finalize.",
+                status: "success",
+                duration: 6000,
+                isClosable: true,
+                position: "top-right"
+            });
+            setOtpAction('finalize_disable');
+            setPaystackOTP('');
+        } catch (e) {
+            toast({
+                title: "Disable failed",
+                description: e?.response?.data?.message || "Failed to initiate disable",
+                status: "error",
+                duration: 5000,
+                isClosable: true,
+                position: "top-right"
+            });
+        } finally {
+            setOtpSubmitting(false);
+        }
+    };
+
+    const handleFinalizeDisable = async () => {
+        if (!authCode || !paystackOTP) {
+            toast({ title: "Both codes required", status: "warning", duration: 3000, position: "top-right" });
+            return;
+        }
+        try {
+            setOtpSubmitting(true);
+            const res = await finalizeDisableTransferOTP(authCode, paystackOTP);
+            toast({
+                title: "OTP Disabled",
+                description: res?.data?.message || "Transfers are now automatic. No OTP needed.",
+                status: "success",
+                duration: 6000,
+                isClosable: true,
+                position: "top-right"
+            });
+            setAuthCode('');
+            setPaystackOTP('');
+            otpModal.onClose();
+            await loadOTPStatus();
+        } catch (e) {
+            toast({
+                title: "Finalize failed",
+                description: e?.response?.data?.message || "Invalid Paystack OTP",
+                status: "error",
+                duration: 6000,
+                isClosable: true,
+                position: "top-right"
+            });
+        } finally {
+            setOtpSubmitting(false);
+        }
+    };
+
+    const handleEnable = async () => {
+        if (!authCode) {
+            toast({ title: "Authenticator required", status: "warning", duration: 3000, position: "top-right" });
+            return;
+        }
+        try {
+            setOtpSubmitting(true);
+            const res = await EnableTransferOTP(authCode);
+            toast({
+                title: "OTP Enabled",
+                description: res?.data?.message || "Transfer OTP is now ENABLED. All transfers require OTP.",
+                status: "success",
+                duration: 6000,
+                isClosable: true,
+                position: "top-right"
+            });
+            setAuthCode('');
+            otpModal.onClose();
+            await loadOTPStatus();
+        } catch (e) {
+            toast({
+                title: "Enable failed",
+                description: e?.response?.data?.message || "Failed to enable OTP",
+                status: "error",
+                duration: 6000,
+                isClosable: true,
+                position: "top-right"
+            });
+        } finally {
+            setOtpSubmitting(false);
+        }
+    };
 
     const toggleWalletExpanded = (id) => {
         setWalletExpandedIds((prev) => {
@@ -182,8 +327,8 @@ export default function AdminFinancialSummary() {
         setEscrowsLoading(true);
         try {
             const params = { page, limit };
-  if (searchTerm.trim()) params.search = searchTerm.trim(); // backend checks title + reference
-  const res = await getEscrows(params);
+            if (searchTerm.trim()) params.search = searchTerm.trim(); // backend checks title + reference
+            const res = await getEscrows(params);
             const escData = res?.data?.data ?? res?.data ?? res ?? {};
             const items = asArray(escData?.escrows ?? escData?.items ?? escData?.data ?? escData);
 
@@ -220,8 +365,8 @@ export default function AdminFinancialSummary() {
     const fetchWithdrawalsPage = async (page = 1, limit = withdrawalPageSize, searchTerm = withdrawalSearch) => {
         try {
             const params = { page, limit };
-  if (searchTerm.trim()) params.search = searchTerm.trim(); // backend checks reference + paystackTransferId
-  const res = await getWithdrawals(params);
+            if (searchTerm.trim()) params.search = searchTerm.trim(); // backend checks reference + paystackTransferId
+            const res = await getWithdrawals(params);
             const withdrawalData = res?.data?.data ?? res?.data ?? res ?? {};
             const items = asArray(withdrawalData?.withdrawals ?? withdrawalData?.items ?? withdrawalData?.data ?? withdrawalData);
             const pageInfo = {
@@ -243,8 +388,8 @@ export default function AdminFinancialSummary() {
         setWalletLoading(true);
         try {
             const params = { page, limit };
-  if (searchTerm.trim()) params.search = searchTerm.trim(); // backend checks reference + walletId
-  const res = await getWalletFundings(params);
+            if (searchTerm.trim()) params.search = searchTerm.trim(); // backend checks reference + walletId
+            const res = await getWalletFundings(params);
             const walletFundingsData = res?.data?.data ?? res?.data ?? res ?? {};
             const items = asArray(walletFundingsData?.fundings ?? walletFundingsData?.items ?? walletFundingsData?.data ?? walletFundingsData);
             const pageInfo = {
@@ -265,35 +410,35 @@ export default function AdminFinancialSummary() {
     };
 
     // WITHDRAWALS
-const handleWithdrawalSearch = () => {
-  setWithdrawalCurrentPage(1);
-  fetchWithdrawalsPage(1, withdrawalPageSize, withdrawalSearch);
-};
-const handleWithdrawalClear = () => {
-  setWithdrawalSearch('');
-  setWithdrawalCurrentPage(1);
-  fetchWithdrawalsPage(1, withdrawalPageSize, '');
-};
+    const handleWithdrawalSearch = () => {
+        setWithdrawalCurrentPage(1);
+        fetchWithdrawalsPage(1, withdrawalPageSize, withdrawalSearch);
+    };
+    const handleWithdrawalClear = () => {
+        setWithdrawalSearch('');
+        setWithdrawalCurrentPage(1);
+        fetchWithdrawalsPage(1, withdrawalPageSize, '');
+    };
 
-// ESCROWS
-const handleEscrowSearch = () => {
-  fetchEscrowsPage(1, escrowsPageInfo.limit, escrowSearch);
-};
-const handleEscrowClear = () => {
-  setEscrowSearch('');
-  fetchEscrowsPage(1, escrowsPageInfo.limit, '');
-};
+    // ESCROWS
+    const handleEscrowSearch = () => {
+        fetchEscrowsPage(1, escrowsPageInfo.limit, escrowSearch);
+    };
+    const handleEscrowClear = () => {
+        setEscrowSearch('');
+        fetchEscrowsPage(1, escrowsPageInfo.limit, '');
+    };
 
-// WALLET FUNDINGS
-const handleWalletFundingSearch = () => {
-  setWalletCurrentPage(1);
-  fetchWalletFundingsPage(1, walletPageSize, walletFundingSearch);
-};
-const handleWalletFundingClear = () => {
-  setWalletFundingSearch('');
-  setWalletCurrentPage(1);
-  fetchWalletFundingsPage(1, walletPageSize, '');
-};
+    // WALLET FUNDINGS
+    const handleWalletFundingSearch = () => {
+        setWalletCurrentPage(1);
+        fetchWalletFundingsPage(1, walletPageSize, walletFundingSearch);
+    };
+    const handleWalletFundingClear = () => {
+        setWalletFundingSearch('');
+        setWalletCurrentPage(1);
+        fetchWalletFundingsPage(1, walletPageSize, '');
+    };
 
     const toggleExpanded = (id) => {
         setExpandedIds((prev) => {
@@ -521,10 +666,59 @@ const handleWalletFundingClear = () => {
             <VStack spacing={6} align="stretch">
                 <Flex align="center" justify="space-between">
                     <Heading size="lg" color="teal.600">Admin Financial Dashboard</Heading>
+
                     <HStack>
                         <Button colorScheme="teal" size="sm">Refresh</Button>
                     </HStack>
                 </Flex>
+                <Card shadow="md" borderRadius="lg" borderLeft="4px solid" borderLeftColor={otpStatus?.enabled ? "green.500" : "red.500"}>
+                    <CardHeader>
+                        <Flex justify="space-between" align="center">
+                            <Heading size="sm">Transfer Security Control</Heading>
+                            {otpStatusLoading ? <Spinner size="sm" /> : (
+                                <Badge colorScheme={otpStatus?.enabled ? "green" : "red"} fontSize="sm" px={3} py={1} borderRadius="full">
+                                    {otpStatus?.enabled ? "OTP ENABLED - Secure" : "OTP DISABLED - Auto"}
+                                </Badge>
+                            )}
+                        </Flex>
+                    </CardHeader>
+                    <CardBody>
+                        <Flex justify="space-between" align="center" wrap="wrap" gap={4}>
+                            <Box>
+                                <Text fontSize="sm" color="gray.600">
+                                    {otpStatus?.enabled
+                                        ? "All Paystack transfers require OTP finalization. Recommended for security."
+                                        : "Transfers are automatic without OTP. Use only for low-value bulk payouts."}
+                                </Text>
+                                {otpStatus?.disabledAt && !otpStatus?.enabled && (
+                                    <Text fontSize="xs" color="gray.500" mt={1}>
+                                        Disabled at: {new Date(otpStatus.disabledAt).toLocaleString()}
+                                    </Text>
+                                )}
+                            </Box>
+                            <HStack>
+                                <Button
+                                    size="sm"
+                                    colorScheme={otpStatus?.enabled ? "red" : "green"}
+                                    onClick={() => {
+                                        if (otpStatus?.enabled) {
+                                            setOtpAction('disable');
+                                        } else {
+                                            setOtpAction('enable');
+                                        }
+                                        setAuthCode('');
+                                        setPaystackOTP('');
+                                        otpModal.onOpen();
+                                    }}
+                                    isLoading={otpStatusLoading}
+                                >
+                                    {otpStatus?.enabled ? "Disable OTP" : "Enable OTP"}
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={loadOTPStatus}>Refresh status</Button>
+                            </HStack>
+                        </Flex>
+                    </CardBody>
+                </Card>
 
                 <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={4}>
                     {summaryCards.map((card) => (
@@ -595,27 +789,29 @@ const handleWalletFundingClear = () => {
                 {/* Recent Withdrawals Table */}
                 <Card>
                     <CardHeader>
-  <VStack spacing={3} align="stretch">
-    <Heading size="sm">Recent Withdrawals</Heading>
-    <HStack spacing={2}>
-      <InputGroup maxW="320px">
-        <Input
-          placeholder="Search by reference, transferId, paystack ID..."
-          value={withdrawalSearch}
-          onChange={(e) => setWithdrawalSearch(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleWithdrawalSearch()}
-        />
-        {withdrawalSearch && (
-          <InputRightElement>
-            <CloseButton size="sm" onClick={handleWithdrawalClear} />
-          </InputRightElement>
-        )}
-      </InputGroup>
-      <Button size="sm" colorScheme="teal" onClick={handleWithdrawalSearch}>Search</Button>
-      <Button size="sm" variant="outline" onClick={handleWithdrawalClear}>Clear</Button>
-    </HStack>
-  </VStack>
-</CardHeader>
+                        <VStack spacing={3} align="stretch">
+                            <Heading size="sm">Recent Withdrawals</Heading>
+                            <HStack spacing={2}>
+                                <InputGroup maxW="320px">
+                                    <Input
+                                        placeholder="Search by reference, transferId, paystack ID..."
+                                        value={withdrawalSearch}
+                                        onChange={(e) => setWithdrawalSearch(e.target.value)}
+                                        onKeyDown={(e) => e.key === 'Enter' && handleWithdrawalSearch()}
+                                    />
+                                    {withdrawalSearch && (
+                                        <InputRightElement>
+                                            <CloseButton size="sm" onClick={handleWithdrawalClear} />
+                                        </InputRightElement>
+                                    )}
+                                </InputGroup>
+                                <Button size="sm" colorScheme="teal" onClick={handleWithdrawalSearch}>Search</Button>
+                                <Button size="sm" variant="outline" onClick={handleWithdrawalClear}>Clear</Button>
+                            </HStack>
+                            <Button size="sm" colorScheme="teal" onClick={() => navigate('/awaiting-withdrawal-transfer-otp')}>Awaiting withdrawal transfer OTP</Button>
+                            <Button size="sm" colorScheme="teal" >Awaiting manual transfer</Button>
+                        </VStack>
+                    </CardHeader>
                     <CardBody>
                         {loading ? (
                             <Spinner />
@@ -725,27 +921,29 @@ const handleWalletFundingClear = () => {
                 {/* Escrows List */}
                 <Card>
                     <CardHeader>
-  <VStack spacing={3} align="stretch">
-    <Heading size="sm">Escrows</Heading>
-    <HStack spacing={2}>
-      <InputGroup maxW="320px">
-        <Input
-          placeholder="Search by title or reference..."
-          value={escrowSearch}
-          onChange={(e) => setEscrowSearch(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleEscrowSearch()}
-        />
-        {escrowSearch && (
-          <InputRightElement>
-            <CloseButton size="sm" onClick={handleEscrowClear} />
-          </InputRightElement>
-        )}
-      </InputGroup>
-      <Button size="sm" colorScheme="teal" onClick={handleEscrowSearch}>Search</Button>
-      <Button size="sm" variant="outline" onClick={handleEscrowClear}>Clear</Button>
-    </HStack>
-  </VStack>
-</CardHeader>
+                        <VStack spacing={3} align="stretch">
+                            <Heading size="sm">Escrows</Heading>
+                            <HStack spacing={2}>
+                                <InputGroup maxW="320px">
+                                    <Input
+                                        placeholder="Search by title or reference..."
+                                        value={escrowSearch}
+                                        onChange={(e) => setEscrowSearch(e.target.value)}
+                                        onKeyDown={(e) => e.key === 'Enter' && handleEscrowSearch()}
+                                    />
+                                    {escrowSearch && (
+                                        <InputRightElement>
+                                            <CloseButton size="sm" onClick={handleEscrowClear} />
+                                        </InputRightElement>
+                                    )}
+                                </InputGroup>
+                                <Button size="sm" colorScheme="teal" onClick={handleEscrowSearch}>Search</Button>
+                                <Button size="sm" variant="outline" onClick={handleEscrowClear}>Clear</Button>
+                            </HStack>
+                            <Button size="sm" colorScheme="teal" onClick={() => navigate('/awaiting-transfer-otp')}>Awaiting transfer OTP</Button>
+                            <Button size="sm" colorScheme="teal" >Awaiting manual Release</Button>
+                        </VStack>
+                    </CardHeader>
                     <CardBody>
                         {escrowsLoading ? (
                             <Spinner />
@@ -853,27 +1051,27 @@ const handleWalletFundingClear = () => {
                 {/* Wallet Fundings Table */}
                 <Card>
                     <CardHeader>
-  <VStack spacing={3} align="stretch">
-    <Heading size="sm">Wallet Fundings</Heading>
-    <HStack spacing={2}>
-      <InputGroup maxW="320px">
-        <Input
-          placeholder="Search by reference or wallet ID..."
-          value={walletFundingSearch}
-          onChange={(e) => setWalletFundingSearch(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleWalletFundingSearch()}
-        />
-        {walletFundingSearch && (
-          <InputRightElement>
-            <CloseButton size="sm" onClick={handleWalletFundingClear} />
-          </InputRightElement>
-        )}
-      </InputGroup>
-      <Button size="sm" colorScheme="teal" onClick={handleWalletFundingSearch}>Search</Button>
-      <Button size="sm" variant="outline" onClick={handleWalletFundingClear}>Clear</Button>
-    </HStack>
-  </VStack>
-</CardHeader>
+                        <VStack spacing={3} align="stretch">
+                            <Heading size="sm">Wallet Fundings</Heading>
+                            <HStack spacing={2}>
+                                <InputGroup maxW="320px">
+                                    <Input
+                                        placeholder="Search by reference or wallet ID..."
+                                        value={walletFundingSearch}
+                                        onChange={(e) => setWalletFundingSearch(e.target.value)}
+                                        onKeyDown={(e) => e.key === 'Enter' && handleWalletFundingSearch()}
+                                    />
+                                    {walletFundingSearch && (
+                                        <InputRightElement>
+                                            <CloseButton size="sm" onClick={handleWalletFundingClear} />
+                                        </InputRightElement>
+                                    )}
+                                </InputGroup>
+                                <Button size="sm" colorScheme="teal" onClick={handleWalletFundingSearch}>Search</Button>
+                                <Button size="sm" variant="outline" onClick={handleWalletFundingClear}>Clear</Button>
+                            </HStack>
+                        </VStack>
+                    </CardHeader>
                     <CardBody>
                         {walletLoading || loading ? (
                             <Spinner />
@@ -1111,6 +1309,68 @@ const handleWalletFundingClear = () => {
                     </CardBody>
                 </Card>
             </VStack>
+            <Modal isOpen={otpModal.isOpen} onClose={otpModal.onClose} isCentered>
+                <ModalOverlay />
+                <ModalContent>
+                    <ModalHeader>
+                        {otpAction === 'disable' ? "Disable Transfer OTP" : otpAction === 'finalize_disable' ? "Finalize Disable - Enter Paystack OTP" : "Enable Transfer OTP"}
+                    </ModalHeader>
+                    <ModalCloseButton />
+                    <ModalBody>
+                        <VStack spacing={4} align="stretch">
+                            {otpAction === 'disable' && (
+                                <Text fontSize="sm" color="orange.600">
+                                    Warning: This will make all transfers automatic without OTP. Only super admin can do this.
+                                </Text>
+                            )}
+                            {otpAction === 'finalize_disable' && (
+                                <Text fontSize="sm" color="blue.600">
+                                    Paystack sent an OTP to the account owner's email/phone. Enter it below + your authenticator code to confirm.
+                                </Text>
+                            )}
+                            {otpAction === 'enable' && (
+                                <Text fontSize="sm" color="green.600">
+                                    This will re-enable OTP protection. All transfers will require OTP finalization.
+                                </Text>
+                            )}
+
+                            <FormControl isRequired>
+                                <FormLabel>Your Authenticator Code</FormLabel>
+                                <Input
+                                    value={authCode}
+                                    onChange={(e) => setAuthCode(e.target.value)}
+                                    placeholder="Enter 2FA code"
+                                />
+                            </FormControl>
+
+                            {otpAction === 'finalize_disable' && (
+                                <FormControl isRequired>
+                                    <FormLabel>Paystack OTP (from email/SMS)</FormLabel>
+                                    <Input
+                                        value={paystackOTP}
+                                        onChange={(e) => setPaystackOTP(e.target.value)}
+                                        placeholder="Enter Paystack OTP"
+                                    />
+                                </FormControl>
+                            )}
+                        </VStack>
+                    </ModalBody>
+                    <ModalFooter>
+                        <Button variant="ghost" mr={3} onClick={otpModal.onClose}>Cancel</Button>
+                        <Button
+                            colorScheme={otpAction === 'enable' ? "green" : otpAction === 'disable' ? "red" : "blue"}
+                            isLoading={otpSubmitting}
+                            onClick={() => {
+                                if (otpAction === 'disable') handleInitiateDisable();
+                                else if (otpAction === 'finalize_disable') handleFinalizeDisable();
+                                else handleEnable();
+                            }}
+                        >
+                            {otpAction === 'disable' ? "Send Paystack OTP" : otpAction === 'finalize_disable' ? "Confirm Disable" : "Enable OTP"}
+                        </Button>
+                    </ModalFooter>
+                </ModalContent>
+            </Modal>
             <AdminNavbar active="Finance" />
         </Box>
     );

@@ -262,8 +262,8 @@ export default function Wallet() {
                             <Text fontSize={{ base: '2xl', md: '3xl' }} fontWeight="bold" color="brand.primary">{formatCurrency(balance)}</Text>
                         </VStack>
                         <Box display="flex" gap={3} flexWrap="wrap" w={{ base: '100%', md: 'auto' }} justifyContent={{ base: 'space-between', md: 'flex-end' }}>
-                            <Button w={{ base: '100%', sm: 'auto' }} size="lg" colorScheme="teal" onClick={openFund}>Fund Wallet</Button>
-                            <Button w={{ base: '100%', sm: 'auto' }} size="lg" colorScheme="teal" onClick={() => { openWithdraw(); getsettlementAccount() }}>Withdraw Funds</Button>
+                            <Button w={{ base: '100%', sm: 'auto' }} size="sm" colorScheme="teal" onClick={openFund}>Fund Wallet</Button>
+                            <Button w={{ base: '100%', sm: 'auto' }} size="sm" colorScheme="teal" onClick={() => { openWithdraw(); getsettlementAccount() }}>Withdraw Funds</Button>
                         </Box>
                     </Stack>
                 </Box>
@@ -471,6 +471,7 @@ export default function Wallet() {
                         <Button
                             w={{ base: '100%', sm: 'auto' }}
                             variant="ghost"
+                            size="md"
                             onClick={() => {
                                 setWithdrawAmount('');
                                 setWithdrawPin('');
@@ -482,8 +483,10 @@ export default function Wallet() {
                         <Button
                             w={{ base: '100%', sm: 'auto' }}
                             colorScheme="teal"
+                            size="md"
                             isLoading={withdrawing}
                             onClick={handleWithdraw}
+                            isDisabled={!withdrawAmount || !withdrawPin || !activeSettlementAccount || withdrawing}
                         >
                             Request Withdrawal{' '}
                             {withdrawAmount

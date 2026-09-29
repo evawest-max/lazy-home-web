@@ -33,18 +33,25 @@ import {
   Plus,
   CheckCircle,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import UpdatePropertyStep2 from './UpdatePropertyStep2';
 import UpdatePropertyStep3 from './UpdatePropertyStep3';
 import UpdatePropertyStep4 from './UpdatePropertyStep4';
+import { stateToLgas, getAreasForLga } from '../StateToLgas';
+import { lgaToAreas } from '../LgaToAreas';
 
 export default function UpdateProperty({ updatedFormdata, setUpdatedFormdata, onSubmit, initialStep = 1, isLoading, setIsLoading }) {
   // console.log("this is the updated formdata",updatedFormdata)
   const navigate = useNavigate();
   const [activeStep, setActiveStep] = useState(Math.max(0, initialStep - 1));
   const totalSteps = 4;
-  const draftKey = 'listingFormData';
+  const draftKey = 'UpdateListingFormData';
+  const location = useLocation();
+
+  // Extract the property data safely using optional chaining (?)
+  const propertyData = location.state?.property;
+  console.log("propertyData",propertyData)
 
 
   const [customAmenity, setCustomAmenity] = useState('');
@@ -59,7 +66,30 @@ export default function UpdateProperty({ updatedFormdata, setUpdatedFormdata, on
     'Gym',
     'Elevator',
   ];
+  // at top of component
+  const [isOtherArea, setIsOtherArea] = useState(false);
 
+  useEffect(() => {
+    if (propertyData &&!updatedFormdata?.address?.state) {
+      setUpdatedFormdata(propertyData);
+      // if custom area not in list, show input
+      if (propertyData.address?.area) {
+        const list = lgaToAreas[propertyData.address.lga] || getAreasForLga(propertyData.address.lga) || [];
+        if (!list.includes(propertyData.address.area)) setIsOtherArea(true);
+      }
+    }
+  }, []);
+
+  if (!updatedFormdata ||!updatedFormdata.address) {
+    return <Box p={10}><Text>Loading property data...</Text></Box>;
+  }
+
+  const currentState = updatedFormdata.address.state || '';
+  const currentLga = updatedFormdata.address.lga || '';
+
+  const lgas = useMemo(() => stateToLgas[currentState] || [], [currentState]);
+  const areasForLga = useMemo(() => lgaToAreas[currentLga] || [], [currentLga]);
+  const areas = useMemo(() => getAreasForLga(currentLga) || [], [currentLga]);
   const toggleAmenity = (amenity) => {
     setUpdatedFormdata((prev) => ({
       ...prev,
@@ -83,6 +113,7 @@ export default function UpdateProperty({ updatedFormdata, setUpdatedFormdata, on
   // No fields are required — validation removed per request
 
   const persistDraft = () => {
+    console.log("Persisting draft to sessionStorage and localStorage:", updatedFormdata);
     const draft = JSON.stringify(updatedFormdata);
     sessionStorage.setItem(draftKey, draft);
     localStorage.setItem(draftKey, draft);
@@ -372,11 +403,11 @@ export default function UpdateProperty({ updatedFormdata, setUpdatedFormdata, on
                   </FormLabel>
                   <VStack spacing={2} align="stretch">
                     <Grid templateColumns="repeat(2, 1fr)" gap={3}>
-                      {amenityOptions.map((amenity) => {
+                      {amenityOptions.map((amenity, index) => {
                         const isSelected = updatedFormdata.amenities.includes(amenity);
                         return (
                           <HStack
-                            key={amenity}
+                            key={index}
                             bg={isSelected ? 'brand.background' : 'white'}
                             p={3}
                             borderRadius="lg"
@@ -457,7 +488,7 @@ export default function UpdateProperty({ updatedFormdata, setUpdatedFormdata, on
                   </Text>
                 </HStack>
 
-                <FormControl>
+                <FormControl isRequired>
                   <FormLabel color="brand.gray.700" fontSize="sm" fontWeight="600">
                     State
                   </FormLabel>
@@ -465,30 +496,82 @@ export default function UpdateProperty({ updatedFormdata, setUpdatedFormdata, on
                     placeholder="Select state"
                     size="lg"
                     value={updatedFormdata.address.state || ""}
-                    onChange={(e) => setUpdatedFormdata(prev => ({ ...prev, state: e.target.value }))}
+                    onChange={(e) => setUpdatedFormdata(prev => ({
+                      ...prev,
+                      address: { ...prev.address, state: e.target.value, lga: '', area: '' },  // update address.state and reset dependent fields
+                    }))}
                     _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
                   >
-                    <option>Lagos</option>
-                    <option>Abuja FCT</option>
-                    <option>Rivers</option>
-                    <option>Oyo</option>
-                    <option>Kano</option>
-                    <option>Enugu</option>
+                    {Object.keys(stateToLgas).sort().map((state, index) => (
+                      <option key={index} value={state}>{state}</option>
+                    ))}
                   </Select>
                 </FormControl>
 
-                <FormControl>
+                <FormControl isRequired>
                   <FormLabel color="brand.gray.700" fontSize="sm" fontWeight="600">
-                    City/Area
+                    LGA / City
                   </FormLabel>
-                  <Input
-                    placeholder="e.g. Lekki, Victoria Island, Ikoyi"
+                  <Select
+                    placeholder={updatedFormdata.address.state ? `Select LGA in ${updatedFormdata.address.state}` : "Select state first"}
                     size="lg"
-                    value={updatedFormdata.address.area || ""}
-                    onChange={(e) => setUpdatedFormdata(prev => ({ ...prev, city: e.target.value }))}
+                    value={updatedFormdata.address.lga}
+                    isDisabled={!updatedFormdata.address.state}
+                    onChange={(e) => setUpdatedFormdata(prev => ({
+                      ...prev,
+                      address: { ...prev.address, lga: e.target.value, area: '' }
+                    }))}
                     _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
-                  />
+                  >
+                    {lgas.map((lga) => (
+                      <option key={lga} value={lga}>{lga}</option>
+                    ))}
+                  </Select>
                 </FormControl>
+
+                <FormControl isRequired>
+                  <FormLabel color="brand.gray.700" fontSize="sm" fontWeight="600">
+                    Area / Neighborhood
+                  </FormLabel>
+                  {areasForLga.length > 0 ? (
+                    <Select
+                      placeholder={`Select area in ${updatedFormdata.address.lga}`}
+                      size="lg"
+                      value={updatedFormdata.address.area || ""}
+                      isDisabled={!updatedFormdata.address.lga}
+                      onChange={(e) => {
+                        setUpdatedFormdata(prev => ({ ...prev, address: { ...prev.address, area: e.target.value } }))
+                        e.target.value === "Other" ? setIsOtherArea(true) : setIsOtherArea(false) 
+                      }}
+                      _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
+                    >
+                      {areas.map((area, index) => (
+                        <option key={index} value={area}>{area}</option>
+                      ))}
+                      <option value="Other">Other (type manually)</option>
+                    </Select>
+                  ) : (
+                    <Input
+                      placeholder="e.g. Lekki Phase 1, GRA, Wuse 2, Bodija"
+                      size="lg"
+                      value={updatedFormdata.address.area || ""}
+                      onChange={(e) => setUpdatedFormdata(prev => ({ ...prev, address: { ...prev.address, area: e.target.value } }))}
+                      _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
+                    />
+                  )}
+                </FormControl>
+
+                {/* If they selected "Other" show input */}
+                {isOtherArea && (
+                  <FormControl isRequired mt={3}>
+                    <Input
+                      placeholder="Type your area"
+                      size="lg"
+                      onChange={(e) => setUpdatedFormdata(prev => ({ ...prev, address: { ...prev.address, area: e.target.value }, area: e.target.value }))}
+                      autoFocus
+                    />
+                  </FormControl>
+                )}
 
                 <FormControl isRequired>
                   <FormLabel color="brand.gray.700" fontSize="sm" fontWeight="600">

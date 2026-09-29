@@ -134,8 +134,8 @@ export const updateProfile = (formData) =>
     },
   });
 
-  
-  
+
+
 
 
 // ======================================================
@@ -189,9 +189,6 @@ export const updateProperty = (
 
 export const deleteProperty = (id) =>
   API.delete(`/api/v1/properties/delete/${id}`);
-
-export const getAllProperties = () =>
-  API.get("/api/v1/properties");
 
 export const updatePropertyStatus = async (id, status) => {
   const payload = { listingStatus: status };
@@ -250,8 +247,12 @@ export const uploadPropertyMedia = (
 // ================= PROPERTY SEARCH ====================
 // ======================================================
 
-export const advancedPropertySearch = (params) =>
-  API.get("/api/v1/properties/search/advanced", { params });
+export const getAllProperties = (params = {}) =>
+  API.get('/api/v1/properties', { params });
+
+export const advancedPropertySearch = (params = {}) =>
+  API.get('/api/v1/properties/search/advanced', { params });
+// params: { page, limit, search, state, area, propertyType, minPrice, maxPrice, bedrooms, bathrooms, amenities, sortBy, sortOrder }
 
 export const nearbyProperties = (
   lng,
@@ -569,7 +570,85 @@ export const getFinanceReconcilation =
       "/api/v1/admin/finance/reconciliation"
     );
 
-//Admin Other API
+export const getOtpPendingEscrows =
+  () =>
+    API.get(
+      "/api/v1/admin/finance/OTP-pending"
+    );
+
+export const adminFinalizeOtpTransfer = (
+  escrowId, transferId, transferCode, paystackOTP, authenticatorCode
+) =>
+  API.post(
+    "/api/v1/admin/finance/finalize-transfer",
+    { escrowId, transferId, paystackOTP, authenticatorCode }
+  );
+
+export const getTransferOTPStatus = () =>
+  API.get(
+    "/api/v1/admin/finance/transfers/otp-status"
+  );
+
+export const disableTransferOTP = (
+  authenticatorCode
+) =>
+  API.post(
+    "/api/v1/admin/finance/transfers/disable-otp",
+    { authenticatorCode }
+  );
+
+  export const finalizeDisableTransferOTP = (
+  authenticatorCode, paystackOTP
+) =>
+  API.post(
+    "/api/v1/admin/finance/transfers/disable-otp/finalize",
+    { authenticatorCode, paystackOTP }
+  );
+
+  export const EnableTransferOTP = (
+  authenticatorCode
+) =>
+  API.post(
+    "/api/v1/admin/finance/transfers/enable-otp",
+    { authenticatorCode }
+  );
+
+export const adminRetryTransfer = (
+  escrowId, transferId, authenticatorCode
+) =>
+  API.post(
+    "/api/v1/admin/finance/retry-transfer",
+    { escrowId, transferId, authenticatorCode }
+  );
+
+  export const getOtpRequiredWithdrawals = (params) =>
+  API.get("/api/v1/admin/finance/withdrawals/otp-required", { params });
+
+export const resendWithdrawalOTP = (id, authenticatorCode, reason) =>
+  API.post(`/api/v1/admin/finance/withdrawals/${id}/resend-otp`, { 
+    authenticatorCode, reason: "transfer"
+  });
+
+export const finalizeWithdrawalOTP = (id, otp, authenticatorCode ) =>
+  API.post(`/api/v1/admin/finance/withdrawals/${id}/finalize-otp`, { 
+    otp, authenticatorCode 
+  });
+
+export const approveManualWithdrawal = (id, { authenticatorCode, note }) =>
+  API.post(`/api/v1/admin/finance/withdrawals/${id}/approve-manual`, { 
+    authenticatorCode, note 
+  });
+
+
+export const adminResendPaystackTransferOTP = (escrowId, transferId, authenticatorCode, reason) => {
+  API.post(
+    "/api/v1/admin/finance/resend-transfer-otp",
+    { escrowId, transferId, authenticatorCode, reason }
+  );
+};
+
+
+//Admin Other modoration API
 export const moderateProperty = (
   propertyId,
   data
@@ -666,7 +745,7 @@ export const getDisputes =
 export const getAuditLogs =
   (params) =>
     API.get(
-      "/api/v1/admin/audit-logs",{ params }
+      "/api/v1/admin/audit-logs", { params }
     );
 
 export const moderateDispute = (

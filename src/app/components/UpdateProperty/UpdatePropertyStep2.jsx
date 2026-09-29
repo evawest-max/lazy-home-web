@@ -27,7 +27,7 @@ import { Link } from 'react-router-dom';
 export default function UpdatePropertyStep2({ updatedFormdata, setUpdatedFormdata, onBack, onNext }) {
   const currentStep = 2;
   const totalSteps = 4;
-  const draftKey = 'listingFormData';
+  const draftKey = 'UpdateListingFormData';
 
   const [uploadedPhotos, setUploadedPhotos] = useState([]);
   const [videoUrl, setVideoUrl] = useState(

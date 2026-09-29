@@ -38,6 +38,8 @@ import AdminAllPropertiesPage from './components/AdminComponents/AdminAllPropert
 import AdminWalletManagement from './components/AdminComponents/AdminWalletManagement';
 import AdminViewSingleUserWallet from './components/AdminComponents/AdminViewSingleUserWallet';
 import AdminUserVerificationPage from './components/AdminComponents/AdminUserVerificationPage';
+import AwaitingTransferOTPPage from './components/AdminComponents/AwaitingTransferOTPPage';
+import AwaitingWithdrawalOTPPage from './components/AdminComponents/AwaitingWithdrawalOTPPage';
 
 const LISTING_DRAFT_KEY = 'listingFormData';
 
@@ -58,7 +60,7 @@ const createEmptyListingFormData = () => ({
   serviceCharge: '',
   serviceChargePeriod: 'yearly',
   state: '',
-  city: '',
+  area: '',
   address: '',
   landmarks: '',
   mapsLink: '',
@@ -105,7 +107,7 @@ const normalizeListingDraft = (draft = {}) => {
     ? draft.address
     : draft.address?.streetAddress ?? '';
   const stateValue = draft.state ?? draft.address?.state ?? '';
-  const cityValue = draft.city ?? draft.address?.area ?? draft.address?.lga ?? '';
+  const areaValue = draft.area ?? draft.address?.area ?? draft.address?.lga ?? '';
   const landmarksValue = draft.landmarks ?? draft.address?.landmark ?? '';
   const annualRentValue = draft.annualRent ?? draft.rentAmount ?? '';
   const rentAmountValue = draft.rentAmount ?? draft.annualRent ?? '';
@@ -121,7 +123,7 @@ const normalizeListingDraft = (draft = {}) => {
     rentAmount: rentAmountValue,
 
     state: stateValue,
-    city: cityValue,
+    area: areaValue,
     address: addressValue,
     landmarks: landmarksValue,
     photos,
@@ -292,7 +294,7 @@ export default function App() {
     } else if (!normalizedFormData.landlordDetails.fullName || !normalizedFormData.landlordDetails.bankName || !normalizedFormData.landlordDetails.accountNumber) {
       alert('Please provide your bank account details for payment processing.');
       return;
-    } else if (!normalizedFormData.title || !normalizedFormData.propertyType || !normalizedFormData.bedrooms || !normalizedFormData.bathrooms || !normalizedFormData.size || !normalizedFormData.description || !normalizedFormData.state || !normalizedFormData.city) {
+    } else if (!normalizedFormData.title || !normalizedFormData.propertyType || !normalizedFormData.bedrooms || !normalizedFormData.bathrooms || !normalizedFormData.size || !normalizedFormData.description || !normalizedFormData.state || !normalizedFormData.area) {
       alert('Please fill in all required property details before submitting your listing.');
       return;
     } else if (!(normalizedFormData.rentAmount || normalizedFormData.annualRent) || !normalizedFormData.cautionDeposit) {
@@ -412,6 +414,8 @@ export default function App() {
               <Route path="/all-users" element={ loadingUser ? (<Spinner />) : user && user.role == "super_admin" ? (<AdminAllUsersPage onLogout={logout} user={user} />  ) : (<Navigate to="/login" /> ) } />
               <Route path="/all-properties" element={ loadingUser ? (<Spinner />) : user && user.role == "super_admin" ? (<AdminAllPropertiesPage onLogout={logout} user={user} />  ) : (<Navigate to="/login" /> ) } />
               <Route path="/admin-user-verification" element={ loadingUser ? (<Spinner />) : user && (user.role == "super_admin" || user.role == "admin" || user.role == "moderator") ? (<AdminUserVerificationPage onLogout={logout} user={user} />  ) : (<Navigate to="/login" /> ) } />
+              <Route path="/awaiting-transfer-otp" element={ loadingUser ? (<Spinner />) : user && (user.role == "super_admin" || user.role == "admin") ? (<AwaitingTransferOTPPage />) : (<Navigate to="/login" /> ) } />
+              <Route path="/awaiting-withdrawal-transfer-otp" element={ loadingUser ? (<Spinner />) : user && (user.role == "super_admin" || user.role == "admin") ? (<AwaitingWithdrawalOTPPage />) : (<Navigate to="/login" /> ) } />
             {/* Add more routes here */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

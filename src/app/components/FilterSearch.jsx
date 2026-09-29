@@ -38,11 +38,10 @@ export default function FilterSearch({ setProperties, fetchProperties, setFilter
   const [bedrooms, setBedrooms] = useState('');
   const [bathrooms, setBathrooms] = useState('');
   const [toilets, setToilets] = useState('');
+  const [rentDuration, setRentDuration] = useState('yearly');
   const [customAmenity, setCustomAmenity] = useState('');
   const [sortBy, setSortBy] = useState('');
-  const [selectedAmenities, setSelectedAmenities] = useState([
-    'verified',
-  ]);
+  const [selectedAmenities, setSelectedAmenities] = useState([]);
 
   const handleAddAmenity = () => {
     const trimmed = customAmenity.trim();
@@ -55,31 +54,33 @@ export default function FilterSearch({ setProperties, fetchProperties, setFilter
     setCustomAmenity('');
   };
 
-  const handleShowProperties = async () => {
+  const handleShowProperties = () => {
     const payload = {
-      // keyword: '',
-      state: locationFilter,
-      area: locationFilter || '',
-      minPrice: priceRange[0],
-      maxPrice: priceRange[1],
-      bedrooms,
-      propertyType,
-      toilets,
-      amenities: selectedAmenities,
+        minPrice: priceRange[0],
+        maxPrice: priceRange[1],
+        propertyType,
+        bedrooms: bedrooms.replace('+',''),
+        bathrooms: bathrooms.replace('+',''),
+        toilets,
+        rentDuration,
+        amenities: selectedAmenities.filter(a => a!== 'verified'),
+        state: locationFilter.split(',')[1]?.trim() || '',
+        area: locationFilter.split(',')[0]?.trim() || '',
+        sortBy: sortBy === 'Price: Low to High'? 'rentAmount' : 'createdAt',
+        sortOrder: sortBy === 'Price: Low to High'? 'asc' : 'desc',
     };
+    if(setFilterPayload) setFilterPayload(payload);
+    if(fetchProperties) fetchProperties(1, payload); // FIX: use real props
+    onClose();
+  };
 
-    setFilterPayload(payload);
-
-    try {
-      const response = await advancedPropertySearch(payload);
-      const result = response?.data?.data || [];
-      setProperties(result);
-    } catch (error) {
-      console.error('Filter request failed:', error);
-      alert('Unable to load filtered properties. Please try again later.');
-    } finally {
-      onClose();
-    }
+  const handleReset = () => {
+    setPriceRange([500000, 5000000]);
+    setPropertyType(''); setBedrooms(''); setBathrooms(''); setToilets('');
+    setSelectedAmenities([]); setLocationFilter('');
+    if(setFilterPayload) setFilterPayload({});
+    if(fetchProperties) fetchProperties(1, {}); // FIX
+    onClose();
   };
 
 const amenities = [
