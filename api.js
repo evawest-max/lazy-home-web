@@ -1,58 +1,152 @@
-// api.js
-
 import axios from "axios";
 
-// const API = axios.create({
-//   baseURL: import.meta.env.VITE_BACKEND_URL,
-// });
 const API = axios.create({
   baseURL: import.meta.env.VITE_BACKEND_URL,
   withCredentials: true,
 });
 
-const APISub = import.meta.env.VITE_BACKEND_URL;
+let isRefreshing = false;
+let failedQueue = [];
 
-// ================== INTERCEPTORS ==================
+const processQueue = (error, token = null) => {
+  failedQueue.forEach(prom => {
+    if (error) prom.reject(error);
+    else prom.resolve(token);
+  });
+  failedQueue = [];
+};
 
+// Request
 API.interceptors.request.use((req) => {
   const token = localStorage.getItem("token");
-
   if (token) {
     req.headers.Authorization = `Bearer ${token}`;
   }
-
   return req;
 });
 
+// Response
 API.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // If backend sent 200 but success: false, treat as error
+    if (response.data && response.data.success === false) {
+      return Promise.reject({
+        config: response.config,
+        response: response // make it look like axios error
+      });
+    }
+    return response;
+  },
   async (error) => {
+    console.error("Interceptor caught error:", error.response?.data || error.message);
+    const originalRequest = error.config;
+    if (!originalRequest) return Promise.reject(error);
+
     const status = error?.response?.status;
+    const url = originalRequest.url || "";
 
-    if (status === 401 && error.config.url !== "/api/v1/auth/refresh-token") {
-      try {
-        // Call refresh endpoint with cookies
-        const { data } = await API.post("/api/v1/auth/refresh-token");
-        const newToken = data?.data?.accessToken;
+    const isAuthRoute =
+      url.includes("/auth/login") ||
+      url.includes("/auth/register") ||
+      url.includes("/auth/refresh-token");
 
-        if (newToken) {
-          localStorage.setItem("token", newToken);
-          error.config.headers["Authorization"] = `Bearer ${newToken}`;
-          return API(error.config); // retry original request
-        }
-      } catch (refreshError) {
-        // Refresh failed → logout
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-        if (window.location.pathname !== "/login") {
-          window.location.href = "/login";
-        }
-      }
+    if (status !== 401 || originalRequest._retry || isAuthRoute) {
+      return Promise.reject(error);
     }
 
-    return Promise.reject(error);
+    // ... your refresh logic
+    if (isRefreshing) {
+      return new Promise((resolve, reject) => {
+        failedQueue.push({ resolve, reject });
+      }).then((token) => {
+        originalRequest.headers.Authorization = `Bearer ${token}`;
+        return API(originalRequest);
+      });
+    }
+
+    originalRequest._retry = true;
+    isRefreshing = true;
+
+    try {
+      const { data } = await axios.post(
+        `${import.meta.env.VITE_BACKEND_URL}/api/v1/auth/refresh-token`,
+        {},
+        { withCredentials: true }
+      );
+      const newToken = data?.data?.accessToken;
+      if (!newToken) throw new Error("No accessToken from refresh");
+      localStorage.setItem("token", newToken);
+      API.defaults.headers.common.Authorization = `Bearer ${newToken}`;
+      originalRequest.headers.Authorization = `Bearer ${newToken}`;
+      processQueue(null, newToken);
+      return API(originalRequest);
+    } catch (refreshError) {
+      processQueue(refreshError, null);
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      if (window.location.pathname !== "/login") window.location.href = "/login";
+      return Promise.reject(refreshError);
+    } finally {
+      isRefreshing = false;
+    }
   }
 );
+
+// api.js
+
+// import axios from "axios";
+
+// // const API = axios.create({
+// //   baseURL: import.meta.env.VITE_BACKEND_URL,
+// // });
+// const API = axios.create({
+//   baseURL: import.meta.env.VITE_BACKEND_URL,
+//   withCredentials: true,
+// });
+
+// const APISub = import.meta.env.VITE_BACKEND_URL;
+
+// // ================== INTERCEPTORS ==================
+
+// API.interceptors.request.use((req) => {
+//   const token = localStorage.getItem("token");
+
+//   if (token) {
+//     req.headers.Authorization = `Bearer ${token}`;
+//   }
+
+//   return req;
+// });
+
+// API.interceptors.response.use(
+//   (response) => response,
+//   async (error) => {
+//     const status = error?.response?.status;
+
+//     if (status === 401 && error.config.url !== "/api/v1/auth/refresh-token") {
+//       try {
+//         // Call refresh endpoint with cookies
+//         const { data } = await API.post("/api/v1/auth/refresh-token");
+//         const newToken = data?.data?.accessToken;
+
+//         if (newToken) {
+//           localStorage.setItem("token", newToken);
+//           error.config.headers["Authorization"] = `Bearer ${newToken}`;
+//           return API(error.config); // retry original request
+//         }
+//       } catch (refreshError) {
+//         // Refresh failed → logout
+//         localStorage.removeItem("token");
+//         localStorage.removeItem("user");
+//         if (window.location.pathname !== "/login") {
+//           window.location.href = "/login";
+//         }
+//       }
+//     }
+
+//     return Promise.reject(error);
+//   }
+// );
 
 
 
@@ -577,7 +671,7 @@ export const getOtpPendingEscrows =
     );
 
 export const adminFinalizeOtpTransfer = (
-  escrowId, transferId, transferCode, paystackOTP, authenticatorCode
+  escrowId, transferId, paystackOTP, authenticatorCode 
 ) =>
   API.post(
     "/api/v1/admin/finance/finalize-transfer",
@@ -597,7 +691,7 @@ export const disableTransferOTP = (
     { authenticatorCode }
   );
 
-  export const finalizeDisableTransferOTP = (
+export const finalizeDisableTransferOTP = (
   authenticatorCode, paystackOTP
 ) =>
   API.post(
@@ -605,7 +699,7 @@ export const disableTransferOTP = (
     { authenticatorCode, paystackOTP }
   );
 
-  export const EnableTransferOTP = (
+export const EnableTransferOTP = (
   authenticatorCode
 ) =>
   API.post(
@@ -621,31 +715,35 @@ export const adminRetryTransfer = (
     { escrowId, transferId, authenticatorCode }
   );
 
-  export const getOtpRequiredWithdrawals = (params) =>
+export const getOtpRequiredWithdrawals = (params) =>
   API.get("/api/v1/admin/finance/withdrawals/otp-required", { params });
 
 export const resendWithdrawalOTP = (id, authenticatorCode, reason) =>
-  API.post(`/api/v1/admin/finance/withdrawals/${id}/resend-otp`, { 
+  API.post(`/api/v1/admin/finance/withdrawals/${id}/resend-otp`, {
     authenticatorCode, reason: "transfer"
   });
 
-export const finalizeWithdrawalOTP = (id, otp, authenticatorCode ) =>
-  API.post(`/api/v1/admin/finance/withdrawals/${id}/finalize-otp`, { 
-    otp, authenticatorCode 
+export const finalizeWithdrawalOTP = (id, otp, authenticatorCode) =>
+  API.post(`/api/v1/admin/finance/withdrawals/${id}/finalize-otp`, {
+    otp, authenticatorCode
+  });
+
+export const retryWithdrawalApproval = (withdrawalId, authenticatorCode) =>
+  API.post(`/api/v1/admin/finance/withdrawals/retry`, {
+    withdrawalId, authenticatorCode
   });
 
 export const approveManualWithdrawal = (id, { authenticatorCode, note }) =>
-  API.post(`/api/v1/admin/finance/withdrawals/${id}/approve-manual`, { 
-    authenticatorCode, note 
+  API.post(`/api/v1/admin/finance/withdrawals/${id}/approve-manual`, {
+    authenticatorCode, note
   });
 
 
-export const adminResendPaystackTransferOTP = (escrowId, transferId, authenticatorCode, reason) => {
+export const adminResendPaystackTransferOTP = (escrowId, transferId, authenticatorCode, reason) =>
   API.post(
     "/api/v1/admin/finance/resend-transfer-otp",
     { escrowId, transferId, authenticatorCode, reason }
   );
-};
 
 
 //Admin Other modoration API

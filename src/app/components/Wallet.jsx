@@ -51,15 +51,22 @@ export default function Wallet() {
     const toast = useToast();
     const [banks, setBanks] = useState([]);
 
-    useEffect(async() => {
-        const res = await getBankcodes();
-                setBanks(res.data.data);
-    }, []);
-
-    const getBankName = (code) => {
-        const bank = banks.find(b => b.code === code);
-        return bank ? bank.name : code;
+useEffect(() => {
+    const fetchBanks = async () => {
+        try {
+            const res = await getBankcodes();
+            setBanks(res.data.data);
+        } catch (err) {
+            console.error(err);
+        }
     };
+    fetchBanks();
+}, []);
+
+const getBankName = (code) => {
+    const bank = banks.find(b => b.code === code);
+    return bank ? bank.name : code;
+};
 
 
     useEffect(() => {

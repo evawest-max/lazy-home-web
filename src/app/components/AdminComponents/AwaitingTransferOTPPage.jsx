@@ -93,11 +93,14 @@ export default function AwaitingTransferOTPPage() {
         try {
             setSubmitting(true);
             setModalError('');
+            const escrowId = selectedTransfer?.escrowId;
+            const transferId = selectedTransfer?.transferId;
+            console.log("finalizing transfer", escrowId, transferId, paystackOTP, authenticatorCode)
             const res = await adminFinalizeOtpTransfer(
-              selectedTransfer.escrowId, 
-              selectedTransfer.transferId, 
-              paystackOTP, 
-              authenticatorCode
+              escrowId,
+              transferId,
+              paystackOTP,
+              authenticatorCode,
             );
 
             toast({
@@ -112,7 +115,7 @@ export default function AwaitingTransferOTPPage() {
             onClose();
             await loadPendingOtpEscrows();
         } catch (err) {
-            const msg = err?.response?.data?.message || 'Unable to complete transfer.';
+            const msg = err?.response?.data?.message;
             setModalError(msg);
             toast({
                 title: "Finalize failed",
@@ -194,12 +197,12 @@ export default function AwaitingTransferOTPPage() {
               selectedTransfer.escrowId, 
               selectedTransfer.transferId, 
               authenticatorCode, 
-              "OTP expired"
+              "transfer"
             );
-            console.log(res?.data)
+            console.log(res?.data?.data)
             toast({
                 title: "OTP resent",
-                description: res?.data?.message || "New OTP sent to your Paystack registered email. Expires in 15 mins.",
+                description: res?.data?.data.message || "New OTP sent to your Paystack registered email. Expires in 15 mins.",
                 status: "success",
                 duration: 6000,
                 isClosable: true,
@@ -209,17 +212,11 @@ export default function AwaitingTransferOTPPage() {
             // switch to finalize so admin can enter new OTP
             setSelectedAction('finalize');
             setPaystackOTP('');
-        } catch (e) {
-            const msg = e?.response?.data?.message || 'Failed to resend OTP';
+        } catch (err) {
+            console.log("error:", err)
+            const msg = err?.response?.data?.message || 'Failed to resend OTP';
             setModalError(msg);
-            toast({
-                title: "Resend failed",
-                description: msg,
-                status: "error",
-                duration: 6000,
-                isClosable: true,
-                position: "top-right"
-            });
+            toast({ title: 'Resend failed', description: typeof msg === 'string'? msg : err.message, status: 'error' });
         } finally {
             setSubmitting(false);
         }
@@ -231,7 +228,7 @@ export default function AwaitingTransferOTPPage() {
         <Box p={6} bg="brand.background" minH="100vh">
             <VStack spacing={5} align="stretch">
                 <Flex justify="space-between" align="center" gap={4} wrap="wrap">
-                    <Heading size="lg" color="teal.600">Awaiting Transfer OTP</Heading>
+                    <Heading size="lg" color="teal.600">Awaiting Escrow Transfer OTP</Heading>
                     <Button size="sm" variant="outline" onClick={() => navigate('/financial-dashboard')}>Back to dashboard</Button>
                 </Flex>
 
@@ -253,7 +250,7 @@ export default function AwaitingTransferOTPPage() {
                                                 <Td><Text fontWeight="bold">{row.escrowTitle}</Text><Text fontSize="xs">{row.escrowId}</Text></Td>
                                                 <Td><Badge colorScheme={row.status === 'failed'? 'red' : row.status === 'otp_required'? 'orange' : 'yellow'}>{row.status}</Badge></Td>
                                                 <Td>{row.reference}</Td>
-                                                <Td>{formatCurrency((Number(row.amount?? 0) || 0) / 100)}</Td>
+                                                <Td>{formatCurrency(Number(row.amount?? 0) || 0)}</Td>
                                                 <Td><Text>{row.recipientAccountName}</Text><Text fontSize="xs">{row.recipientAccountNumber}</Text></Td>
                                                 <Td>{row.initiatedAt!== '—'? new Date(row.initiatedAt).toLocaleString() : '—'}</Td>
                                                 <Td>
@@ -295,11 +292,6 @@ export default function AwaitingTransferOTPPage() {
 
                             {modalError && <Text color="red.500" fontSize="sm">{modalError}</Text>}
 
-                            <FormControl isRequired>
-                                <FormLabel>Authenticator code</FormLabel>
-                                <Input value={authenticatorCode} onChange={(e) => setAuthenticatorCode(e.target.value)} placeholder="Enter authenticator code" />
-                            </FormControl>
-
                             {selectedAction === 'finalize' && (
                                 <>
                                     <FormControl isRequired>
@@ -311,6 +303,11 @@ export default function AwaitingTransferOTPPage() {
                                     </Button>
                                 </>
                             )}
+
+                            <FormControl isRequired>
+                                <FormLabel>Authenticator code</FormLabel>
+                                <Input value={authenticatorCode} onChange={(e) => setAuthenticatorCode(e.target.value)} placeholder="Enter authenticator code" />
+                            </FormControl>
 
                             {selectedAction === 'resendOTP' && (
                                 <Text fontSize="sm" color="gray.500">A new OTP will be sent to your Paystack dashboard email. It expires in 15 mins.</Text>
