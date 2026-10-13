@@ -25,11 +25,14 @@ import Navbar from './Navbar';
 import { testimonials } from './mockData';
 import FilterSearch from './FilterSearch';
 import { useEffect, useState } from 'react';
-import { getAllProperties, getFeaturedProperties, getUnreadCount } from '../../../api';
+import { getAllProperties, getAppReviews, getFeaturedProperties, getUnreadCount } from '../../../api';
 import { Link } from 'react-router-dom';
 
 export default function HomeScreen({ user }) {
   const [properties, setProperties] = useState([]);
+  const [appReviews, setAppReviews] = useState([]);
+  const [reviewSummary, setReviewSummary] = useState({ averageRating: 0, totalReviews: 0 });
+  const [showAllReviews, setShowAllReviews] = useState(false);
   const [loading, setLoading] = useState(true);
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState("0")
 
@@ -82,12 +85,38 @@ export default function HomeScreen({ user }) {
       }
     };
 
+    const fetchAppReviewsData = async () => {
+      try {
+        const response = await getAppReviews();
+        const payload = response?.data?.data || response?.data || {};
+        const reviews = Array.isArray(payload.reviews) ? payload.reviews : [];
+        const summary = payload.summary || {};
+
+        if (isMounted) {
+          setAppReviews(reviews);
+          setReviewSummary({
+            averageRating: Number(summary.averageRating ?? 0),
+            totalReviews: Number(summary.totalReviews ?? payload.pagination?.total ?? reviews.length ?? 0),
+          });
+        }
+      } catch (error) {
+        console.error('Failed to fetch app reviews:', error);
+        if (isMounted) {
+          setAppReviews([]);
+          setReviewSummary({ averageRating: 0, totalReviews: 0 });
+        }
+      }
+    };
+
     fetchProperties();
+    fetchAppReviewsData();
     user && fetchUnreadCount()
     return () => {
       isMounted = false;
     };
   }, []);
+
+  const displayedTestimonials = showAllReviews ? appReviews : appReviews.slice(0, 3);
   return (
     <Box minH="100vh" bg="brand.background" pb="80px">
       <VStack spacing={0} align="stretch">
@@ -207,18 +236,53 @@ export default function HomeScreen({ user }) {
         </VStack>
 
         <VStack spacing={4} px={6} align="stretch">
-          <Text fontSize="lg" fontWeight="600" color="brand.gray.800">
-            What Renters Say About Us
-          </Text>
+          <HStack justify="space-between" align="center">
+            <Text fontSize="lg" fontWeight="600" color="brand.gray.800">
+              What Renters Say About Us
+            </Text>
+            <Text fontSize="sm" color="brand.gray.600">
+              {reviewSummary.averageRating.toFixed(1)} ★ · {reviewSummary.totalReviews} reviews
+            </Text>
+          </HStack>
 
           <VStack spacing={3} align="stretch">
-            {testimonials.map((testimonial, index) => (
-              <TestimonialCard key={index} testimonial={testimonial} />
-            ))}
+            {displayedTestimonials.length > 0 ? displayedTestimonials.map((review, index) => (
+              <TestimonialCard
+                key={review?._id || review?.id || index}
+                testimonial={{
+                  name: review?.user?.fullName || review?.user?.name || `Renter ${index + 1}`,
+                  location: review?.user?.location || 'Verified renter',
+                  text: review?.review || review?.comment || 'Great experience.',
+                  rating: Number(review?.rating || 0),
+                }}
+              />
+            )) : (
+              <Text fontSize="sm" color="brand.gray.600">
+                No app reviews yet.
+              </Text>
+            )}
           </VStack>
+
+          {appReviews.length > 3 && (
+            <Button
+              size="sm"
+              variant="outline"
+              color="brand.primary"
+              borderColor="brand.primary"
+              onClick={() => setShowAllReviews((prev) => !prev)}
+            >
+              {showAllReviews ? 'Show less' : 'View more'}
+            </Button>
+          )}
+
+          {appReviews.length > 0 && (
+            <Button as={Link} to="/app-reviews" variant="outline" color="brand.primary" borderColor="brand.primary">
+              View all
+            </Button>
+          )}
         </VStack>
 
-        <VStack spacing={4} px={6} mb={6} align="stretch">
+        <VStack spacing={4} px={6} mt={6} mb={6} align="stretch">
           <HStack justify="space-between" align="center">
             <Text fontSize="lg" fontWeight="600" color="brand.gray.800">
               Featured Properties
@@ -260,7 +324,7 @@ export default function HomeScreen({ user }) {
         <Box bg="white" mx={6} p={6} borderRadius="xl" boxShadow="sm">
           <VStack spacing={4}>
             <Text fontSize="md" fontWeight="bold" color="brand.primary" textAlign="center">
-              Why Choose DafeTenants?
+              Why Choose SafeTenants?
             </Text>
 
             <VStack spacing={3} w="100%">

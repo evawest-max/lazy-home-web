@@ -16,13 +16,15 @@ import {
 } from "@chakra-ui/react";
 import { StarIcon } from "@chakra-ui/icons";
 import { useState, useEffect } from "react";
+import { createAppReview, createLandlordReview } from "../../../api";
 
-export default function DualReviewModal({ transactionSuccess, onSubmit }) {
+export default function DualReviewModal({ transactionSuccess, onSubmit, escrowId }) {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [landlordRating, setLandlordRating] = useState(0);
   const [landlordReview, setLandlordReview] = useState("");
   const [appRating, setAppRating] = useState(0);
   const [appReview, setAppReview] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const toast = useToast();
 
   // Auto-open when transaction succeeds
@@ -32,13 +34,17 @@ export default function DualReviewModal({ transactionSuccess, onSubmit }) {
     }
   }, [transactionSuccess, onOpen]);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (landlordRating === 0) {
       toast({ title: "Please rate the landlord", status: "warning" });
       return;
     }
     if (!landlordReview.trim()) {
       toast({ title: "Please write a landlord review", status: "warning" });
+      return;
+    }
+    if (!escrowId) {
+      toast({ title: "Missing escrow reference", description: "Unable to submit review without escrow ID.", status: "error" });
       return;
     }
 
@@ -49,21 +55,40 @@ export default function DualReviewModal({ transactionSuccess, onSubmit }) {
         : null,
     };
 
-    onSubmit?.(payload);
+    try {
+      setIsSubmitting(true);
 
-    toast({
-      title: "Thank you!",
-      description: "Your reviews have been submitted.",
-      status: "success",
-      duration: 4000,
-    });
+      await createLandlordReview(escrowId, landlordRating, landlordReview);
 
-    // reset
-    setLandlordRating(0);
-    setLandlordReview("");
-    setAppRating(0);
-    setAppReview("");
-    onClose();
+      if (payload.app) {
+        await createAppReview(escrowId, payload.app.rating, payload.app.review);
+      }
+
+      onSubmit?.(payload);
+
+      toast({
+        title: "Thank you!",
+        description: "Your reviews have been submitted.",
+        status: "success",
+        duration: 4000,
+      });
+
+      setLandlordRating(0);
+      setLandlordReview("");
+      setAppRating(0);
+      setAppReview("");
+      onClose();
+    } catch (error) {
+      console.error("Review submission failed", error);
+      toast({
+        title: "Review submission failed",
+        description: error?.response?.data?.message || "Please try again.",
+        status: "error",
+        duration: 5000,
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -128,7 +153,7 @@ export default function DualReviewModal({ transactionSuccess, onSubmit }) {
             </VStack>
           </ModalBody>
           <ModalFooter>
-            <Button size="sm" colorScheme="blue" onClick={handleSubmit}>
+            <Button size="sm" colorScheme="blue" onClick={handleSubmit} isLoading={isSubmitting} loadingText="Submitting">
               Submit Reviews
             </Button>
           </ModalFooter>

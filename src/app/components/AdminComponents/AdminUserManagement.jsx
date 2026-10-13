@@ -29,7 +29,18 @@ export default function AdminUserManagementDashboard({ onLogout, user }) {
                 setLoading(true); setError('');
                 const res = await getAdminModerationDashboardSummary();
                 const payload = res?.data?.data ?? res?.data ?? res ?? {};
-                setDashboard({ summary: payload?.summary ?? {}, growth: payload?.growth ?? {}, financial: payload?.financial ?? {} });
+                console.log('Dashboard summary payload:', payload);
+                setDashboard({
+                    summary: payload?.summary ?? {},
+                    growth: payload?.growth ?? {},
+                    financial: payload?.financial ?? {},
+                    reviews: payload?.reviews ?? {},
+                    properties: payload?.properties ?? {},
+                    disputes: payload?.disputes ?? {},
+                    verification: payload?.verification ?? {},
+                    escrows: payload?.escrows ?? {},
+                    tenancies: payload?.tenancies ?? {},
+                });
                 // init audits from summary for first load
                 setAudits(payload?.summary?.recentAudits ?? []);
             } catch (err) {
@@ -69,12 +80,32 @@ export default function AdminUserManagementDashboard({ onLogout, user }) {
 
     const summary = dashboard.summary ?? {};
     const users = summary.users ?? {};
-    const properties = summary.properties ?? {};
+    const propertyData = dashboard.properties ?? summary.properties ?? {};
+    const propertyListingStatus = propertyData.byListingStatus ?? {};
+    const propertyVerificationStatus = propertyData.byVerificationStatus ?? {};
+    const propertyRentStats = propertyData.rent ?? {};
+    const properties = {
+        total: Number(propertyData.total ?? propertyData.totals?.total ?? propertyData.recent?.length ?? 0),
+        available: Number(propertyListingStatus.available ?? propertyData.totals?.available ?? 0),
+        rented: Number(propertyListingStatus.rented ?? propertyData.totals?.rented ?? 0),
+        pending: Number(propertyListingStatus.under_offer ?? propertyData.totals?.pending ?? 0),
+        rejected: Number(propertyVerificationStatus.rejected ?? 0),
+        archived: Number(propertyListingStatus.archived ?? 0),
+        deleted: Number(propertyData.deleted ?? 0),
+        featured: Number(propertyData.featured ?? 0),
+        averageRent: Number(propertyRentStats.average ?? 0),
+        totalValue: Number(propertyRentStats.totalValue ?? 0),
+        totalViews: Number(propertyRentStats.totalViews ?? 0),
+    };
     const financial = summary.financial ?? {};
     const disputes = summary.disputes ?? {};
     const verification = summary.verification ?? {};
     const escrows = summary.escrows ?? {};
     const tenancy = summary.tenancies ?? {};
+    const reviewData = dashboard.reviews ?? {};
+    const appReviewData = reviewData.appReviews ?? {};
+    const landlordReviewData = reviewData.landlordReviews ?? {};
+    const reviewMetrics = summary.reviews ?? summary.reviewStats ?? {};
     const userRoleData = Array.isArray(users.byRole) ? users.byRole : [];
     const disputeTypeData = Array.isArray(disputes.byType) ? disputes.byType : [];
     const monthlyUsers = Array.isArray(dashboard.growth?.monthlyUsers) ? dashboard.growth.monthlyUsers : [];
@@ -90,11 +121,16 @@ export default function AdminUserManagementDashboard({ onLogout, user }) {
         return data.length ? data : [{ month: 'Current', properties: properties.total ?? 0 }];
     }, [monthlyProperties, properties.total]);
 
+    const appReviewTotal = Number(appReviewData.total ?? appReviewData.publishedCount ?? appReviewData.recent?.length ?? 0);
+    const landlordReviewTotal = Number(landlordReviewData.total ?? landlordReviewData.publishedCount ?? landlordReviewData.recent?.length ?? 0);
+
     const summaryCards = [
         { label: 'Total Users', value: formatNumber(users.total), helper: `${formatNumber(users.newThisMonth)} new this month`, accent: 'teal' },
         { label: 'Verified Users', value: formatNumber(users.verified), helper: `${formatNumber(users.suspended)} suspended`, accent: 'green' },
         { label: 'Total Properties', value: formatNumber(properties.total), helper: `${formatNumber(properties.pending)} pending`, accent: 'purple' },
         { label: 'Active Escrows', value: formatNumber(escrows.active), helper: formatMoney(escrows.heldAmount), accent: 'orange' },
+        { label: 'App Reviews', value: formatNumber(appReviewTotal), helper: `Avg ${Number(appReviewData.averageRating ?? 0).toFixed(1)}/5 • ${formatNumber(appReviewData.byStatus?.published ?? 0)} published`, accent: 'pink' },
+        { label: 'Landlord Reviews', value: formatNumber(landlordReviewTotal), helper: `Avg ${Number(landlordReviewData.averageRating ?? 0).toFixed(1)}/5 • ${formatNumber(landlordReviewData.byStatus?.published ?? 0)} published`, accent: 'amber' },
         { label: 'Open Disputes', value: formatNumber(disputes.open), helper: `${formatNumber(disputes.total)} total disputes`, accent: 'red' },
         { label: 'Wallet Balance', value: formatCompactMoney(financial.walletBalance/100), helper: `${formatNumber(financial.frozenWallets)} frozen wallets`, accent: 'cyan' },
     ];
@@ -105,10 +141,10 @@ export default function AdminUserManagementDashboard({ onLogout, user }) {
     return (
         <Box p={6} bg="brand.background" minH="100vh" mb={2} pb={58}>
             <VStack spacing={6} align="stretch">
-                <Box><Heading mb={2} color="teal.600">Moderation Dashboard</Heading><Text color="gray.600">Operational overview of users, properties, verification, financial health, and fraud activity.</Text></Box>
+                <Box><Heading mb={2} color="teal.600">Moderation Dashboard</Heading><Text color="gray.600">Operational overview of users, properties, verification, financial health, Reviews and fraud activity.</Text></Box>
                 <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={6}>
                     {summaryCards.map((card) => (
-                        <Card key={card.label} borderLeft="4px solid" borderLeftColor={`${card.accent}.500`} shadow="sm" cursor={card.label === 'Total Users' || card.label === 'Total Properties' || card.label === 'Verified Users' ? 'pointer' : 'default'} onClick={card.label === 'Total Users' ? () => navigate('/all-users') : card.label === 'Total Properties' ? () => navigate('/all-properties') : card.label === 'Verified Users' ? () => navigate('/admin-user-verification') : undefined} _hover={card.label === 'Total Users' || card.label === 'Total Properties' || card.label === 'Verified Users' ? { transform: 'translateY(-1px)', boxShadow: 'md' } : undefined}>
+                        <Card key={card.label} borderLeft="4px solid" borderLeftColor={`${card.accent}.500`} shadow="sm" cursor={card.label === 'Total Users' || card.label === 'Total Properties' || card.label === 'Verified Users' || card.label === 'App Reviews' || card.label === 'Landlord Reviews' ? 'pointer' : 'default'} onClick={card.label === 'Total Users' ? () => navigate('/all-users') : card.label === 'Total Properties' ? () => navigate('/all-properties') : card.label === 'Verified Users' ? () => navigate('/admin-user-verification') : card.label === 'App Reviews' ? () => navigate('/admin-app-reviews') : card.label === 'Landlord Reviews' ? () => navigate('/admin-landlord-reviews') : undefined} _hover={card.label === 'Total Users' || card.label === 'Total Properties' || card.label === 'Verified Users' || card.label === 'App Reviews' || card.label === 'Landlord Reviews' ? { transform: 'translateY(-1px)', boxShadow: 'md' } : undefined}>
                             <CardBody><Stat><StatLabel>{card.label}</StatLabel><StatNumber fontSize="2xl" mt={2}>{card.value}</StatNumber><StatHelpText>{card.helper}</StatHelpText></Stat></CardBody>
                         </Card>
                     ))}
@@ -119,9 +155,61 @@ export default function AdminUserManagementDashboard({ onLogout, user }) {
                 </SimpleGrid>
                 <SimpleGrid columns={{ base: 1, xl: 3 }} spacing={6}>
                     <Card><CardHeader><Heading size="sm">User Distribution</Heading></CardHeader><CardBody><VStack align="stretch" spacing={3}>{userRoleData.map((role) => (<Box key={role._id}><Flex justify="space-between" mb={1}><Text textTransform="capitalize">{role._id}</Text><Text fontWeight="bold">{formatNumber(role.count)}</Text></Flex><Progress value={Math.min(100, ((role.count ?? 0) / (users.total || 1)) * 100)} colorScheme="teal" /></Box>))}</VStack></CardBody></Card>
-                    <Card><CardHeader><Heading size="sm">Property Status</Heading></CardHeader><CardBody><VStack align="stretch" spacing={3}>{[{ label: 'Available', value: properties.available }, { label: 'Rented', value: properties.rented }, { label: 'Pending', value: properties.pending }, { label: 'Rejected', value: properties.rejected }].map((item) => (<Flex key={item.label} justify="space-between" align="center"><Text>{item.label}</Text><Badge colorScheme={item.label === 'Pending' ? 'orange' : item.label === 'Rejected' ? 'red' : 'green'}>{formatNumber(item.value)}</Badge></Flex>))}</VStack></CardBody></Card>
+                    <Card><CardHeader><Heading size="sm">Property Status</Heading></CardHeader><CardBody><VStack align="stretch" spacing={3}>{[{ label: 'Available', value: properties.available }, { label: 'Rented', value: properties.rented }, { label: 'Under Offer', value: properties.pending }, { label: 'Rejected', value: properties.rejected }, { label: 'Archived', value: properties.archived }].map((item) => (<Flex key={item.label} justify="space-between" align="center"><Text>{item.label}</Text><Badge colorScheme={item.label === 'Under Offer' ? 'orange' : item.label === 'Rejected' ? 'red' : item.label === 'Archived' ? 'gray' : 'green'}>{formatNumber(item.value)}</Badge></Flex>))}</VStack></CardBody></Card>
                     <Card><CardHeader><Heading size="sm">Dispute Breakdown</Heading></CardHeader><CardBody><VStack align="stretch" spacing={3}>{disputeTypeData.map((type) => (<Flex key={type._id} justify="space-between" align="center"><Text textTransform="replace">{type._id.replace(/_/g, ' ')}</Text><Badge colorScheme="red">{formatNumber(type.count)}</Badge></Flex>))}</VStack></CardBody></Card>
                 </SimpleGrid>
+
+                <Card>
+                    <CardHeader><Heading size="sm">Property Insights</Heading></CardHeader>
+                    <CardBody>
+                        <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={4}>
+                            <Box border="1px solid" borderColor="gray.200" borderRadius="md" p={4}>
+                                <Text fontSize="xs" color="gray.500">Total properties</Text>
+                                <Text fontSize="2xl" fontWeight="bold">{formatNumber(properties.total)}</Text>
+                            </Box>
+                            <Box border="1px solid" borderColor="gray.200" borderRadius="md" p={4}>
+                                <Text fontSize="xs" color="gray.500">Average rent</Text>
+                                <Text fontSize="2xl" fontWeight="bold">{formatMoney(properties.averageRent)}</Text>
+                            </Box>
+                            <Box border="1px solid" borderColor="gray.200" borderRadius="md" p={4}>
+                                <Text fontSize="xs" color="gray.500">Total value</Text>
+                                <Text fontSize="2xl" fontWeight="bold">{formatMoney(properties.totalValue)}</Text>
+                            </Box>
+                            <Box border="1px solid" borderColor="gray.200" borderRadius="md" p={4}>
+                                <Text fontSize="xs" color="gray.500">Total views</Text>
+                                <Text fontSize="2xl" fontWeight="bold">{formatNumber(properties.totalViews)}</Text>
+                            </Box>
+                        </SimpleGrid>
+                    </CardBody>
+                </Card>
+                <Card>
+                    <CardHeader><Heading size="sm">Review Insights</Heading></CardHeader>
+                    <CardBody>
+                        <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+                            <Box border="1px solid" borderColor="gray.200" borderRadius="md" p={4}>
+                                <Text fontSize="xs" color="gray.500" mb={2}>App Reviews</Text>
+                                <Text fontSize="2xl" fontWeight="bold">{formatNumber(appReviewTotal)}</Text>
+                                <Text fontSize="sm" color="gray.600" mt={2}>Average rating: {Number(appReviewData.averageRating ?? 0).toFixed(1)}/5</Text>
+                                <HStack mt={3} spacing={3} wrap="wrap">
+                                    <Badge colorScheme="green">Published: {formatNumber(appReviewData.byStatus?.published ?? 0)}</Badge>
+                                    <Badge colorScheme="gray">Hidden: {formatNumber(appReviewData.byStatus?.hidden ?? 0)}</Badge>
+                                    <Badge colorScheme="red">Flagged: {formatNumber(appReviewData.byStatus?.flagged ?? 0)}</Badge>
+                                </HStack>
+                            </Box>
+                            <Box border="1px solid" borderColor="gray.200" borderRadius="md" p={4}>
+                                <Text fontSize="xs" color="gray.500" mb={2}>Landlord Reviews</Text>
+                                <Text fontSize="2xl" fontWeight="bold">{formatNumber(landlordReviewTotal)}</Text>
+                                <Text fontSize="sm" color="gray.600" mt={2}>Average rating: {Number(landlordReviewData.averageRating ?? 0).toFixed(1)}/5</Text>
+                                <HStack mt={3} spacing={3} wrap="wrap">
+                                    <Badge colorScheme="green">Published: {formatNumber(landlordReviewData.byStatus?.published ?? 0)}</Badge>
+                                    <Badge colorScheme="gray">Hidden: {formatNumber(landlordReviewData.byStatus?.hidden ?? 0)}</Badge>
+                                    <Badge colorScheme="red">Flagged: {formatNumber(landlordReviewData.byStatus?.flagged ?? 0)}</Badge>
+                                </HStack>
+                            </Box>
+                        </SimpleGrid>
+                    </CardBody>
+                </Card>
+
                 <SimpleGrid columns={{ base: 1, xl: 2 }} spacing={6}>
                     <Card><CardHeader><Heading size="sm">Financial Overview</Heading></CardHeader><CardBody><VStack align="stretch" spacing={4}><Flex justify="space-between"><Text>Total wallet balance</Text><Text fontWeight="bold">{formatMoney(financial.walletBalance/100)}</Text></Flex><Flex justify="space-between"><Text>Pending withdrawals</Text><Text fontWeight="bold">{formatNumber(dashboard.financial?.withdrawals?.pending?.count ?? summary.financial?.pendingWithdrawals ?? 0)}</Text></Flex><Flex justify="space-between"><Text>Held in escrows</Text><Text fontWeight="bold">{formatMoney(escrows.heldAmount)}</Text></Flex><Flex justify="space-between"><Text>Active tenancies</Text><Text fontWeight="bold">{formatNumber(tenancy.active)}</Text></Flex></VStack></CardBody></Card>
                     <Card><CardHeader><Heading size="sm">Verification & Moderation</Heading></CardHeader><CardBody><VStack align="stretch" spacing={4}><Flex justify="space-between"><Text>Pending verifications</Text><Text fontWeight="bold">{formatNumber(verification.pending)}</Text></Flex><Flex justify="space-between"><Text>Pending withdrawals</Text><Text fontWeight="bold">{formatNumber(financial.pendingWithdrawals ?? summary.financial?.pendingWithdrawals ?? 0)}</Text></Flex><Flex justify="space-between"><Text>Suspended users</Text><Text fontWeight="bold">{formatNumber(users.suspended)}</Text></Flex><Flex justify="space-between"><Text>Frozen wallets</Text><Text fontWeight="bold">{formatNumber(financial.frozenWallets)}</Text></Flex><Flex justify="space-between"><Text>Available properties</Text><Text fontWeight="bold">{formatNumber(properties.available)}</Text></Flex></VStack></CardBody></Card>

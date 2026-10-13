@@ -671,7 +671,7 @@ export const getOtpPendingEscrows =
     );
 
 export const adminFinalizeOtpTransfer = (
-  escrowId, transferId, paystackOTP, authenticatorCode 
+  escrowId, transferId, paystackOTP, authenticatorCode
 ) =>
   API.post(
     "/api/v1/admin/finance/finalize-transfer",
@@ -908,6 +908,67 @@ export const findProperty =
         params: typeof query === 'string' && query.trim() ? { q: query.trim() } : {},
       }
     );
+
+
+// ======================================================
+// ====================== RATINGS AND REVIEWS ========================
+// ======================================================
+export const getLandlordReviews =
+  (landlordId, page = 1, limit = 10) =>
+    API.get(
+      `/api/v1/reviews/landlord/${landlordId}`,
+      { params: { page, limit } }
+    );
+
+export const getAppReviews =
+  (page = 1, limit = 10) =>
+    API.get(
+      `/api/v1/reviews/app`,
+      { params: { page, limit } }
+    );
+
+    export const adminGetAppReviews =
+  (page = 1, limit = 10) =>
+    API.get(
+      `/api/v1/admin/app/reviews`,
+      { params: { page, limit } }
+    );
+
+    export const adminGetLandlordReviews =
+  (page = 1, limit = 10) =>
+    API.get(
+      `/api/v1/admin/landlord/reviews`,
+      { params: { page, limit } }
+    );
+
+export const moderateAppReview =
+  (status, reviewId) =>
+    API.patch(
+      `/api/v1/admin/app/${reviewId}`,
+      { status }
+    );
+
+export const moderateLandlordReview = 
+  (status, reviewId) =>
+    API.patch(
+      `/api/v1/admin/landlord/${reviewId}`,
+      { status }
+    );
+
+export const createLandlordReview =
+  (escrowId, rating, review) =>
+    API.post(
+      `/api/v1/reviews/landlord`,
+      { escrowId, rating, review }
+    );
+
+export const createAppReview =
+  (escrowId, rating, review) =>
+    API.post(
+      `/api/v1/reviews/app`,
+      { escrowId, rating, review }
+    );
+
 
 // ======================================================
 // ====================== HEALTH ========================

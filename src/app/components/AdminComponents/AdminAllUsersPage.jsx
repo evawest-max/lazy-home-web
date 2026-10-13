@@ -359,10 +359,10 @@ export default function AdminAllUsersPage() {
           </Box>
 
           <HStack>
-            <Button variant="outline" onClick={() => navigate('/user-management')}>
+            <Button variant="outline" size="sm" onClick={() => navigate('/user-management')}>
               Back
             </Button>
-            <Button colorScheme="teal" onClick={fetchUsers} isLoading={loading}>
+            <Button colorScheme="teal" size="sm" onClick={fetchUsers} isLoading={loading}>
               Refresh
             </Button>
           </HStack>
@@ -378,7 +378,7 @@ export default function AdminAllUsersPage() {
 
         <Card shadow="md">
           <CardHeader>
-            <Heading size="md">User Lookup</Heading>
+            <Heading size="sm">User Lookup</Heading>
           </CardHeader>
           <CardBody>
             <Flex gap={3} wrap="wrap" align="center">
@@ -391,10 +391,10 @@ export default function AdminAllUsersPage() {
                 }}
                 maxW="420px"
               />
-              <Button colorScheme="teal" onClick={() => loadUserDetailsByIdentifier()} isLoading={userLookupLoading}>
+              <Button colorScheme="teal" size="sm" onClick={() => loadUserDetailsByIdentifier()} isLoading={userLookupLoading}>
                 View User
               </Button>
-              <Button variant="outline" onClick={() => setUserLookup('')}>
+              <Button variant="outline" size="sm" onClick={() => setUserLookup('')}>
                 Clear
               </Button>
             </Flex>
@@ -483,7 +483,8 @@ export default function AdminAllUsersPage() {
                             </MenuButton>
                             <MenuList>
                               <MenuItem onClick={() => handleViewUser(user)}>View</MenuItem>
-                              {/* <MenuItem onClick={() => handleUserAction('Wallet', user)}>Wallet</MenuItem> */}
+                              <MenuItem onClick={() => handleUserAction('Wallet', user)}>Wallet</MenuItem>
+                              <MenuItem onClick={() => navigate(`/admin-user-reviews/${user?._id}`)}>Reviews</MenuItem>
                               <MenuItem onClick={() => handleUserAction('Restore account', user)}>Restore User Account</MenuItem>
                               {user?.isSuspended ? (
                                 <MenuItem onClick={() => handleUnsuspendUser(user)}>Unsuspend</MenuItem>
@@ -553,6 +554,7 @@ export default function AdminAllUsersPage() {
                     <MenuList>
                       <MenuItem onClick={() => handleViewUser(selectedUserDetails?.user)}>View</MenuItem>
                       <MenuItem onClick={() => handleUserAction('Wallet', selectedUserDetails?.user)}>Wallet</MenuItem>
+                      <MenuItem onClick={() => navigate(`/admin-user-reviews/${selectedUserDetails?.user?._id}`)}>Reviews</MenuItem>
                       <MenuItem onClick={() => handleUserAction('Restore account', selectedUserDetails?.user)}>Restore User Account</MenuItem>
                       {selectedUserDetails?.user?.isSuspended ? (
                         <MenuItem onClick={() => handleUnsuspendUser(selectedUserDetails?.user)}>Unsuspend</MenuItem>

@@ -40,6 +40,10 @@ import AdminViewSingleUserWallet from './components/AdminComponents/AdminViewSin
 import AdminUserVerificationPage from './components/AdminComponents/AdminUserVerificationPage';
 import AwaitingTransferOTPPage from './components/AdminComponents/AwaitingTransferOTPPage';
 import AwaitingWithdrawalOTPPage from './components/AdminComponents/AwaitingWithdrawalOTPPage';
+import LandlordReviewsPage from './components/LandlordReviewsPage';
+import AppReviewsPage from './components/AppReviewsPage';
+import AdminAppReviewsPage from './components/AdminComponents/AdminAppReviewsPage';
+import AdminLandlordReviewsPage from './components/AdminComponents/AdminLandlordReviewsPage';
 
 const LISTING_DRAFT_KEY = 'listingFormData';
 
@@ -388,6 +392,11 @@ export default function App() {
             <Route path="/home" element={<HomeScreen user={user}/>} />
             <Route path="/property-listings" element={<PropertyListing user={user}/>} />
             <Route path="/property/:id" element={<PropertyDetails />} />
+            <Route path="/app-reviews" element={<AppReviewsPage />} />
+            <Route path="/admin-app-reviews" element={user && (user.role === 'super_admin' || user.role === 'admin' || user.role === 'moderator') ? <AdminAppReviewsPage /> : <Navigate to="/login" />} />
+            <Route path="/admin-landlord-reviews" element={user && (user.role === 'super_admin' || user.role === 'admin' || user.role === 'moderator') ? <AdminLandlordReviewsPage /> : <Navigate to="/login" />} />
+            <Route path="/admin-user-reviews/:userId" element={user && (user.role === 'super_admin' || user.role === 'admin' || user.role === 'moderator') ? <AdminLandlordReviewsPage /> : <Navigate to="/login" />} />
+            <Route path="/landlord-reviews/:landlordId" element={user ? <LandlordReviewsPage /> : <Navigate to="/login" />} />
             <Route path="/inspection-feedback/:id" element={user ? <InspectionFeedback /> : <Navigate to="/login" />} />
             <Route path="/secure-payment/:id" element={<PaymentBreakdown />} />
             <Route path="/book-inspection/:id" element={user ? <BookInspection /> : <Navigate to="/login" />} />

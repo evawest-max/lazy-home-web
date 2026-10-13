@@ -350,8 +350,13 @@ export default function PropertyDetails() {
                 {agentPhone}
               </Text> */}
             </VStack>
-            <Button size="sm" variant="secondary">
-              Contact
+            <Button
+              as={Link}
+              to={`/landlord-reviews/${property?.listedBy?._id || property?.listedBy?.id || property?.owner?._id || property?.owner?.id || property?.agent?._id || property?.agent?.id || property?._id}`}
+              size="sm"
+              variant="secondary"
+            >
+              Reviews
             </Button>
           </HStack>
         </VStack>

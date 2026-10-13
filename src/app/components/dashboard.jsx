@@ -65,7 +65,7 @@ import FilterSearch from './FilterSearch';
 import { mockInspections, mockProperties } from './mockData';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Navbar from './Navbar';
-import { confirmInspection, deleteProperty, getAllEscrowPayments, getAnalyticsDashboardAndProperties, getUnreadCount, getUserProperties, releaseFunds, releaseKeys, refundEscrow, downloadTenancyDoc } from '../../../api';
+import { confirmInspection, deleteProperty, getAllEscrowPayments, getAnalyticsDashboardAndProperties, getLandlordReviews, getUnreadCount, getUserProperties, releaseFunds, releaseKeys, refundEscrow, downloadTenancyDoc } from '../../../api';
 import { reference } from '@popperjs/core';
 import DownloadAgreementButton from './downloadAgreementButton';
 import DualRatingPopover from './leaveReviewsButton';
@@ -87,6 +87,8 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
     const [transactionsLoading, setTransactionsLoading] = useState(false);
     const [allData, setAllData] = useState({})
     const [loading, setLoading] = useState(true);
+    const [recentReviews, setRecentReviews] = useState([]);
+    const [reviewSummary, setReviewSummary] = useState({ averageRating: 0, totalReviews: 0 });
     const { isOpen: isReleaseOpen, onOpen: onOpenRelease, onClose: onCloseRelease } = useDisclosure();
     const [releaseCode, setReleaseCode] = useState('');
     const [selectedEscrowAction, setSelectedEscrowAction] = useState(null);
@@ -248,13 +250,43 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
             }
         };
 
+        const fetchLandlordReviews = async () => {
+            const landlordId = user?._id || user?.id || user?.userId;
+            if (!landlordId) {
+                setRecentReviews([]);
+                setReviewSummary({ averageRating: 0, totalReviews: 0 });
+                return;
+            }
+
+            try {
+                const response = await getLandlordReviews(landlordId);
+                const payload = response?.data?.data || response?.data || {};
+                console.log('Landlord reviews response:', payload);
+                const reviews = Array.isArray(payload.reviews) ? payload.reviews : [];
+                const summary = payload.summary || {};
+                const averageRating = Number(summary.averageRating ?? 0);
+                const totalReviews = Number(summary.totalReviews ?? payload.pagination?.total ?? reviews.length ?? 0);
+
+                setRecentReviews(reviews.slice(0, 3));
+                console.log('Recent reviews:', reviews.slice(0, 3));
+                setReviewSummary({
+                    averageRating,
+                    totalReviews,
+                });
+            } catch (error) {
+                console.error('Failed to fetch landlord reviews:', error);
+                setRecentReviews([]);
+                setReviewSummary({ averageRating: 0, totalReviews: 0 });
+            }
+        };
+
         const loadDashboard = async () => {
-            await Promise.all([fetchProperties(), fetchUnreadCount()]);
+            await Promise.all([fetchProperties(), fetchUnreadCount(), fetchLandlordReviews()]);
             setLoading(false);
         };
 
         loadDashboard();
-    }, []);
+    }, [user?._id, user?.id, user?.userId]);
 
     // Fetch escrow transactions for the current transactionsPage
     useEffect(() => {
@@ -577,315 +609,315 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
             <VStack spacing={0} align="stretch">
                 <Box bg="brand.primary" px={{ base: 4, sm: 6, md: 8, lg: 12 }} pt={{ base: 10, md: 12 }} pb={4}>
                     <Box maxW="1400px" mx="auto" w="100%">
-                    <HStack justify="space-between" mb={4} flexWrap="wrap" rowGap={3}>
-                        <VStack align="start" spacing={0}>
-                            <Text fontSize={{ base: 'xl', md: '2xl' }} fontWeight="bold" color="white">
-                                SafeTenants
-                            </Text>
-                            <Text fontSize="xs" color="whiteAlpha.800">
-                                Welcome back, {user.fullName.split(' ')[0]}!
-                            </Text>
-                        </VStack>
+                        <HStack justify="space-between" mb={4} flexWrap="wrap" rowGap={3}>
+                            <VStack align="start" spacing={0}>
+                                <Text fontSize={{ base: 'xl', md: '2xl' }} fontWeight="bold" color="white">
+                                    SafeTenants
+                                </Text>
+                                <Text fontSize="xs" color="whiteAlpha.800">
+                                    Welcome back, {user.fullName.split(' ')[0]}!
+                                </Text>
+                            </VStack>
 
-                        <HStack spacing={3} align="center">
-                            {/* {Number(unreadNotificationsCount) <= 0 && ( */}
-                            <Link to="/notifications" >
-                                <Box position="relative" display="flex" alignItems="center" justifyContent="center">
-                                    <HStack spacing={2} align="center">
-                                        {user.role !== 'user' &&
-                                            (<Link to="/user-management" style={{ textDecoration: 'none', }}>
-                                                <Box
-                                                    bg="whiteAlpha.200"
-                                                    border="1px solid"
-                                                    borderColor="whiteAlpha.300"
-                                                    borderRadius="full"
-                                                    p={2.5}
-                                                    display="flex"
-                                                    alignItems="center"
-                                                    justifyContent="center"
-                                                    cursor="pointer"
-                                                >
-                                                    <Icon as={Shield} color="white" boxSize={4} />
-                                                </Box>
-                                            </Link>)}
+                            <HStack spacing={3} align="center">
+                                {/* {Number(unreadNotificationsCount) <= 0 && ( */}
+                                <Link to="/notifications" >
+                                    <Box position="relative" display="flex" alignItems="center" justifyContent="center">
+                                        <HStack spacing={2} align="center">
+                                            {user.role !== 'user' &&
+                                                (<Link to="/user-management" style={{ textDecoration: 'none', }}>
+                                                    <Box
+                                                        bg="whiteAlpha.200"
+                                                        border="1px solid"
+                                                        borderColor="whiteAlpha.300"
+                                                        borderRadius="full"
+                                                        p={2.5}
+                                                        display="flex"
+                                                        alignItems="center"
+                                                        justifyContent="center"
+                                                        cursor="pointer"
+                                                    >
+                                                        <Icon as={Shield} color="white" boxSize={4} />
+                                                    </Box>
+                                                </Link>)}
 
-                                        <Box
-                                            bg="whiteAlpha.200"
-                                            border="1px solid"
-                                            borderColor="whiteAlpha.300"
+                                            <Box
+                                                bg="whiteAlpha.200"
+                                                border="1px solid"
+                                                borderColor="whiteAlpha.300"
+                                                borderRadius="full"
+                                                p={2.5}
+                                                display="flex"
+                                                alignItems="center"
+                                                justifyContent="center"
+                                                cursor="pointer"
+                                            >
+                                                <Icon as={Bell} color="white" boxSize={4} />
+                                            </Box>
+                                        </HStack>
+                                        <Badge
+                                            position="absolute"
+                                            top="-4px"
+                                            right="-2px"
                                             borderRadius="full"
-                                            p={2.5}
+                                            colorScheme="red"
+                                            fontSize="10px"
+                                            px={1.5}
+                                            minW="18px"
+                                            h="18px"
                                             display="flex"
                                             alignItems="center"
                                             justifyContent="center"
-                                            cursor="pointer"
                                         >
-                                            <Icon as={Bell} color="white" boxSize={4} />
-                                        </Box>
-                                    </HStack>
-                                    <Badge
-                                        position="absolute"
-                                        top="-4px"
-                                        right="-2px"
-                                        borderRadius="full"
-                                        colorScheme="red"
-                                        fontSize="10px"
-                                        px={1.5}
-                                        minW="18px"
-                                        h="18px"
-                                        display="flex"
-                                        alignItems="center"
-                                        justifyContent="center"
-                                    >
-                                        {unreadNotificationsCount}
-                                    </Badge>
-                                </Box>
-                            </Link>
-                            {/* )} */}
-                            <Avatar
-                                size="md"
-                                name={user.fullName || "John Adeyemi"}
-                                src={user.image || "https://i.pravatar.cc/150?img=33"}
-                                cursor="pointer"
-                            />
-                        </HStack>
-                    </HStack>
-
-                    <Tabs
-                        index={activeTab}
-                        onChange={setActiveTab}
-                        variant="unstyled"
-                        colorScheme="whiteAlpha"
-                    >
-                        <TabList
-                            bg="whiteAlpha.200"
-                            borderRadius="lg"
-                            p={1}
-                            overflowX="auto"
-                            css={{
-                                '&::-webkit-scrollbar': { display: 'none' },
-                                scrollbarWidth: 'none',
-                            }}
-                        >
-
-                            <Tab
-                                fontSize="sm"
-                                fontWeight="600"
-                                color="whiteAlpha.800"
-                                _selected={{
-                                    bg: 'white',
-                                    color: 'brand.primary',
-                                    borderRadius: 'md',
-                                }}
-                                flex={1}
-                                minW="fit-content"
-                                py={2}
-                            >
-                                <HStack spacing={2}>
-                                    <Building2 size={16} />
-                                    <Text>My Listings</Text>
-                                </HStack>
-                            </Tab>
-                            <Tab
-                                fontSize="sm"
-                                fontWeight="600"
-                                color="whiteAlpha.800"
-                                _selected={{
-                                    bg: 'white',
-                                    color: 'brand.primary',
-                                    borderRadius: 'md',
-                                }}
-                                flex={1}
-                                minW="fit-content"
-                                py={2}
-                            >
-                                <HStack spacing={2}>
-                                    <ClipboardList size={16} />
-                                    <Text>My Deals</Text>
-                                </HStack>
-                            </Tab>
-                            <Tab
-                                fontSize="sm"
-                                fontWeight="600"
-                                color="whiteAlpha.800"
-                                _selected={{
-                                    bg: 'white',
-                                    color: 'brand.primary',
-                                    borderRadius: 'md',
-                                }}
-                                flex={1}
-                                minW="fit-content"
-                                py={2}
-                            >
-                                <HStack spacing={2}>
-                                    <Briefcase size={16} />
-                                    <Text>Stats</Text>
-                                </HStack>
-                            </Tab>
-                        </TabList>
-
-                        <TabPanels>
-
-
-                            {/* MY LISTINGS TAB */}
-                            <TabPanel p={0}>
-                                <VStack spacing={4} align="stretch" pt={4}>
-                                    <Button
-                                        as={Link}
-                                        to="/create-listing/steps"
-                                        variant="solid"
-                                        size="lg"
-                                        bg="white"
-                                        color="brand.primary"
-                                        leftIcon={<Plus size={20} />}
-                                        _hover={{ bg: 'whiteAlpha.900' }}
-                                    >
-                                        Create New Listing
-                                    </Button>
-
-                                    <Box bg="white" borderRadius="lg" p={4}>
-                                        <HStack justify="space-between" flexWrap="wrap" rowGap={3}>
-                                            <VStack align="start" spacing={0}>
-                                                <Text fontSize={{ base: 'lg', md: '2xl' }} fontWeight="bold" color="brand.primary">
-                                                    {myProperties.reduce((total, property) => total + (property.approved ? 1 : 0), 0)}
-                                                </Text>
-                                                <Text fontSize="xs" color="brand.gray.600">
-                                                    Active Listings
-                                                </Text>
-                                            </VStack>
-                                            <VStack align="start" spacing={0}>
-                                                <Text fontSize={{ base: 'lg', md: '2xl' }} fontWeight="bold" color="brand.success">
-                                                    ₦{myProperties.reduce((total, property) => total + property.rentAmount, 0).toLocaleString()}
-                                                </Text>
-                                                <Text fontSize="xs" color="brand.gray.600">
-                                                    Total Value
-                                                </Text>
-                                            </VStack>
-                                            <VStack align="start" spacing={0}>
-                                                <Text fontSize={{ base: 'lg', md: '2xl' }} fontWeight="bold" color="brand.warning">
-                                                    {myProperties.reduce((total, property) => total + (property.approved === false ? 1 : 0), 0)}
-                                                </Text>
-                                                <Text fontSize="xs" color="brand.gray.600">
-                                                    Pending approval
-                                                </Text>
-                                            </VStack>
-                                        </HStack>
+                                            {unreadNotificationsCount}
+                                        </Badge>
                                     </Box>
-                                </VStack>
-                            </TabPanel>
+                                </Link>
+                                {/* )} */}
+                                <Avatar
+                                    size="md"
+                                    name={user.fullName || "John Adeyemi"}
+                                    src={user.image || "https://i.pravatar.cc/150?img=33"}
+                                    cursor="pointer"
+                                />
+                            </HStack>
+                        </HStack>
 
-                            {/* MY DEALS TAB */}
-                            <TabPanel p={0}>
-                                <VStack spacing={4} align="stretch" pt={4}>
-                                    <Grid templateColumns={{ base: "repeat(2, 1fr)", lg: "repeat(4, 1fr)" }} gap={3}>
-                                        <Box bg="white" borderRadius="lg" p={4} textAlign="center">
-                                            <Text fontSize="2xl" fontWeight="bold" color="brand.primary">
-                                                {releasedEscrows}
-                                            </Text>
-                                            <Text fontSize="xs" color="brand.gray.600">
-                                                Released
-                                            </Text>
-                                        </Box>
-                                        <Box bg="white" borderRadius="lg" p={4} textAlign="center">
-                                            <Text fontSize="2xl" fontWeight="bold" color="brand.success">
-                                                {releasingEscrows}
-                                            </Text>
-                                            <Text fontSize="xs" color="brand.gray.600">
-                                                Releasing
-                                            </Text>
-                                        </Box>
-                                        <Box bg="white" borderRadius="lg" p={4} textAlign="center">
-                                            <Text fontSize="2xl" fontWeight="bold" color="brand.accent">
-                                                {refundedEscrows}
-                                            </Text>
-                                            <Text fontSize="xs" color="brand.gray.600">
-                                                Refunded
-                                            </Text>
-                                        </Box>
-                                        <Box bg="white" borderRadius="lg" p={4} textAlign="center">
-                                            <Text fontSize="2xl" fontWeight="bold" color="brand.warning">
-                                                {releaseFailedEscrows}
-                                            </Text>
-                                            <Text fontSize="xs" color="brand.gray.600">
-                                                Release faid
-                                            </Text>
-                                        </Box>
-                                    </Grid>
+                        <Tabs
+                            index={activeTab}
+                            onChange={setActiveTab}
+                            variant="unstyled"
+                            colorScheme="whiteAlpha"
+                        >
+                            <TabList
+                                bg="whiteAlpha.200"
+                                borderRadius="lg"
+                                p={1}
+                                overflowX="auto"
+                                css={{
+                                    '&::-webkit-scrollbar': { display: 'none' },
+                                    scrollbarWidth: 'none',
+                                }}
+                            >
 
-                                    <Text fontSize="sm" fontWeight="600" color="white">
-                                        Recent Activity
-                                    </Text>
-                                </VStack>
-                            </TabPanel>
+                                <Tab
+                                    fontSize="sm"
+                                    fontWeight="600"
+                                    color="whiteAlpha.800"
+                                    _selected={{
+                                        bg: 'white',
+                                        color: 'brand.primary',
+                                        borderRadius: 'md',
+                                    }}
+                                    flex={1}
+                                    minW="fit-content"
+                                    py={2}
+                                >
+                                    <HStack spacing={2}>
+                                        <Building2 size={16} />
+                                        <Text>My Listings</Text>
+                                    </HStack>
+                                </Tab>
+                                <Tab
+                                    fontSize="sm"
+                                    fontWeight="600"
+                                    color="whiteAlpha.800"
+                                    _selected={{
+                                        bg: 'white',
+                                        color: 'brand.primary',
+                                        borderRadius: 'md',
+                                    }}
+                                    flex={1}
+                                    minW="fit-content"
+                                    py={2}
+                                >
+                                    <HStack spacing={2}>
+                                        <ClipboardList size={16} />
+                                        <Text>My Deals</Text>
+                                    </HStack>
+                                </Tab>
+                                <Tab
+                                    fontSize="sm"
+                                    fontWeight="600"
+                                    color="whiteAlpha.800"
+                                    _selected={{
+                                        bg: 'white',
+                                        color: 'brand.primary',
+                                        borderRadius: 'md',
+                                    }}
+                                    flex={1}
+                                    minW="fit-content"
+                                    py={2}
+                                >
+                                    <HStack spacing={2}>
+                                        <Briefcase size={16} />
+                                        <Text>Stats</Text>
+                                    </HStack>
+                                </Tab>
+                            </TabList>
 
-                            {/* STATS TAB */}
-                            <TabPanel p={0}>
-                                <VStack spacing={4} align="stretch" pt={4}>
-                                    <Grid templateColumns={{ base: "repeat(2, 1fr)", lg: "repeat(4, 1fr)" }} gap={3}>
+                            <TabPanels>
+
+
+                                {/* MY LISTINGS TAB */}
+                                <TabPanel p={0}>
+                                    <VStack spacing={4} align="stretch" pt={4}>
+                                        <Button
+                                            as={Link}
+                                            to="/create-listing/steps"
+                                            variant="solid"
+                                            size="lg"
+                                            bg="white"
+                                            color="brand.primary"
+                                            leftIcon={<Plus size={20} />}
+                                            _hover={{ bg: 'whiteAlpha.900' }}
+                                        >
+                                            Create New Listing
+                                        </Button>
+
                                         <Box bg="white" borderRadius="lg" p={4}>
-                                            <Stat>
-                                                <StatLabel color="brand.gray.600" fontSize="xs">
-                                                    Total Earnings
-                                                </StatLabel>
-                                                <StatNumber color="brand.primary" fontSize="xl">
-                                                    ₦{allData.totalRevenue}
-                                                </StatNumber>
-                                                <StatHelpText color="brand.success" fontSize="xs">
-                                                    <TrendingUp size={12} style={{ display: 'inline' }} /> +15%
-                                                </StatHelpText>
-                                            </Stat>
+                                            <HStack justify="space-between" flexWrap="wrap" rowGap={3}>
+                                                <VStack align="start" spacing={0}>
+                                                    <Text fontSize={{ base: 'lg', md: '2xl' }} fontWeight="bold" color="brand.primary">
+                                                        {myProperties.reduce((total, property) => total + (property.approved ? 1 : 0), 0)}
+                                                    </Text>
+                                                    <Text fontSize="xs" color="brand.gray.600">
+                                                        Active Listings
+                                                    </Text>
+                                                </VStack>
+                                                <VStack align="start" spacing={0}>
+                                                    <Text fontSize={{ base: 'lg', md: '2xl' }} fontWeight="bold" color="brand.success">
+                                                        ₦{myProperties.reduce((total, property) => total + property.rentAmount, 0).toLocaleString()}
+                                                    </Text>
+                                                    <Text fontSize="xs" color="brand.gray.600">
+                                                        Total Value
+                                                    </Text>
+                                                </VStack>
+                                                <VStack align="start" spacing={0}>
+                                                    <Text fontSize={{ base: 'lg', md: '2xl' }} fontWeight="bold" color="brand.warning">
+                                                        {myProperties.reduce((total, property) => total + (property.approved === false ? 1 : 0), 0)}
+                                                    </Text>
+                                                    <Text fontSize="xs" color="brand.gray.600">
+                                                        Pending approval
+                                                    </Text>
+                                                </VStack>
+                                            </HStack>
                                         </Box>
+                                    </VStack>
+                                </TabPanel>
 
-                                        <Box bg="white" borderRadius="lg" p={4}>
-                                            <Stat>
-                                                <StatLabel color="brand.gray.600" fontSize="xs">
-                                                    Rating
-                                                </StatLabel>
-                                                <StatNumber color="brand.primary" fontSize="xl">
-                                                    4.8
-                                                </StatNumber>
-                                                <StatHelpText color="brand.gray.600" fontSize="xs">
-                                                    142 reviews
-                                                </StatHelpText>
-                                            </Stat>
-                                        </Box>
+                                {/* MY DEALS TAB */}
+                                <TabPanel p={0}>
+                                    <VStack spacing={4} align="stretch" pt={4}>
+                                        <Grid templateColumns={{ base: "repeat(2, 1fr)", lg: "repeat(4, 1fr)" }} gap={3}>
+                                            <Box bg="white" borderRadius="lg" p={4} textAlign="center">
+                                                <Text fontSize="2xl" fontWeight="bold" color="brand.primary">
+                                                    {releasedEscrows}
+                                                </Text>
+                                                <Text fontSize="xs" color="brand.gray.600">
+                                                    Released
+                                                </Text>
+                                            </Box>
+                                            <Box bg="white" borderRadius="lg" p={4} textAlign="center">
+                                                <Text fontSize="2xl" fontWeight="bold" color="brand.success">
+                                                    {releasingEscrows}
+                                                </Text>
+                                                <Text fontSize="xs" color="brand.gray.600">
+                                                    Releasing
+                                                </Text>
+                                            </Box>
+                                            <Box bg="white" borderRadius="lg" p={4} textAlign="center">
+                                                <Text fontSize="2xl" fontWeight="bold" color="brand.accent">
+                                                    {refundedEscrows}
+                                                </Text>
+                                                <Text fontSize="xs" color="brand.gray.600">
+                                                    Refunded
+                                                </Text>
+                                            </Box>
+                                            <Box bg="white" borderRadius="lg" p={4} textAlign="center">
+                                                <Text fontSize="2xl" fontWeight="bold" color="brand.warning">
+                                                    {releaseFailedEscrows}
+                                                </Text>
+                                                <Text fontSize="xs" color="brand.gray.600">
+                                                    Release faid
+                                                </Text>
+                                            </Box>
+                                        </Grid>
 
-                                        <Box bg="white" borderRadius="lg" p={4}>
-                                            <Stat>
-                                                <StatLabel color="brand.gray.600" fontSize="xs">
-                                                    Total Properties listed
-                                                </StatLabel>
-                                                <StatNumber color="brand.primary" fontSize="xl">
-                                                    {allData.totalProperties}
-                                                </StatNumber>
-                                                <StatHelpText color="brand.success" fontSize="xs">
-                                                    +2 this month
-                                                </StatHelpText>
-                                            </Stat>
-                                        </Box>
+                                        <Text fontSize="sm" fontWeight="600" color="white">
+                                            Recent Activity
+                                        </Text>
+                                    </VStack>
+                                </TabPanel>
 
-                                        <Box bg="white" borderRadius="lg" p={4}>
-                                            <Stat>
-                                                <StatLabel color="brand.gray.600" fontSize="xs">
-                                                    Success Rate
-                                                </StatLabel>
-                                                <StatNumber color="brand.success" fontSize="xl">
-                                                    94%
-                                                </StatNumber>
-                                                <StatHelpText color="brand.gray.600" fontSize="xs">
-                                                    Last 30 days
-                                                </StatHelpText>
-                                            </Stat>
-                                        </Box>
-                                    </Grid>
+                                {/* STATS TAB */}
+                                <TabPanel p={0}>
+                                    <VStack spacing={4} align="stretch" pt={4}>
+                                        <Grid templateColumns={{ base: "repeat(2, 1fr)", lg: "repeat(4, 1fr)" }} gap={3}>
+                                            <Box bg="white" borderRadius="lg" p={4}>
+                                                <Stat>
+                                                    <StatLabel color="brand.gray.600" fontSize="xs">
+                                                        Total Earnings
+                                                    </StatLabel>
+                                                    <StatNumber color="brand.primary" fontSize="xl">
+                                                        ₦{allData.totalRevenue}
+                                                    </StatNumber>
+                                                    <StatHelpText color="brand.success" fontSize="xs">
+                                                        <TrendingUp size={12} style={{ display: 'inline' }} /> +15%
+                                                    </StatHelpText>
+                                                </Stat>
+                                            </Box>
 
-                                    <Text fontSize="sm" fontWeight="600" color="white">
-                                        Performance Overview
-                                    </Text>
-                                </VStack>
-                            </TabPanel>
-                        </TabPanels>
-                    </Tabs>
+                                            <Box bg="white" borderRadius="lg" p={4}>
+                                                <Stat>
+                                                    <StatLabel color="brand.gray.600" fontSize="xs">
+                                                        Rating
+                                                    </StatLabel>
+                                                    <StatNumber color="brand.primary" fontSize="xl">
+                                                        4.8
+                                                    </StatNumber>
+                                                    <StatHelpText color="brand.gray.600" fontSize="xs">
+                                                        142 reviews
+                                                    </StatHelpText>
+                                                </Stat>
+                                            </Box>
+
+                                            <Box bg="white" borderRadius="lg" p={4}>
+                                                <Stat>
+                                                    <StatLabel color="brand.gray.600" fontSize="xs">
+                                                        Total Properties listed
+                                                    </StatLabel>
+                                                    <StatNumber color="brand.primary" fontSize="xl">
+                                                        {allData.totalProperties}
+                                                    </StatNumber>
+                                                    <StatHelpText color="brand.success" fontSize="xs">
+                                                        +2 this month
+                                                    </StatHelpText>
+                                                </Stat>
+                                            </Box>
+
+                                            <Box bg="white" borderRadius="lg" p={4}>
+                                                <Stat>
+                                                    <StatLabel color="brand.gray.600" fontSize="xs">
+                                                        Success Rate
+                                                    </StatLabel>
+                                                    <StatNumber color="brand.success" fontSize="xl">
+                                                        94%
+                                                    </StatNumber>
+                                                    <StatHelpText color="brand.gray.600" fontSize="xs">
+                                                        Last 30 days
+                                                    </StatHelpText>
+                                                </Stat>
+                                            </Box>
+                                        </Grid>
+
+                                        <Text fontSize="sm" fontWeight="600" color="white">
+                                            Performance Overview
+                                        </Text>
+                                    </VStack>
+                                </TabPanel>
+                            </TabPanels>
+                        </Tabs>
                     </Box>
                 </Box>
 
@@ -1170,7 +1202,13 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                                                                 <Text fontSize="xs" color="brand.gray.600">{new Date(escrow.releasedAt || escrow.updatedAt || Date.now()).toLocaleString()}</Text>
                                                                 <VStack align="end" spacing={2}>
                                                                     <DownloadAgreementButton escrowid={escrow._id} />
-                                                                    {!escrow.reviewSubmitted && <DualReviewModal transactionSuccess={false} onSubmit={handleInspected} />}
+                                                                    {!escrow.reviewSubmitted && (
+                                                                        <DualReviewModal
+                                                                            transactionSuccess={false}
+                                                                            onSubmit={handleInspected}
+                                                                            escrowId={escrow?.escrowId || escrow?._id || escrow?.id || escrow?.tenancyId}
+                                                                        />
+                                                                    )}
                                                                 </VStack>
                                                             </VStack>
                                                             // <Button
@@ -1272,25 +1310,50 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                         </Box>
 
                         <Box bg="white" p={4} borderRadius="lg" boxShadow="sm">
-                            <Text fontSize="sm" fontWeight="600" color="brand.gray.800" mb={3}>
-                                Recent Reviews
-                            </Text>
+                            <HStack justify="space-between" align="center" mb={3}>
+                                <Text fontSize="sm" fontWeight="600" color="brand.gray.800">
+                                    Recent Reviews
+                                </Text>
+                                <Text fontSize="xs" color="brand.gray.600">
+                                    {reviewSummary.averageRating.toFixed(1)} ★ · {reviewSummary.totalReviews} reviews
+                                </Text>
+                            </HStack>
+
                             <VStack align="stretch" spacing={3}>
-                                <HStack spacing={3}>
-                                    <Avatar size="sm" name="Tunde Bakare" src="https://i.pravatar.cc/150?img=15" />
-                                    <VStack align="start" spacing={0} flex={1}>
-                                        <Text fontSize="xs" fontWeight="600">Tunde Bakare</Text>
-                                        <Text fontSize="xs" color="brand.gray.600">⭐⭐⭐⭐⭐ Excellent service!</Text>
-                                    </VStack>
-                                </HStack>
-                                <HStack spacing={3}>
-                                    <Avatar size="sm" name="Sarah Obi" src="https://i.pravatar.cc/150?img=25" />
-                                    <VStack align="start" spacing={0} flex={1}>
-                                        <Text fontSize="xs" fontWeight="600">Sarah Obi</Text>
-                                        <Text fontSize="xs" color="brand.gray.600">⭐⭐⭐⭐⭐ Very professional</Text>
-                                    </VStack>
-                                </HStack>
+                                {recentReviews.length > 0 ? recentReviews.map((review, index) => {
+                                    const author = review?.tenant?.fullName || review?.tenant?.name || review?.user?.fullName || review?.user?.name || `Tenant ${index + 1}`;
+                                    const text = review?.review || review?.comment || 'No comment provided.';
+                                    const rating = Number(review?.rating || 0);
+
+                                    return (
+                                        <Box key={review?._id || review?.id || index} bg="brand.gray.50" p={3} borderRadius="md">
+                                            <HStack key={review?._id || review?.id || index} spacing={3} align="start">
+                                                <Avatar size="sm" name={author} src={review?.tenant?.image || review?.user?.image || undefined} />
+                                                <VStack align="start" spacing={0} flex={1}>
+                                                    <Text fontSize="xs" fontWeight="600">{author}</Text>
+                                                    <Text fontSize="xs" color="brand.gray.600">
+                                                        {Array.from({ length: 5 }, (_, starIndex) => starIndex < rating ? '★' : '☆').join('')} {text}
+                                                    </Text>
+                                                </VStack>
+                                            </HStack>
+                                            
+                                        </Box>
+                                    )
+                                }) : (
+                                    <Text fontSize="xs" color="brand.gray.600">
+                                        No reviews yet.
+                                    </Text>
+                                )}
                             </VStack>
+                            <Button
+                                size="xs"
+                                variant="link"
+                                colorScheme="teal"
+                                mt={2}
+                                onClick={() => navigate(`/landlord-reviews/${user?._id || user?.id || user?.userId}`)}
+                            >
+                                View all reviews
+                            </Button>
                         </Box>
                     </VStack>
                 )}
@@ -1439,7 +1502,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                                     const res = await releaseFunds(selectedEscrowAction._id, releaseCode, authCode);
                                     console.log("Submitting release code", res);
 
-                                    
+
 
                                     toast({
                                         title: "Release Funds",
