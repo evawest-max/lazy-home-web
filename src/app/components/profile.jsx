@@ -131,6 +131,13 @@ export default function Profile({ onLogout, user }) {
         { icon: LogOut, label: "Logout", danger: true }
     ];
 
+    const formatDateTime = (value) => {
+        if (!value) return "N/A";
+        const date = new Date(value);
+        if (isNaN(date)) return String(value);
+        return date.toLocaleString();
+    };
+
     const handleLogout = () => {
         onLogout();
 
@@ -197,7 +204,7 @@ export default function Profile({ onLogout, user }) {
 
                         <HStack>
                             <Text fontSize="sm" color="gray.500">
-                                Member since {user.registrationDate || "N/A"}
+                                Member since {formatDateTime(user.registrationDate)}
                             </Text>
 
                             {user.verified && (

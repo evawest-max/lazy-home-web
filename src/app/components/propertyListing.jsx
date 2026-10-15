@@ -281,7 +281,7 @@ const handleLocationChange = (e) => {
                                 {user && <Avatar
                                     size="md"
                                     name={user.fullName || "John Adeyemi"}
-                                    src={user.image || "https://i.pravatar.cc/150?img=33"}
+                                    src={user.image || "https://images.unsplash.com/photo-1740252117044-2af197eea287?q=80&w=880&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D"}
                                     cursor="pointer"
                                 />}
                             </HStack>

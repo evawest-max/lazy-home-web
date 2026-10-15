@@ -36,6 +36,7 @@ import {
     Spinner,
     Icon,
     Stack,
+    Flex,
 } from '@chakra-ui/react';
 import {
     Search,
@@ -53,6 +54,7 @@ import {
     Bell,
     BadgeEuroIcon,
     Shield,
+    Star,
 } from 'lucide-react';
 import { Menu, MenuButton, MenuList, MenuItem, FormControl, FormLabel } from '@chakra-ui/react';
 import { ChevronDownIcon } from '@chakra-ui/icons';
@@ -65,14 +67,14 @@ import FilterSearch from './FilterSearch';
 import { mockInspections, mockProperties } from './mockData';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Navbar from './Navbar';
-import { confirmInspection, deleteProperty, getAllEscrowPayments, getAnalyticsDashboardAndProperties, getLandlordReviews, getUnreadCount, getUserProperties, releaseFunds, releaseKeys, refundEscrow, downloadTenancyDoc } from '../../../api';
+import { confirmInspection, deleteProperty, getAllEscrowPayments, getAnalyticsDashboardAndProperties, getEscrowSettlementAccount, getLandlordReviews, getUnreadCount, getUserProperties, releaseFunds, releaseKeys, refundEscrow, downloadTenancyDoc, getBankcodes } from '../../../api';
 import { reference } from '@popperjs/core';
 import DownloadAgreementButton from './downloadAgreementButton';
 import DualRatingPopover from './leaveReviewsButton';
 import DualReviewModal from './leaveReviewsButton';
 import EscrowDetailsModal from './EscrowDetailsModal';
 import PropertyDetailsModal from './PropertyDetailsModal';
-// import DownloadAgreementButton from './downloadAgreementButton';
+import { FiArrowLeft, FiMessageSquare, FiStar } from 'react-icons/fi';
 
 
 export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
@@ -92,6 +94,8 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
     const { isOpen: isReleaseOpen, onOpen: onOpenRelease, onClose: onCloseRelease } = useDisclosure();
     const [releaseCode, setReleaseCode] = useState('');
     const [selectedEscrowAction, setSelectedEscrowAction] = useState(null);
+    const [settlementAccount, setSettlementAccount] = useState(null);
+    const [settlementLoading, setSettlementLoading] = useState(false);
     const [releasing, setReleasing] = useState(false);
     const [authCode, setAuthCode] = useState("");
     const { isOpen: isRefundOpen, onOpen: onOpenRefund, onClose: onCloseRefund } = useDisclosure();
@@ -111,8 +115,11 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
     const [unreadNotificationsCount, setUnreadNotificationsCount] = useState("0")
     const [propertyStatusFilter, setPropertyStatusFilter] = useState('all');
     const [propertyTitleFilter, setPropertyTitleFilter] = useState('');
+    const [showPropertyFilters, setShowPropertyFilters] = useState(false);
     const [escrowStatusFilter, setEscrowStatusFilter] = useState('all');
     const [escrowTitleFilter, setEscrowTitleFilter] = useState('');
+    const [showEscrowFilters, setShowEscrowFilters] = useState(false);
+    const [banks, setBanks] = useState([]);
 
     const location = useLocation();
 
@@ -212,7 +219,18 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
 
     // Pagination calculations for transactions
     // transactions pagination handled by API; UI buttons use `transactionsTotalPages`
-
+    useEffect(() => {
+        const fetchBanks = async () => {
+            try {
+                const res = await getBankcodes();
+                setBanks(res.data.data);
+            } catch (err) {
+                console.error(err);
+            }
+        };
+        fetchBanks();
+    }, []);
+    
     useEffect(() => {
         if (tab == 1) {
             setActiveTab(1)
@@ -370,6 +388,39 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
 
     const toast = useToast();
 
+    const getBankName = (code) => {
+        const safeCode = String(code || '').trim();
+        if (!safeCode) return 'Bank not provided';
+        const bank = banks.find((b) => b.code === safeCode || b.bankCode === safeCode || b.code === String(safeCode));
+        return bank ? bank.name : safeCode;
+    };
+
+    const loadSettlementAccount = async (escrowId) => {
+        if (!escrowId) return;
+
+        setSettlementLoading(true);
+        setSettlementAccount(null);
+
+        try {
+            const response = await getEscrowSettlementAccount(escrowId);
+            const payload = response?.data?.data ?? response?.data ?? {};
+            console.log('Escrow settlement account response:', payload);
+            setSettlementAccount(payload);
+        } catch (error) {
+            console.error('Failed to fetch escrow settlement account', error);
+            setSettlementAccount(null);
+            toast({
+                title: 'Settlement details unavailable',
+                description: error?.response?.data?.message || 'Could not load the recipient details for this payout.',
+                status: 'warning',
+                duration: 5000,
+                isClosable: true,
+            });
+        } finally {
+            setSettlementLoading(false);
+        }
+    };
+
     const handleEscrowAction = async (action, escrow) => {
         // placeholder handlers - replace with real API calls as needed
         console.log(`escrow action: ${action}`, escrow);
@@ -377,6 +428,9 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
             case 'release':
                 setSelectedEscrowAction(escrow);
                 setReleaseCode('');
+                setAuthCode('');
+                setSettlementAccount(null);
+                await loadSettlementAccount(escrow?._id || escrow?.id || escrow?.escrowId);
                 onOpenRelease();
                 return;
             case 'refund':
@@ -677,7 +731,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                                 <Avatar
                                     size="md"
                                     name={user.fullName || "John Adeyemi"}
-                                    src={user.image || "https://i.pravatar.cc/150?img=33"}
+                                    src={user.image || "https://images.unsplash.com/photo-1740252117044-2af197eea287?q=80&w=880&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D"}
                                     cursor="pointer"
                                 />
                             </HStack>
@@ -871,13 +925,13 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                                             <Box bg="white" borderRadius="lg" p={4}>
                                                 <Stat>
                                                     <StatLabel color="brand.gray.600" fontSize="xs">
-                                                        Rating
+                                                        Average Rating
                                                     </StatLabel>
                                                     <StatNumber color="brand.primary" fontSize="xl">
-                                                        4.8
+                                                        {reviewSummary.averageRating.toFixed(1)} <Star size={14} style={{ display: 'inline' }} />
                                                     </StatNumber>
                                                     <StatHelpText color="brand.gray.600" fontSize="xs">
-                                                        142 reviews
+                                                        {reviewSummary.totalReviews} reviews
                                                     </StatHelpText>
                                                 </Stat>
                                             </Box>
@@ -929,27 +983,36 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                         </Text>
 
                         <Box bg="white" p={3} borderRadius="lg" boxShadow="sm">
-                            <VStack align="stretch" spacing={3}>
-                                <Input
-                                    placeholder="Filter by title"
-                                    value={propertyTitleFilter}
-                                    onChange={(e) => setPropertyTitleFilter(e.target.value)}
-                                    maxW="320px"
-                                />
-                                <HStack spacing={2} wrap="wrap">
-                                    {propertyStatusOptions.map((status) => (
-                                        <Button
-                                            key={status}
-                                            size="sm"
-                                            variant={propertyStatusFilter === status ? 'solid' : 'outline'}
-                                            colorScheme={propertyStatusFilter === status ? 'green' : 'gray'}
-                                            onClick={() => setPropertyStatusFilter(status)}
-                                        >
-                                            {status === 'all' ? 'All' : status.replace(/_/g, ' ')}
-                                        </Button>
-                                    ))}
-                                </HStack>
-                            </VStack>
+                            <Flex justify="space-between" align="center" mb={showPropertyFilters ? 3 : 0}>
+                                <Text fontSize="sm" fontWeight="600" color="brand.gray.800">Filters</Text>
+                                <Button size="sm" variant="ghost" onClick={() => setShowPropertyFilters((prev) => !prev)}>
+                                    {showPropertyFilters ? 'Hide filters' : 'Show filters'}
+                                </Button>
+                            </Flex>
+
+                            {showPropertyFilters && (
+                                <VStack align="stretch" spacing={3}>
+                                    <Input
+                                        placeholder="Filter by title"
+                                        value={propertyTitleFilter}
+                                        onChange={(e) => setPropertyTitleFilter(e.target.value)}
+                                        maxW="320px"
+                                    />
+                                    <HStack spacing={2} wrap="wrap">
+                                        {propertyStatusOptions.map((status) => (
+                                            <Button
+                                                key={status}
+                                                size="sm"
+                                                variant={propertyStatusFilter === status ? 'solid' : 'outline'}
+                                                colorScheme={propertyStatusFilter === status ? 'green' : 'gray'}
+                                                onClick={() => setPropertyStatusFilter(status)}
+                                            >
+                                                {status === 'all' ? 'All' : status.replace(/_/g, ' ')}
+                                            </Button>
+                                        ))}
+                                    </HStack>
+                                </VStack>
+                            )}
                         </Box>
 
                         {filteredPropertyListings.length === 0 ? (
@@ -1083,27 +1146,36 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
 
                         <VStack align="stretch" spacing={3}>
                             <Box bg="white" p={3} borderRadius="lg" boxShadow="sm">
-                                <VStack align="stretch" spacing={3}>
-                                    <Input
-                                        placeholder="Filter by title"
-                                        value={escrowTitleFilter}
-                                        onChange={(e) => setEscrowTitleFilter(e.target.value)}
-                                        maxW="320px"
-                                    />
-                                    <HStack spacing={2} wrap="wrap">
-                                        {escrowStatusOptions.map((status) => (
-                                            <Button
-                                                key={status}
-                                                size="sm"
-                                                variant={escrowStatusFilter === status ? 'solid' : 'outline'}
-                                                colorScheme={escrowStatusFilter === status ? 'green' : 'gray'}
-                                                onClick={() => setEscrowStatusFilter(status)}
-                                            >
-                                                {status === 'all' ? 'All' : status.replace(/_/g, ' ')} ({escrowStatusCounts[status] ?? 0})
-                                            </Button>
-                                        ))}
-                                    </HStack>
-                                </VStack>
+                                <Flex justify="space-between" align="center" mb={showEscrowFilters ? 3 : 0}>
+                                    <Text fontSize="sm" fontWeight="600" color="brand.gray.800">Filters</Text>
+                                    <Button size="sm" variant="ghost" onClick={() => setShowEscrowFilters((prev) => !prev)}>
+                                        {showEscrowFilters ? 'Hide filters' : 'Show filters'}
+                                    </Button>
+                                </Flex>
+
+                                {showEscrowFilters && (
+                                    <VStack align="stretch" spacing={3}>
+                                        <Input
+                                            placeholder="Filter by title"
+                                            value={escrowTitleFilter}
+                                            onChange={(e) => setEscrowTitleFilter(e.target.value)}
+                                            maxW="320px"
+                                        />
+                                        <HStack spacing={2} wrap="wrap">
+                                            {escrowStatusOptions.map((status) => (
+                                                <Button
+                                                    key={status}
+                                                    size="sm"
+                                                    variant={escrowStatusFilter === status ? 'solid' : 'outline'}
+                                                    colorScheme={escrowStatusFilter === status ? 'green' : 'gray'}
+                                                    onClick={() => setEscrowStatusFilter(status)}
+                                                >
+                                                    {status === 'all' ? 'All' : status.replace(/_/g, ' ')} ({escrowStatusCounts[status] ?? 0})
+                                                </Button>
+                                            ))}
+                                        </HStack>
+                                    </VStack>
+                                )}
                             </Box>
 
                             <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)", lg: "repeat(3, 1fr)" }} gap={4}>
@@ -1320,26 +1392,51 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                             </HStack>
 
                             <VStack align="stretch" spacing={3}>
-                                {recentReviews.length > 0 ? recentReviews.map((review, index) => {
-                                    const author = review?.tenant?.fullName || review?.tenant?.name || review?.user?.fullName || review?.user?.name || `Tenant ${index + 1}`;
-                                    const text = review?.review || review?.comment || 'No comment provided.';
-                                    const rating = Number(review?.rating || 0);
+                                {recentReviews.length > 0 ? (
+                                    recentReviews.map((review, index) => {
+                                        const author =
+                                            review?.tenant?.fullName ||
+                                            review?.tenant?.name ||
+                                            review?.user?.fullName ||
+                                            review?.user?.name ||
+                                            `Tenant ${index + 1}`;
+                                        const text = review?.review || review?.comment || 'No comment provided.';
+                                        const rating = Number(review?.rating || 0);
+                                        const rounded = Math.round(rating);
 
-                                    return (
-                                        <Box key={review?._id || review?.id || index} bg="brand.gray.50" p={3} borderRadius="md">
-                                            <HStack key={review?._id || review?.id || index} spacing={3} align="start">
-                                                <Avatar size="sm" name={author} src={review?.tenant?.image || review?.user?.image || undefined} />
-                                                <VStack align="start" spacing={0} flex={1}>
-                                                    <Text fontSize="xs" fontWeight="600">{author}</Text>
-                                                    <Text fontSize="xs" color="brand.gray.600">
-                                                        {Array.from({ length: 5 }, (_, starIndex) => starIndex < rating ? '★' : '☆').join('')} {text}
-                                                    </Text>
-                                                </VStack>
-                                            </HStack>
-                                            
-                                        </Box>
-                                    )
-                                }) : (
+                                        return (
+                                            <Box key={review?._id || review?.id || index} bg="brand.gray.50" p={3} borderRadius="md">
+                                                <HStack spacing={3} align="start">
+                                                    <Avatar
+                                                        size="sm"
+                                                        name={author}
+                                                        src={review?.tenant?.image || review?.user?.image || undefined}
+                                                        flexShrink={0}
+                                                    />
+                                                    <VStack align="start" spacing={0.5} flex={1} minW={0}>
+                                                        <Text fontSize="xs" fontWeight="600" noOfLines={1}>
+                                                            {author}
+                                                        </Text>
+                                                        <HStack spacing={0.5}>
+                                                            {Array.from({ length: 5 }, (_, starIndex) => (
+                                                                <Icon
+                                                                    key={starIndex}
+                                                                    as={FiStar}
+                                                                    boxSize={2.5}
+                                                                    color={starIndex < rounded ? 'yellow.400' : 'brand.gray.300'}
+                                                                    fill={starIndex < rounded ? 'currentColor' : 'none'}
+                                                                />
+                                                            ))}
+                                                        </HStack>
+                                                        <Text fontSize="xs" color="brand.gray.600" noOfLines={2}>
+                                                            {text}
+                                                        </Text>
+                                                    </VStack>
+                                                </HStack>
+                                            </Box>
+                                        );
+                                    })
+                                ) : (
                                     <Text fontSize="xs" color="brand.gray.600">
                                         No reviews yet.
                                     </Text>
@@ -1427,7 +1524,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                 </ModalContent>
             </Modal>
 
-            <Modal isOpen={isReleaseOpen} onClose={() => { onCloseRelease(); setSelectedEscrowAction(null); setReleaseCode(''); }} isCentered>
+            <Modal isOpen={isReleaseOpen} onClose={() => { onCloseRelease(); setSelectedEscrowAction(null); setSettlementAccount(null); setReleaseCode(''); setAuthCode(''); }} isCentered>
                 <ModalOverlay />
                 <ModalContent borderRadius="2xl" overflow="hidden" mx={4}>
                     <ModalHeader>Release Funds</ModalHeader>
@@ -1435,8 +1532,72 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                     <ModalBody pb={6}>
                         <VStack spacing={4} align="stretch">
                             <Text fontSize="sm" color="brand.gray.700">
-                                <Text fontWeight="bold" >Ensure you have inspected the property first.</Text> Enter the release code provided to you and 2FA code to release funds for this transaction.
+                                <Text as="span" display="block" fontWeight="bold">Ensure you have inspected the property first.</Text>
+                                Review the payout recipient below before confirming the release.
                             </Text>
+
+                            {settlementLoading ? (
+                                <HStack justify="center" py={3}>
+                                    <Spinner size="sm" />
+                                    <Text fontSize="sm" color="brand.gray.600">Loading payout details...</Text>
+                                </HStack>
+                            ) : settlementAccount ? (
+                                <Box bg="brand.background" p={4} borderRadius="lg" border="1px solid" borderColor="brand.success">
+                                    <VStack align="stretch" spacing={3}>
+                                        <Box>
+                                            <Text fontSize="xs" textTransform="uppercase" letterSpacing="0.08em" color="brand.gray.500">Recipient</Text>
+                                            <Text fontSize="lg" fontWeight="700" color="brand.gray.800">{settlementAccount?.actualLandlord?.fullName || 'Landlord'}</Text>
+                                            <Text fontSize="sm" color="brand.gray.600">{settlementAccount?.actualLandlord?.ownershipType || 'owner'}</Text>
+                                        </Box>
+
+                                        <Box>
+                                            <Text fontSize="xs" textTransform="uppercase" letterSpacing="0.08em" color="brand.gray.500">Bank details</Text>
+                                            <Text fontSize="sm" fontWeight="600" color="brand.gray.800">
+                                                {getBankName(settlementAccount?.actualLandlord?.bankCode || settlementAccount?.actualLandlord?.bank_code) || settlementAccount?.actualLandlord?.bankName || 'Bank not provided'}
+                                            </Text>
+                                            <Text fontSize="sm" color="brand.gray.700">Account name: {settlementAccount?.actualLandlord?.accountName || 'N/A'}</Text>
+                                            <Text fontSize="sm" color="brand.gray.700">Account number: {settlementAccount?.actualLandlord?.accountNumber || 'N/A'}</Text>
+                                        </Box>
+
+                                        {Array.isArray(settlementAccount?.transfers) && settlementAccount.transfers.length > 0 && (
+                                            <Box>
+                                                <Text fontSize="xs" textTransform="uppercase" letterSpacing="0.08em" color="brand.gray.500" mb={2}>Transfer(s)</Text>
+                                                <VStack align="stretch" spacing={2}>
+                                                    {settlementAccount.transfers.map((transfer, index) => (
+                                                        <Box key={`${transfer?.accountNumber || index}-${index}`} bg="white" borderRadius="md" p={3} border="1px solid" borderColor="brand.gray.200">
+                                                            <HStack justify="space-between">
+                                                                <Text fontSize="sm" fontWeight="600">{transfer?.recipientType || 'recipient'}</Text>
+                                                                <Badge colorScheme={transfer?.status === 'success' ? 'green' : 'yellow'}>{transfer?.status || 'pending'}</Badge>
+                                                            </HStack>
+                                                            <Text fontSize="sm" color="brand.gray.700">{transfer?.accountName || 'N/A'} • {transfer?.accountNumber || 'N/A'}</Text>
+                                                            <Text fontSize="sm" fontWeight="600" color="brand.primary">₦{Number(transfer?.amount || 0).toLocaleString()}</Text>
+                                                        </Box>
+                                                    ))}
+                                                </VStack>
+                                            </Box>
+                                        )}
+
+                                        {settlementAccount?.payoutBreakdown && (
+                                            <Box>
+                                                <Text fontSize="xs" textTransform="uppercase" letterSpacing="0.08em" color="brand.gray.500" mb={2}>Payout breakdown</Text>
+                                                <VStack align="stretch" spacing={1}>
+                                                    <HStack justify="space-between">
+                                                        <Text fontSize="sm" color="brand.gray.700">Landlord receives</Text>
+                                                        <Text fontSize="sm" fontWeight="600" color="brand.gray.800">₦{Number(settlementAccount.payoutBreakdown.landlordReceives || 0).toLocaleString()}</Text>
+                                                    </HStack>
+                                                    <HStack justify="space-between">
+                                                        <Text fontSize="sm" color="brand.gray.700">Platform fee</Text>
+                                                        <Text fontSize="sm" fontWeight="600" color="brand.gray.800">₦{Number(settlementAccount.payoutBreakdown.platformFee || 0).toLocaleString()}</Text>
+                                                    </HStack>
+                                                </VStack>
+                                            </Box>
+                                        )}
+                                    </VStack>
+                                </Box>
+                            ) : (
+                                <Text fontSize="sm" color="brand.gray.600">No payout recipient details are available for this escrow.</Text>
+                            )}
+
                             <Input
                                 placeholder="Enter release code"
                                 value={releaseCode}
@@ -1466,7 +1627,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                         </VStack>
                     </ModalBody>
                     <ModalFooter>
-                        <Button mr={3} variant="ghost" onClick={() => { onCloseRelease(); setSelectedEscrowAction(null); setReleaseCode(''); }}>
+                        <Button mr={3} variant="ghost" onClick={() => { onCloseRelease(); setSelectedEscrowAction(null); setSettlementAccount(null); setReleaseCode(''); setAuthCode(''); }}>
                             Cancel
                         </Button>
                         <Button
@@ -1502,8 +1663,6 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                                     const res = await releaseFunds(selectedEscrowAction._id, releaseCode, authCode);
                                     console.log("Submitting release code", res);
 
-
-
                                     toast({
                                         title: "Release Funds",
                                         description: res?.data?.message || "Release code submitted successfully",
@@ -1514,7 +1673,9 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
 
                                     onCloseRelease();
                                     setSelectedEscrowAction(null);
+                                    setSettlementAccount(null);
                                     setReleaseCode("");
+                                    setAuthCode("");
                                     setEscrowTransactions((prev) =>
                                         prev.map((item) =>
                                             item._id === selectedEscrowAction._id

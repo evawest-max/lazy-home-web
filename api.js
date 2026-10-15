@@ -429,6 +429,13 @@ export const releaseKeys = (
     `/api/v1/escrow/confirm-handover/${id}`
   );
 
+export const getEscrowSettlementAccount = (
+  id
+) =>
+  API.get(
+    `/api/v1/escrow/${id}/settlement-account`
+  );
+
 export const confirmInspection = (
   escrowId
 ) =>
@@ -927,14 +934,14 @@ export const getAppReviews =
       { params: { page, limit } }
     );
 
-    export const adminGetAppReviews =
+export const adminGetAppReviews =
   (page = 1, limit = 10) =>
     API.get(
       `/api/v1/admin/app/reviews`,
       { params: { page, limit } }
     );
 
-    export const adminGetLandlordReviews =
+export const adminGetLandlordReviews =
   (page = 1, limit = 10) =>
     API.get(
       `/api/v1/admin/landlord/reviews`,
@@ -948,7 +955,7 @@ export const moderateAppReview =
       { status }
     );
 
-export const moderateLandlordReview = 
+export const moderateLandlordReview =
   (status, reviewId) =>
     API.patch(
       `/api/v1/admin/landlord/${reviewId}`,

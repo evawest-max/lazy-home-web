@@ -9,7 +9,6 @@ import HomeScreen from './components/HomeScreen';
 import SignUp from './components/Sign up';
 import OTPVerification from './components/OTPVerification';
 import SignInForm from './components/login form';
-import AgentDashboard from './components/AgentDashboard';
 import PropertyListing from './components/propertyListing';
 import PropertyDetails from './components/PropertyDetails';
 import PaymentBreakdown from './components/PaymentBreakdown';
@@ -18,7 +17,6 @@ import Profile from './components/profile';
 import IdentityVerification from './components/IdentityVerification';
 import BookInspection from './components/BookInspection';
 import InspectionFeedback from './components/InspectionFeedback';
-import { set } from 'date-fns';
 import Dashboard from './components/dashboard';
 import ResetPassword from './components/Reset password';
 import ForgotPassword from './Forgot Password';
@@ -248,41 +246,6 @@ export default function App() {
     setLoadingUser(false);
   }, []);
 
-  // // Load notifications from localStorage
-  // const savedNotifications = localStorage.getItem('notifications');
-  // if (savedNotifications) {
-  //   try {
-  //     setNotifications(JSON.parse(savedNotifications));
-  //   } catch (error) {
-  //     console.error('Error parsing saved notifications:', error);
-  //     localStorage.removeItem('notifications');
-  //   }
-  // }
-
-  // // Load pending and approved requests from localStorage
-  // const savedPendingRequests = localStorage.getItem('pendingRequests');
-  // if (savedPendingRequests) {
-  //   try {
-  //     setPendingRequests(JSON.parse(savedPendingRequests));
-  //   } catch (error) {
-  //     console.error('Error parsing saved pending requests:', error);
-  //     localStorage.removeItem('pendingRequests');
-  //   }
-  // }
-
-  // const savedApprovedRequests = localStorage.getItem('approvedRequests');
-  // if (savedApprovedRequests) {
-  //   try {
-  //     setApprovedRequests(JSON.parse(savedApprovedRequests));
-  //   } catch (error) {
-  //     console.error('Error parsing saved approved requests:', error);
-  //     localStorage.removeItem('approvedRequests');
-  //   }
-  // }
-
-  //   setIsLoading(false);
-  // }, []);
-
   const [formData, setFormData] = useState(() => normalizeListingDraft(loadSavedListingDraft() ?? {}));
 
   const handleListingSubmit = async (event) => {
@@ -291,38 +254,47 @@ export default function App() {
 
     if (!normalizedFormData.termsAccepted || !normalizedFormData.escrowAccepted || !normalizedFormData.policyAccepted) {
       alert('Please accept all terms and policies before submitting your listing.');
+      setIsLoading(false);
       return;
     } else if (normalizedFormData.media.images.length === 0) {
       alert('Please upload at least one photo of the property.');
+      setIsLoading(false);
       return;
     } else if (!normalizedFormData.landlordDetails.fullName || !normalizedFormData.landlordDetails.bankName || !normalizedFormData.landlordDetails.accountNumber) {
       alert('Please provide your bank account details for payment processing.');
+      setIsLoading(false);
       return;
     } else if (!normalizedFormData.title || !normalizedFormData.propertyType || !normalizedFormData.bedrooms || !normalizedFormData.bathrooms || !normalizedFormData.size || !normalizedFormData.description || !normalizedFormData.state || !normalizedFormData.area) {
       alert('Please fill in all required property details before submitting your listing.');
+      setIsLoading(false);
       return;
     } else if (!(normalizedFormData.rentAmount || normalizedFormData.annualRent) || !normalizedFormData.cautionDeposit) {
       alert('Please provide complete pricing information for your listing.');
+      setIsLoading(false);
       return;
     } else if (normalizedFormData.media.images.length > 19) {
       alert('Please upload no more than 20 photos of the property.');
+      setIsLoading(false);
       return;
     }
-    else if (formData.media.videos.length > 0) {
-      const video = formData.media.videos[0];
+    else if (normalizedFormData.media.videos.length > 0) {
+      const video = normalizedFormData.media.videos[0];
       if (video instanceof File) {
         if (!video.type.startsWith('video/')) {
           alert('Please upload a valid video file.');
+          setIsLoading(false);
           return;
         }
         if (video.size > 50 * 1024 * 1024) {
           alert('Video file size must be less than 50MB.');
+          setIsLoading(false);
           return;
         }
       } else if (typeof video === 'string') {
         // Optionally, validate video URL format here
       } else {
         alert('Invalid video format. Please upload a video file or provide a valid URL.');
+        setIsLoading(false);
         return;
       }
     }
@@ -332,8 +304,8 @@ export default function App() {
     const formPayload = {
       ...normalizedFormData,
       ownershipType: normalizedFormData.ownershipType || formData.ownershipType || '',
-      images: formData._photoFiles || [],
-      video: formData._videoFile || null,
+      images: normalizedFormData.media.images || [],
+      video: normalizedFormData.media.videos?.[0] || null,
     };
 
     delete formPayload._photoFiles;
@@ -356,7 +328,10 @@ export default function App() {
       // setFormData(createEmptyListingFormData());
       setIsLoading(false);
       setTimeout(() => {
-        navigate("/dashboard")
+        // `navigate` isn't available here: App renders <Router> as a child,
+        // so this component sits outside Router's context and useNavigate()
+        // can't be used. A hard redirect works regardless of where this runs.
+        window.location.href = '/dashboard';
       }, 5000);
 
 
@@ -391,14 +366,14 @@ export default function App() {
             <Route path="/verify/:token" element={<VerifyEmail />} />
             <Route path="/home" element={<HomeScreen user={user}/>} />
             <Route path="/property-listings" element={<PropertyListing user={user}/>} />
-            <Route path="/property/:id" element={<PropertyDetails />} />
+            <Route path="/property/:id" element={<PropertyDetails user={user} />} />
             <Route path="/app-reviews" element={<AppReviewsPage />} />
             <Route path="/admin-app-reviews" element={user && (user.role === 'super_admin' || user.role === 'admin' || user.role === 'moderator') ? <AdminAppReviewsPage /> : <Navigate to="/login" />} />
             <Route path="/admin-landlord-reviews" element={user && (user.role === 'super_admin' || user.role === 'admin' || user.role === 'moderator') ? <AdminLandlordReviewsPage /> : <Navigate to="/login" />} />
             <Route path="/admin-user-reviews/:userId" element={user && (user.role === 'super_admin' || user.role === 'admin' || user.role === 'moderator') ? <AdminLandlordReviewsPage /> : <Navigate to="/login" />} />
             <Route path="/landlord-reviews/:landlordId" element={user ? <LandlordReviewsPage /> : <Navigate to="/login" />} />
             <Route path="/inspection-feedback/:id" element={user ? <InspectionFeedback /> : <Navigate to="/login" />} />
-            <Route path="/secure-payment/:id" element={<PaymentBreakdown />} />
+            <Route path="/secure-payment/:id" element={loadingUser ? <Spinner /> : <PaymentBreakdown  user={user} />} />
             <Route path="/book-inspection/:id" element={user ? <BookInspection /> : <Navigate to="/login" />} />
             <Route path="/dashboard" element={user ? <Dashboard user={user} setUpdatedFormdata={setUpdatedFormdata} /> : <Navigate to="/login" />} />
             <Route path="/create-listing/steps" element={user ? <ListProperty formData={formData} setFormData={setFormData} initialStep={1} onSubmit={handleListingSubmit} isLoading={isLoading} setIsLoading={setIsLoading} /> : <Navigate to="/login" />} />

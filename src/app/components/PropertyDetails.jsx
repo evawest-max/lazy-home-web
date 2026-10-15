@@ -11,7 +11,7 @@ const formatCurrency = (value) => {
   return `₦${Number(value).toLocaleString()}`;
 };
 
-export default function PropertyDetails() {
+export default function PropertyDetails({user}) {
   const { id } = useParams();
   const [property, setProperty] = useState(null);
   const [loading, setLoading] = useState(true);

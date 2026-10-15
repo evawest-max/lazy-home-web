@@ -28,7 +28,7 @@ const formatCurrency = (value) => {
   return `₦${Number(value).toLocaleString()}`;
 };
 
-export default function PaymentBreakdown() {
+export default function PaymentBreakdown({user}) {
   const { id } = useParams();
   const [property, setProperty] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -465,16 +465,28 @@ export default function PaymentBreakdown() {
               100% SAFE - MONEY PROTECTED BY ESCROW
             </Text>
           </HStack>
-          <Button
-            w="100%"
-            variant="primary"
-            size="lg"
-            leftIcon={<Lock size={18} />}
+          {!user ? (
+            <Button
+              w="100%"
+              variant="primary"
+              size="lg"
+              leftIcon={<Lock size={18} />}
+              onClick={() => navigate('/login')}
+          >
+              Login to Pay
+            </Button>
+          ) : (
+            <Button
+              w="100%"
+              variant="primary"
+              size="lg"
+              leftIcon={<Lock size={18} />}
             onClick={openConfirmDialog}
             isLoading={confirming}
           >
             Pay to Escrow
           </Button>
+          )}
           <AlertDialog
             isOpen={isConfirmOpen}
             leastDestructiveRef={cancelRef}
