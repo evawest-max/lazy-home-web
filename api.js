@@ -1,7 +1,11 @@
 import axios from "axios";
+import { io } from "socket.io-client";
+
+const RAW_BACKEND_URL = import.meta.env.VITE_BACKEND_URL; // e.g. https://api.xxx.com/api/v1
+const SOCKET_HOST = RAW_BACKEND_URL.replace(/\/api\/v1\/?$/, ""); // strips /api/v1 for socket
 
 const API = axios.create({
-  baseURL: import.meta.env.VITE_BACKEND_URL,
+  baseURL: RAW_BACKEND_URL,
   withCredentials: true,
 });
 
@@ -16,45 +20,27 @@ const processQueue = (error, token = null) => {
   failedQueue = [];
 };
 
-// Request
 API.interceptors.request.use((req) => {
   const token = localStorage.getItem("token");
-  if (token) {
-    req.headers.Authorization = `Bearer ${token}`;
-  }
+  if (token) req.headers.Authorization = `Bearer ${token}`;
+  console.log("[API HIT]", req.baseURL + req.url); // debug
   return req;
 });
 
-// Response
 API.interceptors.response.use(
-  (response) => {
-    // If backend sent 200 but success: false, treat as error
-    if (response.data && response.data.success === false) {
-      return Promise.reject({
-        config: response.config,
-        response: response // make it look like axios error
-      });
-    }
-    return response;
-  },
+  (response) => response,
   async (error) => {
-    console.error("Interceptor caught error:", error.response?.data || error.message);
     const originalRequest = error.config;
     if (!originalRequest) return Promise.reject(error);
 
     const status = error?.response?.status;
     const url = originalRequest.url || "";
-
-    const isAuthRoute =
-      url.includes("/auth/login") ||
-      url.includes("/auth/register") ||
-      url.includes("/auth/refresh-token");
+    const isAuthRoute = url.includes("/auth/login") || url.includes("/auth/register") || url.includes("/auth/refresh-token");
 
     if (status !== 401 || originalRequest._retry || isAuthRoute) {
       return Promise.reject(error);
     }
 
-    // ... your refresh logic
     if (isRefreshing) {
       return new Promise((resolve, reject) => {
         failedQueue.push({ resolve, reject });
@@ -69,12 +55,12 @@ API.interceptors.response.use(
 
     try {
       const { data } = await axios.post(
-        `${import.meta.env.VITE_BACKEND_URL}/api/v1/auth/refresh-token`,
+        `${RAW_BACKEND_URL}/api/v1/auth/refresh-token`,
         {},
         { withCredentials: true }
       );
       const newToken = data?.data?.accessToken;
-      if (!newToken) throw new Error("No accessToken from refresh");
+      if (!newToken) throw new Error("No accessToken");
       localStorage.setItem("token", newToken);
       API.defaults.headers.common.Authorization = `Bearer ${newToken}`;
       originalRequest.headers.Authorization = `Bearer ${newToken}`;
@@ -92,61 +78,74 @@ API.interceptors.response.use(
   }
 );
 
-// api.js
+// --- SOCKET SINGLETON - FIXED --- //
+let socket = null;
+export const getSupportSocket = () => {
+  if (socket?.connected) return socket;
+  const token = localStorage.getItem("token");
+  socket = io(SOCKET_HOST, {
+    auth: { token },
+    autoConnect: true,
+    withCredentials: true,
+    transports: ["websocket", "polling"],
+  });
+  socket.on("connect", () => console.log("[SOCKET CONNECTED]", socket.id));
+  socket.on("connect_error", (err) => console.error("[SOCKET ERROR]", err.message));
+  return socket;
+};
 
-// import axios from "axios";
+export const registerSupportSocket = (userId) => {
+  if (!userId) return;
+  const s = getSupportSocket();
+  if (!s._registered) {
+    s.emit("register", userId);
+    s.emit("joinMyConversations");
+    s._registered = true;
+  }
+  return s;
+};
+export const joinSupportConversation = (conversationId) => {
+  if (!conversationId) return;
+  const s = getSupportSocket();
+  s.emit("joinSupport", { conversationId });
+  return s;
+};
+export const onNewSupportMessage = (cb) => {
+  const s = getSupportSocket();
+  s.off("newSupportMessage");
+  s.on("newSupportMessage", cb);
+  return () => s.off("newSupportMessage", cb);
+};
+export const onUserTyping = (cb) => {
+  const s = getSupportSocket();
+  s.off("userTyping");
+  s.on("userTyping", cb);
+  return () => s.off("userTyping", cb);
+};
+export const onUserStopTyping = (cb) => {
+  const s = getSupportSocket();
+  s.off("userStopTyping");
+  s.on("userStopTyping", cb);
+  return () => s.off("userStopTyping", cb);
+};
+export const emitTyping = (conversationId, isTyping = true) => {
+  if (!conversationId) return;
+  getSupportSocket().emit(isTyping ? "typing" : "stopTyping", { conversationId });
+};
+export const disconnectSupportSocket = () => {
+  if (socket) { socket.disconnect(); socket = null; }
+};
 
-// // const API = axios.create({
-// //   baseURL: import.meta.env.VITE_BACKEND_URL,
-// // });
-// const API = axios.create({
-//   baseURL: import.meta.env.VITE_BACKEND_URL,
-//   withCredentials: true,
-// });
-
-// const APISub = import.meta.env.VITE_BACKEND_URL;
-
-// // ================== INTERCEPTORS ==================
-
-// API.interceptors.request.use((req) => {
-//   const token = localStorage.getItem("token");
-
-//   if (token) {
-//     req.headers.Authorization = `Bearer ${token}`;
-//   }
-
-//   return req;
-// });
-
-// API.interceptors.response.use(
-//   (response) => response,
-//   async (error) => {
-//     const status = error?.response?.status;
-
-//     if (status === 401 && error.config.url !== "/api/v1/auth/refresh-token") {
-//       try {
-//         // Call refresh endpoint with cookies
-//         const { data } = await API.post("/api/v1/auth/refresh-token");
-//         const newToken = data?.data?.accessToken;
-
-//         if (newToken) {
-//           localStorage.setItem("token", newToken);
-//           error.config.headers["Authorization"] = `Bearer ${newToken}`;
-//           return API(error.config); // retry original request
-//         }
-//       } catch (refreshError) {
-//         // Refresh failed → logout
-//         localStorage.removeItem("token");
-//         localStorage.removeItem("user");
-//         if (window.location.pathname !== "/login") {
-//           window.location.href = "/login";
-//         }
-//       }
-//     }
-
-//     return Promise.reject(error);
-//   }
-// );
+// --- Support REST - YOUR BASE ALREADY HAS /api/v1 SO KEEP IT --- //
+export const startSupportConversation = (data) => API.post(`/api/v1/support/start`, data);
+export const sendSupportMessageAPI = (data) => API.post(`/api/v1/support/send`, data);
+export const getMySupportConversations = () => API.get(`/api/v1/support/my`);
+export const getSupportUnreadCount = () => API.get(`/api/v1/support/unread-count`);
+export const markSupportAsRead = (conversationId) => API.patch(`/api/v1/support/${conversationId}/read`);
+export const getAllSupportConversations = (params) => API.get(`/api/v1/support/admin/all`, { params });
+export const replyToSupportConversationAPI = (data) => API.post(`/api/v1/support/admin/reply`, data);
+export const getSupportMessagesAPI = (conversationId) => API.get(`/api/v1/support/${conversationId}/messages`);
+export const updateSupportStatusAPI = (conversationId, status) => API.patch(`/api/v1/support/${conversationId}/status`, { status });
 
 
 
@@ -999,5 +998,6 @@ export const paystackWebhookTest =
 // ====================== SOCKET ========================
 // ======================================================
 
-export const SOCKET_URL =
-  import.meta.env.VITE_BACKEND_URL;
+// export const SOCKET_URL =
+//   import.meta.env.VITE_BACKEND_URL;
+  export const SOCKET_URL = SOCKET_HOST;

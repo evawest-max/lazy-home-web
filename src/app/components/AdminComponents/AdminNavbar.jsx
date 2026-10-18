@@ -1,6 +1,6 @@
 import React from 'react'
 import { Box, Button, VStack, Text, Heading, HStack, Divider } from '@chakra-ui/react';
-import { Mail, Phone, Chrome, ShieldCheck, RefreshCw, Lock, Home, Search, FileText, User, LayoutDashboard, Wallet } from 'lucide-react';
+import { Mail, Phone, Chrome, ShieldCheck, RefreshCw, Lock, Home, Search, FileText, User, LayoutDashboard, Wallet, MessageSquareText } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function AdminNavbar({ active }) {
@@ -46,6 +46,12 @@ export default function AdminNavbar({ active }) {
               <VStack spacing={1} cursor="pointer" color={active === 'User Management' ? 'brand.primary' : 'brand.gray.400'}>
                 <User size={24} />
                 <Text fontSize="xs" fontWeight="600" maxW="100px">User/property</Text>
+              </VStack>
+            </Link>
+            <Link to="/admin-support-chat" style={{ textDecoration: 'none' }}>
+              <VStack spacing={1} cursor="pointer" color={active === 'Support' ? 'brand.primary' : 'brand.gray.400'}>
+                <MessageSquareText size={24} />
+                <Text fontSize="xs" fontWeight="600">Support</Text>
               </VStack>
             </Link>
         </HStack>

@@ -42,6 +42,7 @@ import LandlordReviewsPage from './components/LandlordReviewsPage';
 import AppReviewsPage from './components/AppReviewsPage';
 import AdminAppReviewsPage from './components/AdminComponents/AdminAppReviewsPage';
 import AdminLandlordReviewsPage from './components/AdminComponents/AdminLandlordReviewsPage';
+import AdminSupportChat from './components/AdminComponents/AdminSupportChat';
 
 const LISTING_DRAFT_KEY = 'listingFormData';
 
@@ -390,7 +391,7 @@ export default function App() {
             <Route path="/change-password" element={user ? <ChangePassword user={user} /> : <Navigate to="/login" />} />
             <Route path="/security" element={loadingUser ? (<Spinner />) : user ? <ChangePassword user={user}/> : <Navigate to="/login" />} />
             <Route path="/settings" element={user ? <ListProperty /> : <Navigate to="/login" />} />
-            <Route path="/support" element={user ? <SupportChat /> : <Navigate to="/login" />} />
+            <Route path="/support" element={loadingUser ? (<Spinner />) : user ? <SupportChat user={user} /> : <Navigate to="/login" />} />
               <Route path="/financial-dashboard" element={ loadingUser ? (<Spinner />) : user && user.role == "super_admin" ? (<AdminFinancialSummary onLogout={logout} user={user} />  ) : (<Navigate to="/login" /> ) } />
               <Route path="/wallet-management" element={ loadingUser ? (<Spinner />) : user && (user.role == "super_admin" || user.role == "admin") ? (<AdminWalletManagement onLogout={logout} user={user} />  ) : (<Navigate to="/login" /> ) } />
               <Route path="/view-user-wallet" element={ loadingUser ? (<Spinner />) : user && (user.role == "super_admin" || user.role == "admin") ? (<AdminViewSingleUserWallet onLogout={logout} user={user} />  ) : (<Navigate to="/login" /> ) } />
@@ -398,6 +399,7 @@ export default function App() {
               <Route path="/all-users" element={ loadingUser ? (<Spinner />) : user && user.role == "super_admin" ? (<AdminAllUsersPage onLogout={logout} user={user} />  ) : (<Navigate to="/login" /> ) } />
               <Route path="/all-properties" element={ loadingUser ? (<Spinner />) : user && user.role == "super_admin" ? (<AdminAllPropertiesPage onLogout={logout} user={user} />  ) : (<Navigate to="/login" /> ) } />
               <Route path="/admin-user-verification" element={ loadingUser ? (<Spinner />) : user && (user.role == "super_admin" || user.role == "admin" || user.role == "moderator") ? (<AdminUserVerificationPage onLogout={logout} user={user} />  ) : (<Navigate to="/login" /> ) } />
+            <Route path="/admin-support-chat" element={ loadingUser ? (<Spinner />) : user && (user.role == "super_admin" || user.role == "admin" || user.role == "moderator") ? (<AdminSupportChat user={user} />) : (<Navigate to="/login" /> ) } />
               <Route path="/awaiting-transfer-otp" element={ loadingUser ? (<Spinner />) : user && (user.role == "super_admin" || user.role == "admin") ? (<AwaitingTransferOTPPage />) : (<Navigate to="/login" /> ) } />
               <Route path="/awaiting-withdrawal-transfer-otp" element={ loadingUser ? (<Spinner />) : user && (user.role == "super_admin" || user.role == "admin") ? (<AwaitingWithdrawalOTPPage />) : (<Navigate to="/login" /> ) } />
             {/* Add more routes here */}
