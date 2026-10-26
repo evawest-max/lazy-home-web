@@ -400,14 +400,14 @@ export default function PropertyDetails({user}) {
 
 
       <Box position="fixed" bottom={0} left={0} right={0} bg="white" borderTop="2px solid" borderColor="brand.success" p={6} boxShadow="2xl">
-        {/* <Grid templateColumns="1fr 1fr" gap={3} w="100%"> */}
-        {/* <Button as={Link} to={`/book-inspection/${property._id}`} variant="secondary" leftIcon={<Calendar size={18} />} size="lg">
+        <Grid templateColumns="1fr 1fr" gap={3} w="100%">
+        <Button as={Link} to={`/book-inspection/${property._id}`} variant="secondary" leftIcon={<Calendar size={18} />} size="lg">
             Book Inspection
-          </Button> */}
+          </Button>
         <Button as={Link} to={`/secure-payment/${property._id}`} variant="primary" leftIcon={<LockIcon size={18} />} size="lg" w="100%">
           Secure Property
         </Button>
-        {/* </Grid> */}
+        </Grid>
       </Box>
     </Box>
   );

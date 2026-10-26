@@ -230,7 +230,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
         };
         fetchBanks();
     }, []);
-    
+
     useEffect(() => {
         if (tab == 1) {
             setActiveTab(1)
@@ -728,6 +728,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                                     </Box>
                                 </Link>
                                 {/* )} */}
+
                                 <Avatar
                                     size="md"
                                     name={user.fullName || "John Adeyemi"}
@@ -982,6 +983,19 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                             My Property Listings
                         </Text>
 
+                        <Button
+                            // alignSelf="flex-start"
+                            size="sm"
+                            
+                            bg="white"
+                            color="brand.primary"
+                            _hover={{ bg: 'whiteAlpha.900' }}
+                            leftIcon={<ClipboardList size={16} />}
+                            onClick={() => navigate('/managed-inspections')}
+                        >
+                            View all property inspections
+                        </Button>
+
                         <Box bg="white" p={3} borderRadius="lg" boxShadow="sm">
                             <Flex justify="space-between" align="center" mb={showPropertyFilters ? 3 : 0}>
                                 <Text fontSize="sm" fontWeight="600" color="brand.gray.800">Filters</Text>
@@ -1083,7 +1097,9 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                                                         {item.listingStatus == "under_offer" && (
                                                             <MenuItem onClick={() => handleReleasedKeys(item._id)}>Released keys</MenuItem>
                                                         )}
-                                                        <MenuItem >Decline Offer</MenuItem>
+                                                        <MenuItem onClick={() => navigate(`/managed-property-inspections/${item._id}`)}>
+                                                            View inspections
+                                                        </MenuItem>
                                                         <MenuItem>Share Property</MenuItem>
                                                         <MenuItem onClick={() => editProperty(item)}>Update property</MenuItem>
                                                         <MenuItem onClick={() => deleteMyProperty(item._id)}>Delete Property</MenuItem>
@@ -1140,6 +1156,17 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
 
                 {activeTab === 1 && (
                     <VStack align="stretch" px={{ base: 4, sm: 6, md: 8, lg: 12 }} pt={6} spacing={4} maxW="1400px" mx="auto" w="100%">
+                        <Button
+                            as={Link}
+                            to="/my-inspections"
+                            size="sm"
+                            leftIcon={<ClipboardList size={16} />}
+                            bg="white"
+                            color="brand.primary"
+                            _hover={{ bg: 'whiteAlpha.900' }}
+                        >
+                            My Inspections
+                        </Button>
                         <Text fontSize="lg" fontWeight="600" color="brand.gray.800">
                             Escrow Transactions
                         </Text>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
     Box,
     VStack,
@@ -14,10 +14,18 @@ import {
     Image,
     Badge,
     Spinner,
+    AlertDialog,
+    AlertDialogOverlay,
+    AlertDialogContent,
+    AlertDialogHeader,
+    AlertDialogBody,
+    AlertDialogFooter,
+    useDisclosure,
+    useToast,
 } from '@chakra-ui/react';
-import { ArrowLeft, Calendar, Clock, MapPin, ShieldCheck, AlertCircle, Phone, Mail } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, MapPin, ShieldCheck, AlertCircle } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
-import { getSingleProperty } from '../../../api';
+import { bookInspection, getSingleProperty } from '../../../api';
 
 export default function BookInspection() {
     const { id } = useParams();
@@ -28,10 +36,11 @@ export default function BookInspection() {
     const [preferredTime, setPreferredTime] = useState('');
     const [alternativeDate, setAlternativeDate] = useState('');
     const [visitors, setVisitors] = useState('');
-    const [fullName, setFullName] = useState('');
-    const [phone, setPhone] = useState('');
-    const [email, setEmail] = useState('');
     const [specialRequests, setSpecialRequests] = useState('');
+    const [booking, setBooking] = useState(false);
+    const { isOpen, onOpen, onClose } = useDisclosure();
+    const cancelRef = useRef(null);
+    const toast = useToast();
 
     const imageUrl = useMemo(() => {
         const rawImages = property?.media?.images || property?.images || property?.gallery || [];
@@ -85,23 +94,59 @@ export default function BookInspection() {
     }, [id]);
 
     const handlePay = () => {
-        if (!preferredDate || !preferredTime || !visitors || !fullName || !phone || !email) {
-            alert('Please fill in all required fields.');
+        if (!preferredDate || !preferredTime || !visitors) {
+            toast({
+                title: 'Complete the inspection details',
+                description: 'Choose a preferred date, time, and number of visitors.',
+                status: 'warning',
+                duration: 4000,
+                isClosable: true,
+            });
             return;
         }
-        const data = {
-            preferredDate,
-            preferredTime,
-            alternativeDate,
-            visitors,
-            fullName,
-            phone,
-            email,
-            specialRequests,
-            propertyId: id,
-        };
-        console.log('Booking data:', data);
-        alert('Payment successful! Your inspection has been booked.');
+
+        onOpen();
+    };
+
+    const confirmBooking = async () => {
+        setBooking(true);
+
+        try {
+            const scheduledAt = new Date(`${preferredDate}T${preferredTime}:00`);
+            const alternativeScheduledAt = alternativeDate
+                ? new Date(`${alternativeDate}T${preferredTime}:00`)
+                : null;
+            const cancellationDeadline = new Date(scheduledAt.getTime() - 24 * 60 * 60 * 1000);
+
+            await bookInspection(
+                id,
+                scheduledAt.toISOString(),
+                alternativeScheduledAt?.toISOString() || null,
+                Number(visitors),
+                specialRequests.trim(),
+                cancellationDeadline.toISOString(),
+                globalThis.crypto?.randomUUID?.() || `viewing-request-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+            );
+
+            onClose();
+            toast({
+                title: 'Inspection booking submitted',
+                description: 'Your inspection request has been sent.',
+                status: 'success',
+                duration: 5000,
+                isClosable: true,
+            });
+        } catch (error) {
+            toast({
+                title: 'Unable to book inspection',
+                description: error?.response?.data?.message || error?.message || 'Please try again.',
+                status: 'error',
+                duration: 5000,
+                isClosable: true,
+            });
+        } finally {
+            setBooking(false);
+        }
     };
     if (loading) {
         return (
@@ -237,11 +282,11 @@ export default function BookInspection() {
                                     onChange={(e) => setPreferredTime(e.target.value)}
                                     _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
                                 >
-                                    <option>9:00 AM - 11:00 AM</option>
-                                    <option>11:00 AM - 1:00 PM</option>
-                                    <option>1:00 PM - 3:00 PM</option>
-                                    <option>3:00 PM - 5:00 PM</option>
-                                    <option>5:00 PM - 7:00 PM</option>
+                                    <option value="09:00">9:00 AM - 11:00 AM</option>
+                                    <option value="11:00">11:00 AM - 1:00 PM</option>
+                                    <option value="13:00">1:00 PM - 3:00 PM</option>
+                                    <option value="15:00">3:00 PM - 5:00 PM</option>
+                                    <option value="17:00">5:00 PM - 7:00 PM</option>
                                 </Select>
                             </HStack>
                         </FormControl>
@@ -273,10 +318,10 @@ export default function BookInspection() {
                                 onChange={(e) => setVisitors(e.target.value)}
                                 _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
                             >
-                                <option>Just me</option>
-                                <option>2 people</option>
-                                <option>3 people</option>
-                                <option>4+ people</option>
+                                <option value="1">Just me</option>
+                                <option value="2">2 people</option>
+                                <option value="3">3 people</option>
+                                <option value="4">4+ people</option>
                             </Select>
                         </FormControl>
                     </VStack>
@@ -285,23 +330,21 @@ export default function BookInspection() {
                 <Box bg="white" borderRadius="xl" p={6} boxShadow="sm">
                     <VStack align="stretch" spacing={5}>
                         <Text fontSize="lg" fontWeight="600" color="brand.gray.800">
-                            Your Contact Information
+                            More Information
                         </Text>
 
-                        <FormControl isRequired>
+                        {/* <FormControl >
                             <FormLabel color="brand.gray.700" fontSize="sm" fontWeight="600">
                                 Full Name
                             </FormLabel>
                             <Input
                                 placeholder="Enter your full name"
                                 size="lg"
-                                value={fullName}
-                                onChange={(e) => setFullName(e.target.value)}
                                 _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
                             />
                         </FormControl>
 
-                        <FormControl isRequired>
+                        <FormControl >
                             <FormLabel color="brand.gray.700" fontSize="sm" fontWeight="600">
                                 Phone Number
                             </FormLabel>
@@ -311,14 +354,12 @@ export default function BookInspection() {
                                     placeholder="+234 812 345 6789"
                                     type="tel"
                                     size="lg"
-                                    value={phone}
-                                    onChange={(e) => setPhone(e.target.value)}
                                     _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
                                 />
                             </HStack>
                         </FormControl>
 
-                        <FormControl isRequired>
+                        <FormControl >
                             <FormLabel color="brand.gray.700" fontSize="sm" fontWeight="600">
                                 Email Address
                             </FormLabel>
@@ -328,12 +369,10 @@ export default function BookInspection() {
                                     placeholder="your.email@example.com"
                                     type="email"
                                     size="lg"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
                                     _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
                                 />
                             </HStack>
-                        </FormControl>
+                        </FormControl> */}
 
                         <FormControl>
                             <FormLabel color="brand.gray.700" fontSize="sm" fontWeight="600">
@@ -429,11 +468,48 @@ export default function BookInspection() {
                         variant="primary"
                         size="lg"
                         onClick={handlePay}
+                        isDisabled={booking}
                     >
                         Pay ₦5,500 & Book Inspection
                     </Button>
                 </VStack>
             </Box>
+
+            <AlertDialog
+                isOpen={isOpen}
+                leastDestructiveRef={cancelRef}
+                onClose={onClose}
+                isCentered
+                closeOnEsc={!booking}
+                closeOnOverlayClick={!booking}
+            >
+                <AlertDialogOverlay>
+                    <AlertDialogContent mx={4}>
+                        <AlertDialogHeader fontSize="lg" fontWeight="bold">
+                            Confirm inspection booking
+                        </AlertDialogHeader>
+                        <AlertDialogBody>
+                            Submit an inspection request for {title} on{' '}
+                            {preferredDate && new Date(`${preferredDate}T${preferredTime}:00`).toLocaleString()}?
+                            The total is ₦5,500.
+                        </AlertDialogBody>
+                        <AlertDialogFooter>
+                            <Button ref={cancelRef} onClick={onClose} isDisabled={booking}>
+                                Cancel
+                            </Button>
+                            <Button
+                                colorScheme="teal"
+                                onClick={confirmBooking}
+                                ml={3}
+                                isLoading={booking}
+                                loadingText="Submitting"
+                            >
+                                Confirm & Book
+                            </Button>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialogOverlay>
+            </AlertDialog>
         </Box>
     );
 }

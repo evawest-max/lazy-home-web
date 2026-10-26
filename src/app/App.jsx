@@ -17,6 +17,9 @@ import Profile from './components/profile';
 import IdentityVerification from './components/IdentityVerification';
 import BookInspection from './components/BookInspection';
 import InspectionFeedback from './components/InspectionFeedback';
+import MyInspectionBookings from './components/MyInspectionBookings';
+import ManagedPropertyInspections from './components/ManagedPropertyInspections';
+import ManagedInspections from './components/ManagedInspections';
 import Dashboard from './components/dashboard';
 import ResetPassword from './components/Reset password';
 import ForgotPassword from './Forgot Password';
@@ -221,7 +224,7 @@ export default function App() {
     setUser(userData);
     localStorage.setItem('user', JSON.stringify(userData));
   };
-  const logout = async() => {
+  const logout = async () => {
     try {
       const response = await loginOutUser()
       setUser(null);
@@ -360,48 +363,51 @@ export default function App() {
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={!user ? <Login onLogin={login} /> : <Navigate to="/dashboard" />} />
             <Route path="/signup" element={!user ? <SignUp /> : <Navigate to="/dashboard" />} />
-            <Route path="/otp" element={user ? <OTPVerification phone={user.phone} /> : <Navigate to="/login" />} />
+            <Route path="/otp" element={loadingUser ? (<Spinner />) : user ? <OTPVerification phone={user.phone} /> : <Navigate to="/login" />} />
             <Route path="/login-form" element={!user ? <SignInForm onLogin={login} /> : <Navigate to="/dashboard" />} />
             <Route path="/forgot-password" element={!user ? <ForgotPassword /> : <Navigate to="/dashboard" />} />
             <Route path="/reset-password/:resetToken" element={!user ? <ResetPassword /> : <Navigate to="/dashboard" />} />
             <Route path="/verify/:token" element={<VerifyEmail />} />
-            <Route path="/home" element={<HomeScreen user={user}/>} />
-            <Route path="/property-listings" element={<PropertyListing user={user}/>} />
+            <Route path="/home" element={<HomeScreen user={user} />} />
+            <Route path="/property-listings" element={<PropertyListing user={user} />} />
             <Route path="/property/:id" element={<PropertyDetails user={user} />} />
             <Route path="/app-reviews" element={<AppReviewsPage />} />
-            <Route path="/admin-app-reviews" element={user && (user.role === 'super_admin' || user.role === 'admin' || user.role === 'moderator') ? <AdminAppReviewsPage /> : <Navigate to="/login" />} />
-            <Route path="/admin-landlord-reviews" element={user && (user.role === 'super_admin' || user.role === 'admin' || user.role === 'moderator') ? <AdminLandlordReviewsPage /> : <Navigate to="/login" />} />
-            <Route path="/admin-user-reviews/:userId" element={user && (user.role === 'super_admin' || user.role === 'admin' || user.role === 'moderator') ? <AdminLandlordReviewsPage /> : <Navigate to="/login" />} />
-            <Route path="/landlord-reviews/:landlordId" element={user ? <LandlordReviewsPage /> : <Navigate to="/login" />} />
-            <Route path="/inspection-feedback/:id" element={user ? <InspectionFeedback /> : <Navigate to="/login" />} />
-            <Route path="/secure-payment/:id" element={loadingUser ? <Spinner /> : <PaymentBreakdown  user={user} />} />
-            <Route path="/book-inspection/:id" element={user ? <BookInspection /> : <Navigate to="/login" />} />
+            <Route path="/admin-app-reviews" element={loadingUser ? (<Spinner />) : user && (user.role === 'super_admin' || user.role === 'admin' || user.role === 'moderator') ? <AdminAppReviewsPage /> : <Navigate to="/login" />} />
+            <Route path="/admin-landlord-reviews" element={loadingUser ? (<Spinner />) : user && (user.role === 'super_admin' || user.role === 'admin' || user.role === 'moderator') ? <AdminLandlordReviewsPage /> : <Navigate to="/login" />} />
+            <Route path="/admin-user-reviews/:userId" element={loadingUser ? (<Spinner />) : user && (user.role === 'super_admin' || user.role === 'admin' || user.role === 'moderator') ? <AdminLandlordReviewsPage /> : <Navigate to="/login" />} />
+            <Route path="/landlord-reviews/:landlordId" element={loadingUser ? (<Spinner />) : user ? <LandlordReviewsPage /> : <Navigate to="/login" />} />
+            <Route path="/inspection-feedback/:id" element={loadingUser ? (<Spinner />) : user ? <InspectionFeedback /> : <Navigate to="/login" />} />
+            <Route path="/my-inspections" element={loadingUser ? (<Spinner />) : user ? <MyInspectionBookings /> : <Navigate to="/login" />} />
+            <Route path="/managed-property-inspections/:propertyId" element={loadingUser ? (<Spinner />) : user ? <ManagedPropertyInspections /> : <Navigate to="/login" />} />
+            <Route path="/managed-inspections" element={loadingUser ? (<Spinner />) : user ? <ManagedInspections /> : <Navigate to="/login" />} />
+            <Route path="/secure-payment/:id" element={loadingUser ? <Spinner /> : <PaymentBreakdown user={user} />} />
+            <Route path="/book-inspection/:id" element={loadingUser ? (<Spinner />) : user ? <BookInspection /> : <Navigate to="/login" />} />
             <Route path="/dashboard" element={user ? <Dashboard user={user} setUpdatedFormdata={setUpdatedFormdata} /> : <Navigate to="/login" />} />
             <Route path="/create-listing/steps" element={user ? <ListProperty formData={formData} setFormData={setFormData} initialStep={1} onSubmit={handleListingSubmit} isLoading={isLoading} setIsLoading={setIsLoading} /> : <Navigate to="/login" />} />
             <Route path="/update-listing/steps" element={user ? <UpdateProperty updatedFormdata={updatedFormdata} setUpdatedFormdata={setUpdatedFormdata} initialStep={1} /> : <Navigate to="/login" />} />
             {/* <Route path="/create-listing/step-3" element={ user ? <ListProperty formData={formData} setFormData={setFormData} initialStep={3} onSubmit={handleListingSubmit} /> : <Navigate to="/login" />} /> */}
             {/* <Route path="/create-listing/step-4" element={ user ? <ListProperty formData={formData} setFormData={setFormData} initialStep={4} onSubmit={handleListingSubmit} /> : <Navigate to="/login" />} />  */}
-            <Route path="/profile" element={ loadingUser ? (<Spinner />) : user ? (<Profile onLogout={logout} user={user} />  ) : (<Navigate to="/login" /> ) } />
+            <Route path="/profile" element={loadingUser ? (<Spinner />) : user ? (<Profile onLogout={logout} user={user} />) : (<Navigate to="/login" />)} />
             {/* <Route path="/profile" element={!user ? <Navigate to="/login" /> : <Profile onLogout={logout} user={user} />} /> */}
-            <Route path="/wallet" element={loadingUser ? (<Spinner />) : user ? ( <Wallet user={user} /> ): (<Navigate to="/login" />)} />
+            <Route path="/wallet" element={loadingUser ? (<Spinner />) : user ? (<Wallet user={user} />) : (<Navigate to="/login" />)} />
             <Route path="/notifications" element={loadingUser ? (<Spinner />) : user ? <Notifications user={user} /> : <Navigate to="/login" />} />
             <Route path="/bank-verification" element={user ? <BankVerificationForm user={user} /> : <Navigate to="/login" />} />
             <Route path="/verify_ID" element={user ? <IdentityVerification /> : <Navigate to="/login" />} />
             <Route path="/edit-profile" element={user ? <EditProfile user={user} /> : <Navigate to="/login" />} />
             <Route path="/change-password" element={user ? <ChangePassword user={user} /> : <Navigate to="/login" />} />
-            <Route path="/security" element={loadingUser ? (<Spinner />) : user ? <ChangePassword user={user}/> : <Navigate to="/login" />} />
+            <Route path="/security" element={loadingUser ? (<Spinner />) : user ? <ChangePassword user={user} /> : <Navigate to="/login" />} />
             <Route path="/settings" element={user ? <ListProperty /> : <Navigate to="/login" />} />
             <Route path="/support" element={loadingUser ? (<Spinner />) : user ? <SupportChat user={user} /> : <Navigate to="/login" />} />
-              <Route path="/financial-dashboard" element={ loadingUser ? (<Spinner />) : user && user.role == "super_admin" ? (<AdminFinancialSummary onLogout={logout} user={user} />  ) : (<Navigate to="/login" /> ) } />
-              <Route path="/wallet-management" element={ loadingUser ? (<Spinner />) : user && (user.role == "super_admin" || user.role == "admin") ? (<AdminWalletManagement onLogout={logout} user={user} />  ) : (<Navigate to="/login" /> ) } />
-              <Route path="/view-user-wallet" element={ loadingUser ? (<Spinner />) : user && (user.role == "super_admin" || user.role == "admin") ? (<AdminViewSingleUserWallet onLogout={logout} user={user} />  ) : (<Navigate to="/login" /> ) } />
-              <Route path="/user-management" element={ loadingUser ? (<Spinner />) : user && (user.role == "super_admin" || user.role == "admin" || user.role == "moderator") ? (<AdminUserManagementDashboard onLogout={logout} user={user} />  ) : (<Navigate to="/login" /> ) } />
-              <Route path="/all-users" element={ loadingUser ? (<Spinner />) : user && user.role == "super_admin" ? (<AdminAllUsersPage onLogout={logout} user={user} />  ) : (<Navigate to="/login" /> ) } />
-              <Route path="/all-properties" element={ loadingUser ? (<Spinner />) : user && user.role == "super_admin" ? (<AdminAllPropertiesPage onLogout={logout} user={user} />  ) : (<Navigate to="/login" /> ) } />
-              <Route path="/admin-user-verification" element={ loadingUser ? (<Spinner />) : user && (user.role == "super_admin" || user.role == "admin" || user.role == "moderator") ? (<AdminUserVerificationPage onLogout={logout} user={user} />  ) : (<Navigate to="/login" /> ) } />
-            <Route path="/admin-support-chat" element={ loadingUser ? (<Spinner />) : user && (user.role == "super_admin" || user.role == "admin" || user.role == "moderator") ? (<AdminSupportChat user={user} />) : (<Navigate to="/login" /> ) } />
-              <Route path="/awaiting-transfer-otp" element={ loadingUser ? (<Spinner />) : user && (user.role == "super_admin" || user.role == "admin") ? (<AwaitingTransferOTPPage />) : (<Navigate to="/login" /> ) } />
-              <Route path="/awaiting-withdrawal-transfer-otp" element={ loadingUser ? (<Spinner />) : user && (user.role == "super_admin" || user.role == "admin") ? (<AwaitingWithdrawalOTPPage />) : (<Navigate to="/login" /> ) } />
+            <Route path="/financial-dashboard" element={loadingUser ? (<Spinner />) : user && user.role == "super_admin" ? (<AdminFinancialSummary onLogout={logout} user={user} />) : (<Navigate to="/login" />)} />
+            <Route path="/wallet-management" element={loadingUser ? (<Spinner />) : user && (user.role == "super_admin" || user.role == "admin") ? (<AdminWalletManagement onLogout={logout} user={user} />) : (<Navigate to="/login" />)} />
+            <Route path="/view-user-wallet" element={loadingUser ? (<Spinner />) : user && (user.role == "super_admin" || user.role == "admin") ? (<AdminViewSingleUserWallet onLogout={logout} user={user} />) : (<Navigate to="/login" />)} />
+            <Route path="/user-management" element={loadingUser ? (<Spinner />) : user && (user.role == "super_admin" || user.role == "admin" || user.role == "moderator") ? (<AdminUserManagementDashboard onLogout={logout} user={user} />) : (<Navigate to="/login" />)} />
+            <Route path="/all-users" element={loadingUser ? (<Spinner />) : user && user.role == "super_admin" ? (<AdminAllUsersPage onLogout={logout} user={user} />) : (<Navigate to="/login" />)} />
+            <Route path="/all-properties" element={loadingUser ? (<Spinner />) : user && user.role == "super_admin" ? (<AdminAllPropertiesPage onLogout={logout} user={user} />) : (<Navigate to="/login" />)} />
+            <Route path="/admin-user-verification" element={loadingUser ? (<Spinner />) : user && (user.role == "super_admin" || user.role == "admin" || user.role == "moderator") ? (<AdminUserVerificationPage onLogout={logout} user={user} />) : (<Navigate to="/login" />)} />
+            <Route path="/admin-support-chat" element={loadingUser ? (<Spinner />) : user && (user.role == "super_admin" || user.role == "admin" || user.role == "moderator") ? (<AdminSupportChat user={user} />) : (<Navigate to="/login" />)} />
+            <Route path="/awaiting-transfer-otp" element={loadingUser ? (<Spinner />) : user && (user.role == "super_admin" || user.role == "admin") ? (<AwaitingTransferOTPPage />) : (<Navigate to="/login" />)} />
+            <Route path="/awaiting-withdrawal-transfer-otp" element={loadingUser ? (<Spinner />) : user && (user.role == "super_admin" || user.role == "admin") ? (<AwaitingWithdrawalOTPPage />) : (<Navigate to="/login" />)} />
             {/* Add more routes here */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

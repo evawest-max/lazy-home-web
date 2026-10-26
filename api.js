@@ -414,6 +414,150 @@ export const getwalletTransactions = (
     `/api/v1/wallet/transactions`, data
   );
 
+export const bookInspection = (
+  propertyId,
+  scheduledAt,
+  alternativeDate,
+  numberOfVisitors,
+  specialRequests,
+  cancellationDeadline,
+  idempotencyKey,
+) =>
+  API.post(
+    "/api/v1/viewing-commitments", {
+    propertyId,
+    scheduledAt,
+    alternativeDate,
+    numberOfVisitors,
+    specialRequests,
+    cancellationDeadline,
+    idempotencyKey,
+  }
+  );
+
+export const getMyInspectionBookings = (query = {}) =>
+  API.get("/api/v1/viewing-commitments/my-commitments", {
+    params: {
+      page: 1,
+      limit: 10,
+      sortBy: "scheduledAt",
+      order: "desc",
+      ...query,
+    },
+  });
+
+export const getManagedPropertyInspections = (query = {}) =>
+  API.get("/api/v1/viewing-commitments/managed-properties", {
+    params: {
+      page: 1,
+      limit: 20,
+      sortBy: "scheduledAt",
+      order: "asc",
+      // --- these are the allowed queries from buildInspectionFilters ---
+      viewingStatus: undefined, // pending_payment | scheduled | attended | no_show_reported | disputed | cancelled | rescheduled | completed
+      paymentStatus: undefined, // pending | held | refund_pending | refunded | credited_to_rent | partially_forfeited
+      rescheduleStatus: undefined, // none | pending | approved | rejected
+      dateFrom: undefined, // ISO string e.g. "2026-05-01"
+      dateTo: undefined,   // ISO string e.g. "2026-05-31"
+      ...query,
+    },
+  });
+
+export const getManagedPropertyInspectionsByProperty = (propertyId, query = {}) =>
+  API.get(`/api/v1/viewing-commitments/managed-properties/${propertyId}`, {
+    params: {
+      page: 1,
+      limit: 20,
+      viewingStatus: undefined,
+      paymentStatus: undefined,
+      dateFrom: undefined,
+      dateTo: undefined,
+      ...query,
+    },
+  });
+
+export const requestInspectionReschedule = (
+  commitmentId,
+  proposedDate,
+  reason,
+) =>
+  API.patch(
+    `/api/v1/viewing-commitments/${commitmentId}/reschedule-request`,
+    {
+      proposedDate,
+      reason,
+    }
+  );
+
+export const inspectionRequestResponse = (
+  commitmentId,
+  decision,
+  responseNote
+) =>
+  API.patch(
+    `/api/v1/viewing-commitments/${commitmentId}/reschedule-request/response`, {
+    decision,
+    responseNote
+  }
+  );
+
+export const confirmInspectionAttendance = (
+  commitmentId,
+  evidence = []
+) => {
+  const formData = new FormData();
+  evidence.forEach(({ file, description }) => {
+    formData.append("images[]", file);
+    formData.append("descriptions[]", description);
+  });
+
+  return API.patch(
+    `/api/v1/viewing-commitments/${commitmentId}/attendance/confirm`,
+    formData
+  );
+};
+
+  export const reportInspectionNoShow = (
+  commitmentId,
+  reason,
+  evidence = []
+  ) => {
+    const formData = new FormData();
+    formData.append("commitmentId", commitmentId);
+    formData.append("reason", reason);
+    evidence.forEach(({ file, reason: evidenceReason }) => {
+      formData.append("images[]", file);
+      formData.append("reasons[]", evidenceReason);
+    });
+
+    return API.patch(
+      `/api/v1/viewing-commitments/${commitmentId}/no-show`,
+      formData
+    );
+  };
+
+  export const disputeViewingNoShow = (
+  commitmentId,
+  evidence = [],
+  reason
+) =>
+  API.post(
+    `/api/v1/viewing-commitments/${commitmentId}/disputes`, {
+    commitmentId,
+    evidence,
+    reason,
+  }
+  );
+
+export const cancelInspectionBooking = (
+  commitmentId
+) =>
+  API.patch(
+    `/api/v1/viewing-commitments/${commitmentId}/cancel`
+  );
+
+
+
 export const payRent = (
   data
 ) =>
@@ -1000,4 +1144,4 @@ export const paystackWebhookTest =
 
 // export const SOCKET_URL =
 //   import.meta.env.VITE_BACKEND_URL;
-  export const SOCKET_URL = SOCKET_HOST;
+export const SOCKET_URL = SOCKET_HOST;

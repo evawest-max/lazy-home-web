@@ -13,6 +13,7 @@ import {
     getSupportSocket,
 } from '../../../../api';
 import AdminChatHeader from './AdminChatHeader';
+import AdminNavbar from './AdminNavbar';
 
 const getDisplayName = (user) => user?.fullName || user?.name || 'Unknown user';
 const getDisplayEmail = (user) => user?.email || 'No email available';
@@ -250,7 +251,7 @@ export default function AdminSupportChat({user}) {
     }, []);
 
     return (
-        <Flex h="100vh" bg="gray.50">
+        <Flex h="92vh" bg="gray.50">
             <Box w="380px" bg="white" borderRight="1px solid" borderColor="gray.200" display="flex" flexDirection="column">
                 <VStack p={4} align="stretch" spacing={3}>
                     <Heading size="md">Support Inbox</Heading>
@@ -412,6 +413,7 @@ export default function AdminSupportChat({user}) {
                     </>
                 )}
             </Flex>
+            <AdminNavbar active="Support" />
         </Flex>
     );
 }
