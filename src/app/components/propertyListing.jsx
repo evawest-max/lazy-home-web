@@ -236,7 +236,7 @@ const handleLocationChange = (e) => {
                         <HStack justify="space-between" mb={4}>
                             <VStack align="start" spacing={0}>
                                 <Text fontSize="2xl" fontWeight="bold" color="white">
-                                    SafeTenants
+                                    RentGidi
                                 </Text>
                                 {user && <Text fontSize="xs" color="whiteAlpha.800">
                                     Welcome back, {user.fullName.split(' ')[0]}!
@@ -405,7 +405,7 @@ const handleLocationChange = (e) => {
                 <Box bg="white" mx={6} p={6} borderRadius="xl" boxShadow="sm">
                     <VStack spacing={4}>
                         <Text fontSize="md" fontWeight="bold" color="brand.primary" textAlign="center">
-                            Why Choose SafeTenants?
+                            Why Choose RentGidi?
                         </Text>
 
                         <VStack spacing={3} w="100%">

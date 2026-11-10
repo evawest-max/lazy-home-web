@@ -110,6 +110,7 @@ export default function AdminUserManagementDashboard({ onLogout, user }) {
     const disputeTypeData = Array.isArray(disputes.byType) ? disputes.byType : [];
     const monthlyUsers = Array.isArray(dashboard.growth?.monthlyUsers) ? dashboard.growth.monthlyUsers : [];
     const monthlyProperties = Array.isArray(dashboard.growth?.monthlyProperties) ? dashboard.growth.monthlyProperties : [];
+    const inspection = summary.inspections ?? dashboard.summary?.inspections ?? {};
 
     const revenueGrowthData = useMemo(() => {
         const data = [...monthlyUsers].map((item) => ({ month: item?._id?.month ? `M${item._id.month}` : 'N/A', users: item?.count ?? 0 }));
@@ -131,9 +132,18 @@ export default function AdminUserManagementDashboard({ onLogout, user }) {
         { label: 'Active Escrows', value: formatNumber(escrows.active), helper: formatMoney(escrows.heldAmount), accent: 'orange' },
         { label: 'App Reviews', value: formatNumber(appReviewTotal), helper: `Avg ${Number(appReviewData.averageRating ?? 0).toFixed(1)}/5 • ${formatNumber(appReviewData.byStatus?.published ?? 0)} published`, accent: 'pink' },
         { label: 'Landlord Reviews', value: formatNumber(landlordReviewTotal), helper: `Avg ${Number(landlordReviewData.averageRating ?? 0).toFixed(1)}/5 • ${formatNumber(landlordReviewData.byStatus?.published ?? 0)} published`, accent: 'amber' },
-        { label: 'Open Disputes', value: formatNumber(disputes.open), helper: `${formatNumber(disputes.total)} total disputes`, accent: 'red' },
+        { label: 'Pending Inspections', value: formatNumber(inspection.totalPending), helper: `${formatNumber(inspection.totalDisputed || 0)} total disputes`, accent: 'red' },
         { label: 'Wallet Balance', value: formatCompactMoney(financial.walletBalance/100), helper: `${formatNumber(financial.frozenWallets)} frozen wallets`, accent: 'cyan' },
     ];
+
+    const summaryCardRoutes = {
+        'Total Users': '/all-users',
+        'Total Properties': '/all-properties',
+        'Verified Users': '/admin-user-verification',
+        'App Reviews': '/admin-app-reviews',
+        'Landlord Reviews': '/admin-landlord-reviews',
+        'Pending Inspections': '/admin-inspections',
+    };
 
     if (loading) { return (<Box p={6} bg="brand.background" minH="100vh" display="flex" alignItems="center" justifyContent="center"><Spinner size="lg" color="teal.500" /></Box>); }
     if (error) { return (<Box p={6} bg="brand.background" minH="100vh" pb={20}><Card border="1px solid" borderColor="red.200" bg="red.50"><CardBody><Text color="red.600">{error}</Text></CardBody></Card><AdminNavbar active="User Management" /></Box>); }
@@ -143,11 +153,28 @@ export default function AdminUserManagementDashboard({ onLogout, user }) {
             <VStack spacing={6} align="stretch">
                 <Box><Heading mb={2} color="teal.600">Moderation Dashboard</Heading><Text color="gray.600">Operational overview of users, properties, verification, financial health, Reviews and fraud activity.</Text></Box>
                 <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={6}>
-                    {summaryCards.map((card) => (
-                        <Card key={card.label} borderLeft="4px solid" borderLeftColor={`${card.accent}.500`} shadow="sm" cursor={card.label === 'Total Users' || card.label === 'Total Properties' || card.label === 'Verified Users' || card.label === 'App Reviews' || card.label === 'Landlord Reviews' ? 'pointer' : 'default'} onClick={card.label === 'Total Users' ? () => navigate('/all-users') : card.label === 'Total Properties' ? () => navigate('/all-properties') : card.label === 'Verified Users' ? () => navigate('/admin-user-verification') : card.label === 'App Reviews' ? () => navigate('/admin-app-reviews') : card.label === 'Landlord Reviews' ? () => navigate('/admin-landlord-reviews') : undefined} _hover={card.label === 'Total Users' || card.label === 'Total Properties' || card.label === 'Verified Users' || card.label === 'App Reviews' || card.label === 'Landlord Reviews' ? { transform: 'translateY(-1px)', boxShadow: 'md' } : undefined}>
-                            <CardBody><Stat><StatLabel>{card.label}</StatLabel><StatNumber fontSize="2xl" mt={2}>{card.value}</StatNumber><StatHelpText>{card.helper}</StatHelpText></Stat></CardBody>
-                        </Card>
-                    ))}
+                    {summaryCards.map((card) => {
+                        const route = summaryCardRoutes[card.label];
+                        return (
+                            <Card
+                                key={card.label}
+                                borderLeft="4px solid"
+                                borderLeftColor={`${card.accent}.500`}
+                                shadow="sm"
+                                cursor={route ? 'pointer' : 'default'}
+                                onClick={route ? () => navigate(route) : undefined}
+                                _hover={route ? { transform: 'translateY(-1px)', boxShadow: 'md' } : undefined}
+                            >
+                                <CardBody>
+                                    <Stat>
+                                        <StatLabel>{card.label}</StatLabel>
+                                        <StatNumber fontSize="2xl" mt={2}>{card.value}</StatNumber>
+                                        <StatHelpText>{card.helper}</StatHelpText>
+                                    </Stat>
+                                </CardBody>
+                            </Card>
+                        );
+                    })}
                 </SimpleGrid>
                 <SimpleGrid columns={{ base: 1, xl: 2 }} spacing={6}>
                     <Card><CardHeader><Heading size="sm">User Growth</Heading></CardHeader><CardBody h="320px"><ResponsiveContainer width="100%" height="100%"><LineChart data={revenueGrowthData}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="month" /><YAxis /><Tooltip /><Line type="monotone" dataKey="users" stroke="#38A169" strokeWidth={3} /></LineChart></ResponsiveContainer></CardBody></Card>
@@ -156,7 +183,7 @@ export default function AdminUserManagementDashboard({ onLogout, user }) {
                 <SimpleGrid columns={{ base: 1, xl: 3 }} spacing={6}>
                     <Card><CardHeader><Heading size="sm">User Distribution</Heading></CardHeader><CardBody><VStack align="stretch" spacing={3}>{userRoleData.map((role) => (<Box key={role._id}><Flex justify="space-between" mb={1}><Text textTransform="capitalize">{role._id}</Text><Text fontWeight="bold">{formatNumber(role.count)}</Text></Flex><Progress value={Math.min(100, ((role.count ?? 0) / (users.total || 1)) * 100)} colorScheme="teal" /></Box>))}</VStack></CardBody></Card>
                     <Card><CardHeader><Heading size="sm">Property Status</Heading></CardHeader><CardBody><VStack align="stretch" spacing={3}>{[{ label: 'Available', value: properties.available }, { label: 'Rented', value: properties.rented }, { label: 'Under Offer', value: properties.pending }, { label: 'Rejected', value: properties.rejected }, { label: 'Archived', value: properties.archived }].map((item) => (<Flex key={item.label} justify="space-between" align="center"><Text>{item.label}</Text><Badge colorScheme={item.label === 'Under Offer' ? 'orange' : item.label === 'Rejected' ? 'red' : item.label === 'Archived' ? 'gray' : 'green'}>{formatNumber(item.value)}</Badge></Flex>))}</VStack></CardBody></Card>
-                    <Card><CardHeader><Heading size="sm">Dispute Breakdown</Heading></CardHeader><CardBody><VStack align="stretch" spacing={3}>{disputeTypeData.map((type) => (<Flex key={type._id} justify="space-between" align="center"><Text textTransform="replace">{type._id.replace(/_/g, ' ')}</Text><Badge colorScheme="red">{formatNumber(type.count)}</Badge></Flex>))}</VStack></CardBody></Card>
+                    <Card><CardHeader><Heading size="sm">Dispute Breakdown</Heading></CardHeader><CardBody><VStack align="stretch" spacing={3}>{disputeTypeData.map((type) => (<Flex key={type._id} justify="space-between" align="center"><Text textTransform="capitalize">{type._id.replace(/_/g, ' ')}</Text><Badge colorScheme="red">{formatNumber(type.count)}</Badge></Flex>))}</VStack></CardBody></Card>
                 </SimpleGrid>
 
                 <Card>

@@ -312,7 +312,7 @@ export default function SupportChat({ user }) {
                                 <HStack align="flex-end" spacing={2} maxW="70%">
                                     <Avatar size="sm" name="Support Team" bg="gray.400" />
                                     <VStack align="flex-start" spacing={1}>
-                                        <Box bg="gray.100" px={4} py={3} borderRadius="lg"><Text fontSize="sm">Hello! Welcome to SafeTenants Support. How can we help you today?</Text></Box>
+                                        <Box bg="gray.100" px={4} py={3} borderRadius="lg"><Text fontSize="sm">Hello! Welcome to RentGidi Support. How can we help you today?</Text></Box>
                                         <Text fontSize="xs" color="brand.gray.600">{formatMessageDate(new Date())}</Text>
                                     </VStack>
                                 </HStack>
@@ -391,7 +391,7 @@ export default function SupportChat({ user }) {
                 </Flex>
 
                 <Box mt={4} textAlign="center">
-                    <Text fontSize="xs" color="brand.gray.600">💬 Chat is monitored 24/7 • 📧 Email: support@SafeTenants.com • 📞 Call: +234 123 456 7890</Text>
+                    <Text fontSize="xs" color="brand.gray.600">💬 Chat is monitored 24/7 • 📧 Email: support@RentGidi.com • 📞 Call: +234 123 456 7890</Text>
                 </Box>
             </Box>
             <Navbar active="support" />

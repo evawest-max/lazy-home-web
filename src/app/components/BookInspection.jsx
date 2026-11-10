@@ -24,8 +24,14 @@ import {
     useToast,
 } from '@chakra-ui/react';
 import { ArrowLeft, Calendar, Clock, MapPin, ShieldCheck, AlertCircle } from 'lucide-react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { bookInspection, getSingleProperty } from '../../../api';
+import InspectionFeePolicy from './InspectionFeePolicy';
+
+const toLocalDateTimeInputValue = (date) => {
+    const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+    return localDate.toISOString().slice(0, 16);
+};
 
 export default function BookInspection() {
     const { id } = useParams();
@@ -34,13 +40,16 @@ export default function BookInspection() {
 
     const [preferredDate, setPreferredDate] = useState('');
     const [preferredTime, setPreferredTime] = useState('');
+    const [landlordResponseDeadline, setLandlordResponseDeadline] = useState('');
     const [alternativeDate, setAlternativeDate] = useState('');
     const [visitors, setVisitors] = useState('');
     const [specialRequests, setSpecialRequests] = useState('');
     const [booking, setBooking] = useState(false);
+    const [acceptedPolicy, setAcceptedPolicy] = useState(false);
     const { isOpen, onOpen, onClose } = useDisclosure();
     const cancelRef = useRef(null);
     const toast = useToast();
+    const navigate = useNavigate()
 
     const imageUrl = useMemo(() => {
         const rawImages = property?.media?.images || property?.images || property?.gallery || [];
@@ -94,6 +103,10 @@ export default function BookInspection() {
     }, [id]);
 
     const handlePay = () => {
+        if (!acceptedPolicy) {
+            toast({ title: 'Accept fee policy', description: 'Please accept the inspection fee policy before booking.', status: 'warning' });
+            return;
+        }
         if (!preferredDate || !preferredTime || !visitors) {
             toast({
                 title: 'Complete the inspection details',
@@ -105,10 +118,44 @@ export default function BookInspection() {
             return;
         }
 
+        const responseDeadline = new Date(landlordResponseDeadline);
+        console.log(responseDeadline)
+        if (
+            !landlordResponseDeadline
+            || Number.isNaN(responseDeadline.getTime())
+            || responseDeadline.getTime() <= Date.now()
+        ) {
+            toast({
+                title: 'Choose a response deadline',
+                description: 'Select a future date and time for the landlord to respond.',
+                status: 'warning',
+                duration: 4000,
+                isClosable: true,
+            });
+            return;
+        }
+
         onOpen();
     };
 
     const confirmBooking = async () => {
+        const responseDeadline = new Date(landlordResponseDeadline);
+        if (
+            !landlordResponseDeadline
+            || Number.isNaN(responseDeadline.getTime())
+            || responseDeadline.getTime() <= Date.now()
+        ) {
+            onClose();
+            toast({
+                title: 'Choose a response deadline',
+                description: 'Select a future date and time for the landlord to respond.',
+                status: 'warning',
+                duration: 4000,
+                isClosable: true,
+            });
+            return;
+        }
+
         setBooking(true);
 
         try {
@@ -125,6 +172,7 @@ export default function BookInspection() {
                 Number(visitors),
                 specialRequests.trim(),
                 cancellationDeadline.toISOString(),
+                responseDeadline.toISOString(),
                 globalThis.crypto?.randomUUID?.() || `viewing-request-${Date.now()}-${Math.random().toString(36).slice(2)}`,
             );
 
@@ -136,6 +184,9 @@ export default function BookInspection() {
                 duration: 5000,
                 isClosable: true,
             });
+            setTimeout(() => {
+                navigate("/dashboard", { state: { parameter: 1 } })
+            }, 3000);
         } catch (error) {
             toast({
                 title: 'Unable to book inspection',
@@ -273,6 +324,8 @@ export default function BookInspection() {
                             <FormLabel color="brand.gray.700" fontSize="sm" fontWeight="600">
                                 Preferred Time
                             </FormLabel>
+                            <Text fontSize="xs" color="brand.gray.600" mt={1}>
+                                your prefered time must be 6 hours from now. you can only cancel 6 hours before the scheduled time                            </Text>
                             <HStack>
                                 <Clock size={18} color="#00695C" />
                                 <Select
@@ -289,6 +342,24 @@ export default function BookInspection() {
                                     <option value="17:00">5:00 PM - 7:00 PM</option>
                                 </Select>
                             </HStack>
+                        </FormControl>
+
+                        <FormControl isRequired>
+                            <FormLabel color="brand.gray.700" fontSize="sm" fontWeight="600">
+                                Landlord Response Deadline
+                            </FormLabel>
+                            <Input
+                                type="datetime-local"
+                                size="lg"
+                                value={landlordResponseDeadline}
+                                min={toLocalDateTimeInputValue(new Date())}
+                                onChange={(e) => setLandlordResponseDeadline(e.target.value)}
+                                required
+                                _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #00695C' }}
+                            />
+                            <Text fontSize="xs" color="brand.gray.600" mt={1}>
+                                Choose a future date and time for the landlord to respond to your request.
+                            </Text>
                         </FormControl>
 
                         <FormControl>
@@ -390,7 +461,7 @@ export default function BookInspection() {
                     </VStack>
                 </Box>
 
-                <Box bg="brand.background" border="2px solid" borderColor="brand.accent" borderRadius="lg" p={5}>
+                {/* <Box bg="brand.background" border="2px solid" borderColor="brand.accent" borderRadius="lg" p={5}>
                     <VStack spacing={3}>
                         <HStack spacing={2}>
                             <AlertCircle size={20} color="#26A69A" />
@@ -412,6 +483,25 @@ export default function BookInspection() {
                             <Text fontSize="sm" color="brand.gray.700">
                                 <Text as="span" fontWeight="bold">4.</Text> Upload inspection photos and decide
                             </Text>
+                        </VStack>
+                    </VStack>
+                </Box> */}
+                <InspectionFeePolicy
+                    amount={500000}
+                    accepted={acceptedPolicy}
+                    onAccept={setAcceptedPolicy}
+                />
+                <Box bg="brand.background" border="2px solid" borderColor="brand.accent" borderRadius="lg" p={5}>
+                    <VStack spacing={3}>
+                        <HStack spacing={2}>
+                            <AlertCircle size={20} color="#26A69A" />
+                            <Text fontSize="md" fontWeight="bold" color="brand.primary">What Happens Next?</Text>
+                        </HStack>
+                        <VStack spacing={2} align="stretch">
+                            <Text fontSize="sm" color="brand.gray.700"><Text as="span" fontWeight="bold">1.</Text> Pay ₦5,000 inspection fee (policy above applies)</Text>
+                            <Text fontSize="sm" color="brand.gray.700"><Text as="span" fontWeight="bold">2.</Text> Agent confirms within 2 hours</Text>
+                            <Text fontSize="sm" color="brand.gray.700"><Text as="span" fontWeight="bold">3.</Text> Visit property</Text>
+                            <Text fontSize="sm" color="brand.gray.700"><Text as="span" fontWeight="bold">4.</Text> Confirm attendance + rental decision</Text>
                         </VStack>
                     </VStack>
                 </Box>
@@ -439,7 +529,7 @@ export default function BookInspection() {
                         </VStack>
 
                         <Text fontSize="xs" color="brand.success" textAlign="center" fontWeight="600">
-                            ✓ Full ₦5,000 refunded if you proceed to rent this property
+                            ✓ Full ₦5,000 refunded if property does match the landLord's discription.
                         </Text>
                     </VStack>
                 </Box>
@@ -460,7 +550,7 @@ export default function BookInspection() {
                     <HStack spacing={2} bg="brand.background" py={2} px={4} borderRadius="lg" w="100%" justify="center">
                         <ShieldCheck size={16} color="#2E7D32" />
                         <Text fontSize="xs" fontWeight="bold" color="brand.success">
-                            ESCROW PROTECTED - REFUNDABLE IF YOU RENT
+                            ESCROW PROTECTED - NOT REFUNDABLE IF YOU RENT
                         </Text>
                     </HStack>
                     <Button
@@ -468,9 +558,9 @@ export default function BookInspection() {
                         variant="primary"
                         size="lg"
                         onClick={handlePay}
-                        isDisabled={booking}
+                        isDisabled={booking || !acceptedPolicy} // <-- add acceptedPolicy
                     >
-                        Pay ₦5,500 & Book Inspection
+                        {acceptedPolicy ? "Pay ₦5,500 & Book Inspection" : "Accept fee policy to continue"}
                     </Button>
                 </VStack>
             </Box>

@@ -38,7 +38,7 @@ export default function TrustBanner() {
               10,000+ Renters
             </Text>
             <Text fontSize="xs" color="brand.gray.600" textAlign="center">
-              Trust SafeTenants
+              Trust RentGidi
             </Text>
           </VStack>
         </HStack>

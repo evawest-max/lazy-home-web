@@ -130,7 +130,7 @@ export default function DualReviewModal({ transactionSuccess, onSubmit, escrowId
 
               {/* App Section - Optional */}
               <div>
-                <strong>SafeTenants App Rating (optional)</strong>
+                <strong>RentGidi App Rating (optional)</strong>
                 <HStack spacing={1} mt={1}>
                   {[1, 2, 3, 4, 5].map((star) => (
                     <IconButton

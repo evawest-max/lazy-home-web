@@ -8,6 +8,10 @@ import {
     FormControl,
     FormLabel,
     Input,
+    Menu,
+    MenuButton,
+    MenuItem,
+    MenuList,
     Modal,
     ModalBody,
     ModalCloseButton,
@@ -22,12 +26,15 @@ import {
     useDisclosure,
     useToast,
 } from '@chakra-ui/react';
-import { ArrowLeft, Calendar, Mail, Phone, User } from 'lucide-react';
+import { ArrowLeft, Calendar, ChevronDown, Mail, Phone, User } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import {
+    acceptInspectionBooking,
     confirmInspectionAttendance,
+    declineInspectionBooking,
     getManagedPropertyInspectionsByProperty,
     inspectionRequestResponse,
+    reportInspectionNoShow,
 } from '../../../api';
 import Navbar from './Navbar';
 
@@ -61,12 +68,158 @@ export default function ManagedPropertyInspections() {
     const [attendanceEvidence, setAttendanceEvidence] = useState([]);
     const [attendanceLoading, setAttendanceLoading] = useState(false);
     const [attendanceError, setAttendanceError] = useState('');
+    const [selectedActionInspection, setSelectedActionInspection] = useState(null);
+    const [noShowReason, setNoShowReason] = useState('');
+    const [noShowEvidence, setNoShowEvidence] = useState([]);
+    const [actionLoading, setActionLoading] = useState(false);
+    const [actionError, setActionError] = useState('');
+    const [currentTime, setCurrentTime] = useState(Date.now());
+    const [selectedBookingAction, setSelectedBookingAction] = useState(null);
+    const [bookingActionLoading, setBookingActionLoading] = useState(false);
+    const [bookingActionError, setBookingActionError] = useState('');
     const {
         isOpen: isAttendanceOpen,
         onOpen: onOpenAttendance,
         onClose: onCloseAttendance,
     } = useDisclosure();
+    const {
+        isOpen: isNoShowOpen,
+        onOpen: onOpenNoShow,
+        onClose: onCloseNoShow,
+    } = useDisclosure();
+    const {
+        isOpen: isBookingDecisionOpen,
+        onOpen: onOpenBookingDecision,
+        onClose: onCloseBookingDecision,
+    } = useDisclosure();
     const toast = useToast();
+
+    useEffect(() => {
+        const timer = setInterval(() => setCurrentTime(Date.now()), 30000);
+        return () => clearInterval(timer);
+    }, []);
+
+    const openNoShowModal = (inspection) => {
+        setSelectedActionInspection(inspection);
+        setNoShowReason('');
+        setNoShowEvidence([{ file: null, reason: '' }]);
+        setActionError('');
+        onOpenNoShow();
+    };
+
+    const closeNoShowModal = () => {
+        if (actionLoading) return;
+        setSelectedActionInspection(null);
+        setNoShowReason('');
+        setNoShowEvidence([]);
+        setActionError('');
+        onCloseNoShow();
+    };
+
+    const openBookingDecisionModal = (inspection, action) => {
+        setSelectedBookingAction({ inspection, action });
+        setBookingActionError('');
+        onOpenBookingDecision();
+    };
+
+    const closeBookingDecisionModal = () => {
+        if (bookingActionLoading) return;
+        setSelectedBookingAction(null);
+        setBookingActionError('');
+        onCloseBookingDecision();
+    };
+
+    const submitBookingDecision = async () => {
+        const inspection = selectedBookingAction?.inspection;
+        const inspectionId = inspection?._id || inspection?.id;
+        if (!inspectionId) {
+            setBookingActionError('This inspection is missing its ID. Refresh and try again.');
+            return;
+        }
+
+        setBookingActionLoading(true);
+        setBookingActionError('');
+        try {
+            if (selectedBookingAction.action === 'accept') {
+                await acceptInspectionBooking(inspectionId);
+            } else {
+                await declineInspectionBooking(inspectionId);
+            }
+
+            const actionLabel = selectedBookingAction.action === 'accept' ? 'accepted' : 'declined';
+            setSelectedBookingAction(null);
+            onCloseBookingDecision();
+            setRefreshKey((key) => key + 1);
+            toast({
+                title: `Booking ${actionLabel}`,
+                status: 'success',
+                duration: 5000,
+                isClosable: true,
+            });
+        } catch (requestError) {
+            console.error('Failed to respond to inspection booking:', requestError);
+            setBookingActionError(
+                requestError?.response?.data?.message || 'Unable to update this booking. Please try again.',
+            );
+        } finally {
+            setBookingActionLoading(false);
+        }
+    };
+
+    const submitNoShowReport = async () => {
+        const inspectionId = selectedActionInspection?._id || selectedActionInspection?.id;
+        if (!inspectionId) {
+            setActionError('This inspection is missing its ID. Refresh and try again.');
+            return;
+        }
+        if (!noShowReason.trim()) {
+            setActionError('Enter a reason for reporting the no-show.');
+            return;
+        }
+        if (
+            noShowEvidence.length === 0
+            || noShowEvidence.length > 5
+            || noShowEvidence.some((item) => !item.file || !item.reason.trim())
+        ) {
+            setActionError('Upload an image and enter a reason for each of up to 5 evidence items.');
+            return;
+        }
+        if (noShowEvidence.some((item) => !item.file.type.startsWith('image/'))) {
+            setActionError('Only image files can be uploaded as no-show evidence.');
+            return;
+        }
+        if (noShowReason.trim().length > 1000 || noShowEvidence.some((item) => item.reason.trim().length > 1000)) {
+            setActionError('The report reason and each evidence reason must be 1000 characters or fewer.');
+            return;
+        }
+
+        setActionLoading(true);
+        setActionError('');
+        try {
+            await reportInspectionNoShow(
+                inspectionId,
+                noShowReason.trim(),
+                noShowEvidence.map(({ file, reason }) => ({ file, reason: reason.trim() })),
+            );
+            setSelectedActionInspection(null);
+            onCloseNoShow();
+            setRefreshKey((key) => key + 1);
+            toast({
+                title: 'No-show report submitted',
+                description: 'The report and evidence have been sent for review.',
+                status: 'success',
+                duration: 5000,
+                isClosable: true,
+            });
+        } catch (requestError) {
+            console.error('Failed to report managed property inspection no-show:', requestError);
+            setActionError(
+                requestError?.response?.data?.message || 'Unable to submit the no-show report. Please try again.',
+            );
+        } finally {
+            setActionLoading(false);
+        }
+    };
 
     const openAttendanceModal = (inspection) => {
         setSelectedAttendanceInspection(inspection);
@@ -308,7 +461,17 @@ export default function ManagedPropertyInspections() {
                             const viewingStatus = inspection.viewingStatus || 'unknown';
                             const paymentStatus = inspection.paymentStatus || 'unknown';
                             const hasPendingReschedule = inspection.rescheduleRequest?.status === 'pending';
-                            const canConfirmAttendance = String(viewingStatus).toLowerCase() === 'scheduled' || String(viewingStatus).toLowerCase() === 'rescheduled';
+                            const normalizedStatus = String(viewingStatus).toLowerCase().replace(/[\s-]+/g, '_');
+                            const canRespondToBooking = normalizedStatus === 'pending_landlord_approval';
+                            const canManage = !['cancelled', 'canceled', 'completed', 'rejected'].includes(normalizedStatus);
+                            const canConfirmAttendance = normalizedStatus === 'scheduled' || normalizedStatus === 'rescheduled';
+                            const gracePeriodMinutes = Number(inspection.gracePeriodMinutes);
+                            const scheduledTime = new Date(inspection.scheduledAt).getTime();
+                            const canReportNoShow = inspection.attendance?.landlordConfirmed === true
+                                && inspection.attendance?.tenantConfirmed === true
+                                && Number.isFinite(gracePeriodMinutes)
+                                && Number.isFinite(scheduledTime)
+                                && currentTime >= scheduledTime + gracePeriodMinutes * 60 * 1000;
 
                             return (
                                 <Box key={inspectionId} bg="white" p={{ base: 4, md: 6 }} borderRadius="xl" boxShadow="sm">
@@ -328,6 +491,54 @@ export default function ManagedPropertyInspections() {
                                             <Badge colorScheme={paymentStatus === 'held' ? 'green' : 'gray'}>
                                                 Payment: {formatStatus(paymentStatus)}
                                             </Badge>
+                                            {canRespondToBooking && (
+                                                <>
+                                                    <Button
+                                                        size="sm"
+                                                        colorScheme="green"
+                                                        onClick={() => openBookingDecisionModal(inspection, 'accept')}
+                                                    >
+                                                        Accept
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        colorScheme="red"
+                                                        variant="outline"
+                                                        onClick={() => openBookingDecisionModal(inspection, 'decline')}
+                                                    >
+                                                        Decline
+                                                    </Button>
+                                                </>
+                                            )}
+                                            {(canConfirmAttendance || canReportNoShow || hasPendingReschedule) && (
+                                                <Menu>
+                                                    <MenuButton
+                                                        as={Button}
+                                                        size="sm"
+                                                        variant="outline"
+                                                        rightIcon={<ChevronDown size={16} />}
+                                                    >
+                                                        Actions
+                                                    </MenuButton>
+                                                    <MenuList>
+                                                        {hasPendingReschedule && (
+                                                            <MenuItem onClick={() => openResponseModal(inspection)}>
+                                                                Respond to reschedule
+                                                            </MenuItem>
+                                                        )}
+                                                        {canConfirmAttendance && (
+                                                            <MenuItem onClick={() => openAttendanceModal(inspection)}>
+                                                                Confirm attendance
+                                                            </MenuItem>
+                                                        )}
+                                                        {canReportNoShow && (
+                                                            <MenuItem color="red.600" onClick={() => openNoShowModal(inspection)}>
+                                                                Report no-show
+                                                            </MenuItem>
+                                                        )}
+                                                    </MenuList>
+                                                </Menu>
+                                            )}
                                         </HStack>
                                     </HStack>
 
@@ -380,29 +591,25 @@ export default function ManagedPropertyInspections() {
                                                         </Text>
                                                     )}
                                                 </Box>
-                                                {hasPendingReschedule && (
-                                                    <Button
-                                                        size="sm"
-                                                        colorScheme="teal"
-                                                        onClick={() => openResponseModal(inspection)}
-                                                    >
-                                                        Respond
-                                                    </Button>
-                                                )}
                                             </HStack>
                                         </Box>
                                     )}
+                                    {inspection.specialRequests && (
+                                        <Text fontSize="sm" color="brand.gray.600" mt={2}>
+                                            Request: {inspection.specialRequests}
+                                        </Text>
+                                    )}
 
-                                    {canConfirmAttendance && (
-                                        <Button
-                                            mt={4}
-                                            size="sm"
-                                            colorScheme="teal"
-                                            onClick={() => openAttendanceModal(inspection)}
-                                        >
-                                            Confirm attendance
-                                        </Button>
-                                   )} 
+                                    {inspection.depositAmount != null && (
+                                        <Text fontSize="sm" color="brand.gray.600" mt={4}>
+                                            Deposit: {inspection.currency || 'NGN'} {(Number(inspection.depositAmount) / 100).toLocaleString()}
+                                        </Text>
+                                    )}
+                                    {inspection.cancellationDeadline && (
+                                        <Text fontSize="sm" color="brand.gray.600" mt={1}>
+                                            Cancellation deadline: {formatDate(inspection.cancellationDeadline)}
+                                        </Text>
+                                    )}
                                 </Box>
                             );
                         })}
@@ -598,6 +805,143 @@ export default function ManagedPropertyInspections() {
                             loadingText="Submitting"
                         >
                             Submit attendance
+                        </Button>
+                    </ModalFooter>
+                </ModalContent>
+            </Modal>
+
+            <Modal isOpen={isNoShowOpen} onClose={closeNoShowModal} isCentered size="xl">
+                <ModalOverlay />
+                <ModalContent mx={4}>
+                    <ModalHeader>Report inspection no-show</ModalHeader>
+                    <ModalCloseButton isDisabled={actionLoading} />
+                    <ModalBody>
+                        <VStack align="stretch" spacing={4}>
+                            <Text color="brand.gray.600">
+                                Explain the no-show and provide up to 5 image evidence items with a reason for each.
+                            </Text>
+                            <FormControl isRequired>
+                                <FormLabel>Reason for report</FormLabel>
+                                <Textarea
+                                    value={noShowReason}
+                                    maxLength={1000}
+                                    isDisabled={actionLoading}
+                                    onChange={(event) => setNoShowReason(event.target.value)}
+                                    placeholder="Explain why you are reporting this no-show"
+                                />
+                            </FormControl>
+                            {noShowEvidence.map((item, index) => (
+                                <Box key={index} border="1px solid" borderColor="brand.gray.200" borderRadius="lg" p={4}>
+                                    <HStack justify="space-between" mb={3}>
+                                        <Text fontWeight="600">Evidence {index + 1}</Text>
+                                        <Button
+                                            size="xs"
+                                            variant="ghost"
+                                            colorScheme="red"
+                                            isDisabled={actionLoading}
+                                            onClick={() => setNoShowEvidence((items) => (
+                                                items.filter((_, itemIndex) => itemIndex !== index)
+                                            ))}
+                                        >
+                                            Remove
+                                        </Button>
+                                    </HStack>
+                                    <VStack align="stretch" spacing={3}>
+                                        <FormControl isRequired>
+                                            <FormLabel>Image</FormLabel>
+                                            <Input
+                                                type="file"
+                                                accept="image/*"
+                                                isDisabled={actionLoading}
+                                                onChange={(event) => setNoShowEvidence((items) => items.map((evidenceItem, itemIndex) => (
+                                                    itemIndex === index
+                                                        ? { ...evidenceItem, file: event.target.files?.[0] || null }
+                                                        : evidenceItem
+                                                )))}
+                                            />
+                                            {item.file && (
+                                                <Text fontSize="sm" color="brand.gray.600" mt={1}>
+                                                    {item.file.name}
+                                                </Text>
+                                            )}
+                                        </FormControl>
+                                        <FormControl isRequired>
+                                            <FormLabel>Evidence reason</FormLabel>
+                                            <Textarea
+                                                value={item.reason}
+                                                maxLength={1000}
+                                                isDisabled={actionLoading}
+                                                onChange={(event) => setNoShowEvidence((items) => items.map((evidenceItem, itemIndex) => (
+                                                    itemIndex === index
+                                                        ? { ...evidenceItem, reason: event.target.value }
+                                                        : evidenceItem
+                                                )))}
+                                                placeholder="Explain what this image shows"
+                                            />
+                                        </FormControl>
+                                    </VStack>
+                                </Box>
+                            ))}
+                            {noShowEvidence.length < 5 && (
+                                <Button
+                                    alignSelf="flex-start"
+                                    size="sm"
+                                    variant="outline"
+                                    isDisabled={actionLoading}
+                                    onClick={() => setNoShowEvidence((items) => [...items, { file: null, reason: '' }])}
+                                >
+                                    Add image evidence
+                                </Button>
+                            )}
+                            {actionError && <Text color="red.600" fontSize="sm">{actionError}</Text>}
+                        </VStack>
+                    </ModalBody>
+                    <ModalFooter>
+                        <Button variant="ghost" onClick={closeNoShowModal} isDisabled={actionLoading}>
+                            Close
+                        </Button>
+                        <Button
+                            colorScheme="red"
+                            ml={3}
+                            onClick={submitNoShowReport}
+                            isLoading={actionLoading}
+                            loadingText="Submitting report"
+                        >
+                            Submit report
+                        </Button>
+                    </ModalFooter>
+                </ModalContent>
+            </Modal>
+
+            <Modal isOpen={isBookingDecisionOpen} onClose={closeBookingDecisionModal} isCentered>
+                <ModalOverlay />
+                <ModalContent mx={4}>
+                    <ModalHeader>
+                        {selectedBookingAction?.action === 'accept' ? 'Accept booking?' : 'Decline booking?'}
+                    </ModalHeader>
+                    <ModalCloseButton isDisabled={bookingActionLoading} />
+                    <ModalBody>
+                        <Text color="brand.gray.600">
+                            {selectedBookingAction?.action === 'accept'
+                                ? 'Confirm that you want to accept this inspection booking.'
+                                : 'Confirm that you want to decline this inspection booking.'}
+                        </Text>
+                        {bookingActionError && (
+                            <Text color="red.600" fontSize="sm" mt={3}>{bookingActionError}</Text>
+                        )}
+                    </ModalBody>
+                    <ModalFooter>
+                        <Button variant="ghost" onClick={closeBookingDecisionModal} isDisabled={bookingActionLoading}>
+                            Cancel
+                        </Button>
+                        <Button
+                            ml={3}
+                            colorScheme={selectedBookingAction?.action === 'accept' ? 'green' : 'red'}
+                            onClick={submitBookingDecision}
+                            isLoading={bookingActionLoading}
+                            loadingText="Submitting"
+                        >
+                            Confirm {selectedBookingAction?.action === 'accept' ? 'acceptance' : 'decline'}
                         </Button>
                     </ModalFooter>
                 </ModalContent>

@@ -421,6 +421,7 @@ export const bookInspection = (
   numberOfVisitors,
   specialRequests,
   cancellationDeadline,
+  landlordResponseDeadline,
   idempotencyKey,
 ) =>
   API.post(
@@ -431,6 +432,7 @@ export const bookInspection = (
     numberOfVisitors,
     specialRequests,
     cancellationDeadline,
+    landlordResponseDeadline,
     idempotencyKey,
   }
   );
@@ -503,13 +505,8 @@ export const inspectionRequestResponse = (
 
 export const confirmInspectionAttendance = (
   commitmentId,
-  evidence = []
+  formData
 ) => {
-  const formData = new FormData();
-  evidence.forEach(({ file, description }) => {
-    formData.append("images[]", file);
-    formData.append("descriptions[]", description);
-  });
 
   return API.patch(
     `/api/v1/viewing-commitments/${commitmentId}/attendance/confirm`,
@@ -517,26 +514,26 @@ export const confirmInspectionAttendance = (
   );
 };
 
-  export const reportInspectionNoShow = (
+export const reportInspectionNoShow = (
   commitmentId,
   reason,
   evidence = []
-  ) => {
-    const formData = new FormData();
-    formData.append("commitmentId", commitmentId);
-    formData.append("reason", reason);
-    evidence.forEach(({ file, reason: evidenceReason }) => {
-      formData.append("images[]", file);
-      formData.append("reasons[]", evidenceReason);
-    });
+) => {
+  const formData = new FormData();
+  formData.append("commitmentId", commitmentId);
+  formData.append("reason", reason);
+  evidence.forEach(({ file, reason: evidenceReason }) => {
+    formData.append("images[]", file);
+    formData.append("reasons[]", evidenceReason);
+  });
 
-    return API.patch(
-      `/api/v1/viewing-commitments/${commitmentId}/no-show`,
-      formData
-    );
-  };
+  return API.patch(
+    `/api/v1/viewing-commitments/${commitmentId}/no-show`,
+    formData
+  );
+};
 
-  export const disputeViewingNoShow = (
+export const disputeViewingNoShow = (
   commitmentId,
   evidence = [],
   reason
@@ -549,11 +546,36 @@ export const confirmInspectionAttendance = (
   }
   );
 
+export const openGeneralViewingDispute = (
+  commitmentId,
+  formData
+) => {
+  return API.post(
+    `/api/v1/viewing-commitments/${commitmentId}/general/disputes/open`,
+    formData
+  );
+};
+
 export const cancelInspectionBooking = (
+  commitmentId,
+  reason
+) => {
+  const url = `/api/v1/viewing-commitments/${commitmentId}/cancel`;
+  return reason ? API.patch(url, { reason }) : API.patch(url);
+};
+
+  export const acceptInspectionBooking = (
   commitmentId
 ) =>
   API.patch(
-    `/api/v1/viewing-commitments/${commitmentId}/cancel`
+    `/api/v1/viewing-commitments/${commitmentId}/accept`
+  );
+
+  export const declineInspectionBooking = (
+  commitmentId
+) =>
+  API.patch(
+    `/api/v1/viewing-commitments/${commitmentId}/decline`
   );
 
 
@@ -1058,6 +1080,40 @@ export const findProperty =
         params: typeof query === 'string' && query.trim() ? { q: query.trim() } : {},
       }
     );
+
+export const getAllInspections = (query = {}) =>
+  API.get("/api/v1/admin/inspections", {
+    params: { disputedOnly: "false", page: 1, limit: 20, ...query },
+  });
+
+  export const getAllUnresolvedDispute = (query = {}) =>
+  API.get("/api/v1/admin/disputes", {
+    params: { page: 1, limit: 20, ...query },
+  });
+
+export const resolveInspectionDisputeFull = (
+  disputeId,
+  {
+    decision, // "refund_tenant" | "apply_to_rent" | "partial_forfeit"
+    adminNotes,
+  }
+) =>
+  API.post(`/api/v1/admin/inspections/${disputeId}/resolve`, {
+    decision : decision || "refund_tenant",
+    adminNotes,
+  });
+
+  export const resolveInspectionDisputePartial = (
+  disputeId,
+  {
+    decision, // "refund_tenant" | "apply_to_rent" | "partial_forfeit"
+    adminNotes,
+  }
+) =>
+  API.post(`/api/v1/admin/inspections/${disputeId}/resolve`, {
+    decision : decision || "partial_forfeit",
+    adminNotes,
+  });
 
 
 // ======================================================

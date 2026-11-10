@@ -5,6 +5,7 @@ import {
     Button,
     Divider,
     FormControl,
+    FormHelperText,
     FormLabel,
     HStack,
     Input,
@@ -29,12 +30,13 @@ import {
 import { ArrowLeft, Calendar, ChevronDown, Mail, Phone, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import {
+    acceptInspectionBooking,
     confirmInspectionAttendance,
+    declineInspectionBooking,
     disputeViewingNoShow,
     getManagedPropertyInspections,
     inspectionRequestResponse,
     reportInspectionNoShow,
-    requestInspectionReschedule,
 } from '../../../api';
 import Navbar from './Navbar';
 
@@ -67,8 +69,6 @@ export default function ManagedInspections() {
     const [attendanceLoading, setAttendanceLoading] = useState(false);
     const [attendanceError, setAttendanceError] = useState('');
     const [selectedActionInspection, setSelectedActionInspection] = useState(null);
-    const [proposedDate, setProposedDate] = useState('');
-    const [rescheduleReason, setRescheduleReason] = useState('');
     const [noShowReason, setNoShowReason] = useState('');
     const [noShowEvidence, setNoShowEvidence] = useState([]);
     const [disputeReason, setDisputeReason] = useState('');
@@ -76,15 +76,13 @@ export default function ManagedInspections() {
     const [actionLoading, setActionLoading] = useState(false);
     const [actionError, setActionError] = useState('');
     const [currentTime, setCurrentTime] = useState(Date.now());
+    const [selectedBookingAction, setSelectedBookingAction] = useState(null);
+    const [bookingActionLoading, setBookingActionLoading] = useState(false);
+    const [bookingActionError, setBookingActionError] = useState('');
     const {
         isOpen: isAttendanceOpen,
         onOpen: onOpenAttendance,
         onClose: onCloseAttendance,
-    } = useDisclosure();
-    const {
-        isOpen: isRescheduleOpen,
-        onOpen: onOpenReschedule,
-        onClose: onCloseReschedule,
     } = useDisclosure();
     const {
         isOpen: isNoShowOpen,
@@ -96,6 +94,11 @@ export default function ManagedInspections() {
         onOpen: onOpenDispute,
         onClose: onCloseDispute,
     } = useDisclosure();
+    const {
+        isOpen: isBookingDecisionOpen,
+        onOpen: onOpenBookingDecision,
+        onClose: onCloseBookingDecision,
+    } = useDisclosure();
     const toast = useToast();
 
     useEffect(() => {
@@ -106,61 +109,6 @@ export default function ManagedInspections() {
     const getSelectedInspectionId = () => (
         selectedActionInspection?._id || selectedActionInspection?.id
     );
-
-    const openRescheduleModal = (inspection) => {
-        setSelectedActionInspection(inspection);
-        setProposedDate('');
-        setRescheduleReason('');
-        setActionError('');
-        onOpenReschedule();
-    };
-
-    const closeRescheduleModal = () => {
-        if (actionLoading) return;
-        setSelectedActionInspection(null);
-        setActionError('');
-        onCloseReschedule();
-    };
-
-    const submitRescheduleRequest = async () => {
-        const inspectionId = getSelectedInspectionId();
-        const proposedDateValue = new Date(proposedDate);
-        if (!inspectionId) {
-            setActionError('This inspection is missing its ID. Refresh and try again.');
-            return;
-        }
-        if (!proposedDate || Number.isNaN(proposedDateValue.getTime()) || proposedDateValue <= new Date()) {
-            setActionError('Choose a valid date and time in the future.');
-            return;
-        }
-
-        setActionLoading(true);
-        setActionError('');
-        try {
-            await requestInspectionReschedule(
-                inspectionId,
-                proposedDateValue.toISOString(),
-                rescheduleReason.trim(),
-            );
-            setSelectedActionInspection(null);
-            onCloseReschedule();
-            setRefreshKey((key) => key + 1);
-            toast({
-                title: 'Reschedule request sent',
-                description: 'Your proposed inspection date has been submitted.',
-                status: 'success',
-                duration: 5000,
-                isClosable: true,
-            });
-        } catch (requestError) {
-            console.error('Failed to request managed inspection reschedule:', requestError);
-            setActionError(
-                requestError?.response?.data?.message || 'Unable to request a reschedule. Please try again.',
-            );
-        } finally {
-            setActionLoading(false);
-        }
-    };
 
     const openNoShowModal = (inspection) => {
         setSelectedActionInspection(inspection);
@@ -420,6 +368,56 @@ export default function ManagedInspections() {
         }
     };
 
+    const openBookingDecisionModal = (inspection, action) => {
+        setSelectedBookingAction({ inspection, action });
+        setBookingActionError('');
+        onOpenBookingDecision();
+    };
+
+    const closeBookingDecisionModal = () => {
+        if (bookingActionLoading) return;
+        setSelectedBookingAction(null);
+        setBookingActionError('');
+        onCloseBookingDecision();
+    };
+
+    const submitBookingDecision = async () => {
+        const inspection = selectedBookingAction?.inspection;
+        const inspectionId = inspection?._id || inspection?.id;
+        if (!inspectionId) {
+            setBookingActionError('This inspection is missing its ID. Refresh and try again.');
+            return;
+        }
+
+        setBookingActionLoading(true);
+        setBookingActionError('');
+        try {
+            if (selectedBookingAction.action === 'accept') {
+                await acceptInspectionBooking(inspectionId);
+            } else {
+                await declineInspectionBooking(inspectionId);
+            }
+
+            const actionLabel = selectedBookingAction.action === 'accept' ? 'accepted' : 'declined';
+            setSelectedBookingAction(null);
+            onCloseBookingDecision();
+            setRefreshKey((key) => key + 1);
+            toast({
+                title: `Booking ${actionLabel}`,
+                status: 'success',
+                duration: 5000,
+                isClosable: true,
+            });
+        } catch (requestError) {
+            console.error('Failed to respond to inspection booking:', requestError);
+            setBookingActionError(
+                requestError?.response?.data?.message || 'Unable to update this booking. Please try again.',
+            );
+        } finally {
+            setBookingActionLoading(false);
+        }
+    };
+
     useEffect(() => {
         let isMounted = true;
 
@@ -526,7 +524,7 @@ export default function ManagedInspections() {
                             const paymentStatus = inspection.paymentStatus || 'unknown';
                             const hasPendingReschedule = inspection.rescheduleRequest?.status === 'pending';
                             const normalizedStatus = String(viewingStatus).toLowerCase().replace(/[\s-]+/g, '_');
-                            const canManage = !['cancelled', 'canceled', 'completed', 'rejected'].includes(normalizedStatus);
+                            const canRespondToBooking = normalizedStatus === 'pending_landlord_approval';
                             const canConfirmAttendance = normalizedStatus === 'scheduled' || normalizedStatus === 'rescheduled';
                             const gracePeriodMinutes = Number(inspection.gracePeriodMinutes);
                             const scheduledTime = new Date(inspection.scheduledAt).getTime();
@@ -556,7 +554,26 @@ export default function ManagedInspections() {
                                             <Badge colorScheme={paymentStatus === 'held' ? 'green' : 'gray'}>
                                                 Payment: {formatStatus(paymentStatus)}
                                             </Badge>
-                                            {(canManage || hasPendingReschedule) && (
+                                            {canRespondToBooking && (
+                                                <>
+                                                    <Button
+                                                        size="sm"
+                                                        colorScheme="green"
+                                                        onClick={() => openBookingDecisionModal(inspection, 'accept')}
+                                                    >
+                                                        Accept
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        colorScheme="red"
+                                                        variant="outline"
+                                                        onClick={() => openBookingDecisionModal(inspection, 'decline')}
+                                                    >
+                                                        Decline
+                                                    </Button>
+                                                </>
+                                            )}
+                                            {(hasPendingReschedule || canConfirmAttendance || canReportNoShow || canDisputeNoShow) && (
                                                 <Menu>
                                                     <MenuButton
                                                         as={Button}
@@ -585,11 +602,6 @@ export default function ManagedInspections() {
                                                         {canDisputeNoShow && (
                                                             <MenuItem color="orange.600" onClick={() => openDisputeModal(inspection)}>
                                                                 Dispute no-show
-                                                            </MenuItem>
-                                                        )}
-                                                        {canManage && (
-                                                            <MenuItem onClick={() => openRescheduleModal(inspection)}>
-                                                                Reschedule inspection
                                                             </MenuItem>
                                                         )}
                                                     </MenuList>
@@ -647,6 +659,12 @@ export default function ManagedInspections() {
                                                 </Box>
                                             </HStack>
                                         </Box>
+                                    )}
+
+                                    {inspection.specialRequests && (
+                                        <Text fontSize="sm" color="brand.gray.600" mt={2}>
+                                            Request: {inspection.specialRequests}
+                                        </Text>
                                     )}
 
                                     {inspection.depositAmount != null && (
@@ -752,6 +770,40 @@ export default function ManagedInspections() {
                 </ModalContent>
             </Modal>
 
+            <Modal isOpen={isBookingDecisionOpen} onClose={closeBookingDecisionModal} isCentered>
+                <ModalOverlay />
+                <ModalContent mx={4}>
+                    <ModalHeader>
+                        {selectedBookingAction?.action === 'accept' ? 'Accept booking?' : 'Decline booking?'}
+                    </ModalHeader>
+                    <ModalCloseButton isDisabled={bookingActionLoading} />
+                    <ModalBody>
+                        <Text color="brand.gray.600">
+                            {selectedBookingAction?.action === 'accept'
+                                ? 'Confirm that you want to accept this inspection booking.'
+                                : 'Confirm that you want to decline this inspection booking.'}
+                        </Text>
+                        {bookingActionError && (
+                            <Text color="red.600" fontSize="sm" mt={3}>{bookingActionError}</Text>
+                        )}
+                    </ModalBody>
+                    <ModalFooter>
+                        <Button variant="ghost" onClick={closeBookingDecisionModal} isDisabled={bookingActionLoading}>
+                            Cancel
+                        </Button>
+                        <Button
+                            ml={3}
+                            colorScheme={selectedBookingAction?.action === 'accept' ? 'green' : 'red'}
+                            onClick={submitBookingDecision}
+                            isLoading={bookingActionLoading}
+                            loadingText="Submitting"
+                        >
+                            Confirm {selectedBookingAction?.action === 'accept' ? 'acceptance' : 'decline'}
+                        </Button>
+                    </ModalFooter>
+                </ModalContent>
+            </Modal>
+
             <Modal isOpen={isAttendanceOpen} onClose={closeAttendanceModal} isCentered size="xl">
                 <ModalOverlay />
                 <ModalContent mx={4}>
@@ -785,21 +837,41 @@ export default function ManagedInspections() {
                                         </Button>
                                     </HStack>
                                     <VStack align="stretch" spacing={3}>
-                                        <FormControl isRequired>
-                                            <FormLabel>Image</FormLabel>
+                                        <FormControl>
+                                            <FormLabel mb={1}>Image</FormLabel>
+                                            <FormHelperText mt={0} mb={2} fontSize="xs" color="gray.500">
+                                                Example: image of you and the tenant at the property
+                                            </FormHelperText>
+
                                             <Input
                                                 type="file"
                                                 accept="image/*"
-                                                isDisabled={attendanceLoading}
-                                                onChange={(event) => updateAttendanceEvidence(
-                                                    index,
-                                                    'file',
-                                                    event.target.files?.[0] || null,
-                                                )}
+                                                isDisabled={actionLoading}
+                                                sx={{
+                                                    "::file-selector-button": {
+                                                        border: "none",
+                                                        mr: 3,
+                                                        py: 1.5,
+                                                        px: 4,
+                                                        borderRadius: "md",
+                                                        bg: "teal.50",
+                                                        color: "teal.700",
+                                                        fontWeight: 600,
+                                                        cursor: "pointer",
+                                                    },
+                                                }}
+                                                onChange={(event) =>
+                                                    updateAttendanceEvidence(
+                                                        index,
+                                                        'file',
+                                                        event.target.files?.[0] || null
+                                                    )
+                                                }
                                             />
+
                                             {item.file && (
-                                                <Text fontSize="sm" color="brand.gray.600" mt={1}>
-                                                    {item.file.name}
+                                                <Text fontSize="xs" color="gray.600" mt={2} noOfLines={1}>
+                                                    Selected: {item.file.name}
                                                 </Text>
                                             )}
                                         </FormControl>
@@ -854,55 +926,6 @@ export default function ManagedInspections() {
                             loadingText="Submitting"
                         >
                             Submit attendance
-                        </Button>
-                    </ModalFooter>
-                </ModalContent>
-            </Modal>
-
-            <Modal isOpen={isRescheduleOpen} onClose={closeRescheduleModal} isCentered>
-                <ModalOverlay />
-                <ModalContent mx={4}>
-                    <ModalHeader>Request a new inspection time</ModalHeader>
-                    <ModalCloseButton isDisabled={actionLoading} />
-                    <ModalBody>
-                        <VStack align="stretch" spacing={4}>
-                            <Text color="brand.gray.600">
-                                Select a proposed date and time. The inspection is not rescheduled until the request is reviewed.
-                            </Text>
-                            <FormControl isRequired>
-                                <FormLabel>Proposed date and time</FormLabel>
-                                <Input
-                                    type="datetime-local"
-                                    value={proposedDate}
-                                    min={new Date(Date.now() - new Date().getTimezoneOffset() * 60000 + 60000).toISOString().slice(0, 16)}
-                                    isDisabled={actionLoading}
-                                    onChange={(event) => setProposedDate(event.target.value)}
-                                />
-                            </FormControl>
-                            <FormControl>
-                                <FormLabel>Reason (optional)</FormLabel>
-                                <Textarea
-                                    value={rescheduleReason}
-                                    isDisabled={actionLoading}
-                                    onChange={(event) => setRescheduleReason(event.target.value)}
-                                    placeholder="Tell us why you need to reschedule"
-                                />
-                            </FormControl>
-                            {actionError && <Text color="red.600" fontSize="sm">{actionError}</Text>}
-                        </VStack>
-                    </ModalBody>
-                    <ModalFooter>
-                        <Button variant="ghost" onClick={closeRescheduleModal} isDisabled={actionLoading}>
-                            Close
-                        </Button>
-                        <Button
-                            colorScheme="teal"
-                            ml={3}
-                            onClick={submitRescheduleRequest}
-                            isLoading={actionLoading}
-                            loadingText="Sending request"
-                        >
-                            Send request
                         </Button>
                     </ModalFooter>
                 </ModalContent>

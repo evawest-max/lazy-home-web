@@ -38,7 +38,7 @@ export default function LandingPage({user}) {
         <VStack spacing={6} textAlign="center">
 
           <Text fontSize="2xl" fontWeight="bold" color="white">
-                SafeTenants
+                RentGidi
               </Text>
 
           <Text fontSize="lg" color="gray.200">

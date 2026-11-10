@@ -8,6 +8,7 @@ import {
     FormLabel,
     HStack,
     Input,
+    Select,
     Modal,
     ModalBody,
     ModalCloseButton,
@@ -31,14 +32,16 @@ import {
     AlertDialogOverlay,
     useDisclosure,
     useToast,
+    FormHelperText,
 } from '@chakra-ui/react';
 import { ArrowLeft, Calendar, ChevronDown, MapPin, Users } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
     cancelInspectionBooking,
     confirmInspectionAttendance,
     disputeViewingNoShow,
     getMyInspectionBookings,
+    openGeneralViewingDispute,
     reportInspectionNoShow,
     requestInspectionReschedule,
 } from '../../../api';
@@ -61,6 +64,8 @@ export default function MyInspectionBookings() {
     const [error, setError] = useState('');
     const [refreshKey, setRefreshKey] = useState(0);
     const [selectedBooking, setSelectedBooking] = useState(null);
+    const [declineReason, setDeclineReason] = useState('');
+    const [declineReasonDetails, setDeclineReasonDetails] = useState('');
     const [proposedDate, setProposedDate] = useState('');
     const [rescheduleReason, setRescheduleReason] = useState('');
     const [attendanceEvidence, setAttendanceEvidence] = useState([]);
@@ -68,6 +73,8 @@ export default function MyInspectionBookings() {
     const [noShowEvidence, setNoShowEvidence] = useState([]);
     const [disputeReason, setDisputeReason] = useState('');
     const [disputeEvidence, setDisputeEvidence] = useState([]);
+    const [generalDisputeReason, setGeneralDisputeReason] = useState('');
+    const [generalDisputeEvidence, setGeneralDisputeEvidence] = useState([]);
     const [currentTime, setCurrentTime] = useState(Date.now());
     const [actionLoading, setActionLoading] = useState(false);
     const [actionError, setActionError] = useState('');
@@ -76,8 +83,19 @@ export default function MyInspectionBookings() {
     const { isOpen: isAttendanceOpen, onOpen: onOpenAttendance, onClose: onCloseAttendance } = useDisclosure();
     const { isOpen: isNoShowOpen, onOpen: onOpenNoShow, onClose: onCloseNoShow } = useDisclosure();
     const { isOpen: isDisputeOpen, onOpen: onOpenDispute, onClose: onCloseDispute } = useDisclosure();
+    const {
+        isOpen: isGeneralDisputeOpen,
+        onOpen: onOpenGeneralDispute,
+        onClose: onCloseGeneralDispute,
+    } = useDisclosure();
     const cancelRef = useRef(null);
     const toast = useToast();
+    const navigate = useNavigate();
+    const isDecliningAttendedBooking = ['attended'].includes(
+        String(selectedBooking?.viewingStatus || selectedBooking?.status || '')
+            .toLowerCase()
+            .replace(/[\s-]+/g, '_'),
+    );
 
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime(Date.now()), 30000);
@@ -94,6 +112,8 @@ export default function MyInspectionBookings() {
 
     const openCancelConfirmation = (booking) => {
         setSelectedBooking(booking);
+        setDeclineReason('');
+        setDeclineReasonDetails('');
         setActionError('');
         onOpenCancel();
     };
@@ -139,10 +159,16 @@ export default function MyInspectionBookings() {
             description: item.description.trim(),
         }));
 
+        const formData = new FormData();
+        evidence.forEach(({ file, description }) => {
+            formData.append("images[]", file);
+            formData.append("descriptions[]", description);
+        });
+
         setActionLoading(true);
         setActionError('');
         try {
-            await confirmInspectionAttendance(bookingId, evidence);
+            await confirmInspectionAttendance(bookingId, formData);
             onCloseAttendance();
             setSelectedBooking(null);
             setAttendanceEvidence([]);
@@ -249,6 +275,81 @@ export default function MyInspectionBookings() {
         onCloseDispute();
     };
 
+    const openGeneralDisputeModal = (booking) => {
+        setSelectedBooking(booking);
+        setGeneralDisputeReason('');
+        setGeneralDisputeEvidence([]);
+        setActionError('');
+        onOpenGeneralDispute();
+    };
+
+    const closeGeneralDisputeModal = () => {
+        if (actionLoading) return;
+        setSelectedBooking(null);
+        setGeneralDisputeReason('');
+        setGeneralDisputeEvidence([]);
+        setActionError('');
+        onCloseGeneralDispute();
+    };
+
+    const handleGeneralDispute = async () => {
+        const bookingId = selectedBooking?._id || selectedBooking?.id;
+        if (!bookingId) {
+            setActionError('This inspection is missing its booking ID. Refresh and try again.');
+            return;
+        }
+        if (!generalDisputeReason.trim()) {
+            setActionError('Describe the inspection-related issue before submitting.');
+            return;
+        }
+        if (generalDisputeReason.trim().length > 1000) {
+            setActionError('The dispute description must be 1000 characters or fewer.');
+            return;
+        }
+        if (generalDisputeEvidence.length > 5 || generalDisputeEvidence.some((item) => !item.file)) {
+            setActionError('Upload an image for each evidence item, or remove empty items. You can add up to 5 images.');
+            return;
+        }
+        if (generalDisputeEvidence.some((item) => !item.file.type.startsWith('image/'))) {
+            setActionError('Only image files can be uploaded as dispute evidence.');
+            return;
+        }
+
+        setActionLoading(true);
+        setActionError('');
+        const formData = new FormData();
+        formData.append("commitmentId", bookingId);
+        formData.append("reason", generalDisputeReason.trim());
+        generalDisputeEvidence.forEach(({ file }) => {
+            formData.append("images[]", file);
+        });
+        // Debug correctly:
+        console.log("FormData entries:", [...formData.entries()]);
+        console.log("Files:", generalDisputeEvidence.map(e => e.file?.name));
+        try {
+            await openGeneralViewingDispute(bookingId, formData);
+            onCloseGeneralDispute();
+            setSelectedBooking(null);
+            setGeneralDisputeReason('');
+            setGeneralDisputeEvidence([]);
+            setRefreshKey((key) => key + 1);
+            toast({
+                title: 'General dispute submitted',
+                description: 'Your inspection-related complaint has been sent for review.',
+                status: 'success',
+                duration: 5000,
+                isClosable: true,
+            });
+        } catch (requestError) {
+            console.error('Failed to submit general inspection dispute:', requestError);
+            setActionError(
+                requestError?.response?.data?.message || 'Unable to submit the general dispute. Please try again.',
+            );
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
     const handleNoShowDispute = async () => {
         const bookingId = selectedBooking?._id || selectedBooking?.id;
         if (!bookingId) {
@@ -347,13 +448,21 @@ export default function MyInspectionBookings() {
         setActionLoading(true);
         setActionError('');
         try {
-            await cancelInspectionBooking(selectedBooking._id || selectedBooking.id);
+            const reason = declineReason === 'Other'
+                ? declineReasonDetails.trim() || declineReason
+                : declineReason;
+            const isDecline = isDecliningAttendedBooking;
+            await cancelInspectionBooking(selectedBooking._id || selectedBooking.id, reason || undefined);
             onCloseCancel();
             setSelectedBooking(null);
+            setDeclineReason('');
+            setDeclineReasonDetails('');
             setRefreshKey((currentKey) => currentKey + 1);
             toast({
-                title: 'Inspection cancelled',
-                description: 'Your inspection booking has been cancelled.',
+                title: isDecline ? 'Property declined' : 'Inspection cancelled',
+                description: isDecline
+                    ? 'Your response has been submitted.'
+                    : 'Your inspection booking has been cancelled.',
                 status: 'success',
                 duration: 5000,
                 isClosable: true,
@@ -369,6 +478,8 @@ export default function MyInspectionBookings() {
     const closeCancelDialog = () => {
         if (actionLoading) return;
         setSelectedBooking(null);
+        setDeclineReason('');
+        setDeclineReasonDetails('');
         setActionError('');
         onCloseCancel();
     };
@@ -500,12 +611,16 @@ export default function MyInspectionBookings() {
                             {total} inspection{total === 1 ? '' : 's'}
                         </Text>
                         {bookings.map((booking, index) => {
+                            console.log('Rendering booking:', booking);
                             const property = booking.property
                                 || (typeof booking.propertyId === 'object' ? booking.propertyId : {});
                             const bookingId = booking._id || booking.id || `inspection-${index}`;
                             const status = booking.viewingStatus || booking.status || 'Pending';
                             const title = property.title || property.propertyType || booking.propertyTitle || 'Property inspection';
                             const normalizedStatus = String(status).toLowerCase().replace(/[\s-]+/g, '_');
+                            const propertyId = property._id || (typeof booking.propertyId === 'string' ? booking.propertyId : '');
+                            const isAttended = normalizedStatus === 'attended';
+                            const isCompleted = normalizedStatus === 'completed';
                             const canManage = !['cancelled', 'canceled', 'completed', 'rejected'].includes(normalizedStatus);
                             const canConfirmAttendance = normalizedStatus === 'scheduled' || normalizedStatus === 'rescheduled';
                             const gracePeriodMinutes = Number(booking.gracePeriodMinutes);
@@ -578,6 +693,57 @@ export default function MyInspectionBookings() {
                                             Request: {booking.specialRequests}
                                         </Text>
                                     )}
+                                    {isCompleted && (
+                                        <Box mt={5} p={4} bg="brand.background" borderRadius="lg">
+                                            <VStack align="stretch" spacing={3}>
+                                                <Text fontWeight="600" color="brand.gray.800">
+                                                    Your property inspection has been successfully completed. Are you interested in proceeding with this property?
+                                                </Text>
+                                                <HStack align="stretch" spacing={3} flexWrap="wrap">
+                                                    <VStack
+                                                        align="stretch"
+                                                        spacing={3}
+                                                        flex={1}
+                                                        minW={{ base: '100%', sm: '220px' }}
+                                                        bg="white"
+                                                        p={4}
+                                                        borderRadius="md"
+                                                    >
+                                                        <Text fontWeight="600">I am interested</Text>
+                                                        <Button
+                                                            colorScheme="teal"
+                                                            size= "sm"
+                                                            isDisabled={!propertyId}
+                                                            onClick={() => {
+                                                                if (propertyId) navigate(`/secure-payment/${propertyId}`);
+                                                            }}
+                                                        >
+                                                            Proceed
+                                                        </Button>
+                                                    </VStack>
+                                                    <VStack
+                                                        align="stretch"
+                                                        spacing={3}
+                                                        flex={1}
+                                                        minW={{ base: '100%', sm: '220px' }}
+                                                        bg="white"
+                                                        p={4}
+                                                        borderRadius="md"
+                                                    >
+                                                        <Text fontWeight="600">I am not interested</Text>
+                                                        <Button
+                                                            colorScheme="red"
+                                                            size="sm"
+                                                            variant="outline"
+                                                            onClick={() => openCancelConfirmation(booking)}
+                                                        >
+                                                            Decline
+                                                        </Button>
+                                                    </VStack>
+                                                </HStack>
+                                            </VStack>
+                                        </Box>
+                                    )}
                                     {canManage && (
                                         <Menu>
                                             <MenuButton
@@ -605,6 +771,9 @@ export default function MyInspectionBookings() {
                                                         Dispute no-show
                                                     </MenuItem>
                                                 )}
+                                                <MenuItem onClick={() => openGeneralDisputeModal(booking)}>
+                                                    General dispute
+                                                </MenuItem>
                                                 <MenuItem onClick={() => openReschedule(booking)}>
                                                     Reschedule inspection
                                                 </MenuItem>
@@ -716,16 +885,40 @@ export default function MyInspectionBookings() {
                                     </HStack>
                                     <VStack align="stretch" spacing={3}>
                                         <FormControl>
-                                            <FormLabel>Image</FormLabel>
+                                            <FormLabel mb={1}>Image</FormLabel>
+                                            <FormHelperText mt={0} mb={2} fontSize="xs" color="gray.500">
+                                                Example: image of the property
+                                            </FormHelperText>
+
                                             <Input
                                                 type="file"
                                                 accept="image/*"
                                                 isDisabled={actionLoading}
-                                                onChange={(event) => updateAttendanceEvidence(index, 'file', event.target.files?.[0] || null)}
+                                                sx={{
+                                                    "::file-selector-button": {
+                                                        border: "none",
+                                                        mr: 3,
+                                                        py: 1.5,
+                                                        px: 4,
+                                                        borderRadius: "md",
+                                                        bg: "teal.50",
+                                                        color: "teal.700",
+                                                        fontWeight: 600,
+                                                        cursor: "pointer",
+                                                    },
+                                                }}
+                                                onChange={(event) =>
+                                                    updateAttendanceEvidence(
+                                                        index,
+                                                        'file',
+                                                        event.target.files?.[0] || null
+                                                    )
+                                                }
                                             />
+
                                             {item.file && (
-                                                <Text fontSize="sm" color="brand.gray.600" mt={1}>
-                                                    {item.file.name}
+                                                <Text fontSize="xs" color="gray.600" mt={2} noOfLines={1}>
+                                                    Selected: {item.file.name}
                                                 </Text>
                                             )}
                                         </FormControl>
@@ -954,6 +1147,96 @@ export default function MyInspectionBookings() {
                 </ModalContent>
             </Modal>
 
+            <Modal isOpen={isGeneralDisputeOpen} onClose={closeGeneralDisputeModal} isCentered size="xl">
+                <ModalOverlay />
+                <ModalContent mx={4}>
+                    <ModalHeader>Open a general inspection dispute</ModalHeader>
+                    <ModalCloseButton isDisabled={actionLoading} />
+                    <ModalBody>
+                        <VStack align="stretch" spacing={4}>
+                            <Text color="brand.gray.600">
+                                Describe your inspection-related complaint. You can also upload up to 5 images as supporting evidence.
+                            </Text>
+                            <FormControl isRequired>
+                                <FormLabel>Complaint details</FormLabel>
+                                <Textarea
+                                    value={generalDisputeReason}
+                                    maxLength={1000}
+                                    isDisabled={actionLoading}
+                                    onChange={(event) => setGeneralDisputeReason(event.target.value)}
+                                    placeholder="Explain the issue with this inspection"
+                                />
+                                <Text textAlign="right" fontSize="xs" color="brand.gray.500">
+                                    {generalDisputeReason.length}/1000
+                                </Text>
+                            </FormControl>
+                            {generalDisputeEvidence.map((item, index) => (
+                                <Box key={index} border="1px solid" borderColor="brand.gray.200" borderRadius="lg" p={4}>
+                                    <HStack justify="space-between" mb={3}>
+                                        <Text fontWeight="600">Image evidence {index + 1}</Text>
+                                        <Button
+                                            size="xs"
+                                            variant="ghost"
+                                            colorScheme="red"
+                                            isDisabled={actionLoading}
+                                            onClick={() => setGeneralDisputeEvidence((items) => (
+                                                items.filter((_, itemIndex) => itemIndex !== index)
+                                            ))}
+                                        >
+                                            Remove
+                                        </Button>
+                                    </HStack>
+                                    <FormControl isRequired>
+                                        <FormLabel>Image</FormLabel>
+                                        <Input
+                                            type="file"
+                                            accept="image/*"
+                                            isDisabled={actionLoading}
+                                            onChange={(event) => setGeneralDisputeEvidence((items) => items.map((evidenceItem, itemIndex) => (
+                                                itemIndex === index
+                                                    ? { ...evidenceItem, file: event.target.files?.[0] || null }
+                                                    : evidenceItem
+                                            )))}
+                                        />
+                                        {item.file && (
+                                            <Text fontSize="sm" color="brand.gray.600" mt={1}>
+                                                {item.file.name}
+                                            </Text>
+                                        )}
+                                    </FormControl>
+                                </Box>
+                            ))}
+                            {generalDisputeEvidence.length < 5 && (
+                                <Button
+                                    alignSelf="flex-start"
+                                    size="sm"
+                                    variant="outline"
+                                    isDisabled={actionLoading}
+                                    onClick={() => setGeneralDisputeEvidence((items) => [...items, { file: null }])}
+                                >
+                                    Add image
+                                </Button>
+                            )}
+                            {actionError && <Text color="red.600" fontSize="sm">{actionError}</Text>}
+                        </VStack>
+                    </ModalBody>
+                    <ModalFooter>
+                        <Button variant="ghost" onClick={closeGeneralDisputeModal} isDisabled={actionLoading}>
+                            Close
+                        </Button>
+                        <Button
+                            colorScheme="orange"
+                            ml={3}
+                            onClick={handleGeneralDispute}
+                            isLoading={actionLoading}
+                            loadingText="Submitting dispute"
+                        >
+                            Submit dispute
+                        </Button>
+                    </ModalFooter>
+                </ModalContent>
+            </Modal>
+
             <AlertDialog
                 isOpen={isCancelOpen}
                 leastDestructiveRef={cancelRef}
@@ -965,10 +1248,49 @@ export default function MyInspectionBookings() {
                 <AlertDialogOverlay>
                     <AlertDialogContent mx={4}>
                         <AlertDialogHeader fontSize="lg" fontWeight="bold">
-                            Cancel inspection?
+                            {isDecliningAttendedBooking
+                                ? 'Decline this property?'
+                                : 'Cancel inspection?'}
                         </AlertDialogHeader>
                         <AlertDialogBody>
-                            Are you sure you want to cancel this inspection booking? This action cannot be undone.
+                            {isDecliningAttendedBooking
+                                ? 'Are you sure you are not interested in proceeding? This will cancel the inspection booking.'
+                                : 'Are you sure you want to cancel this inspection booking? This action cannot be undone.'}
+                            {isDecliningAttendedBooking && (
+                                <VStack align="stretch" spacing={3} mt={4}>
+                                    <FormControl>
+                                        <FormLabel>Reason (optional)</FormLabel>
+                                        <Select
+                                            value={declineReason}
+                                            isDisabled={actionLoading}
+                                            onChange={(event) => {
+                                                setDeclineReason(event.target.value);
+                                                setDeclineReasonDetails('');
+                                            }}
+                                        >
+                                            <option value="">Prefer not to say</option>
+                                            <option value="Property does not match description">Property does not match description</option>
+                                            <option value="Rent is too expensive">Rent is too expensive</option>
+                                            <option value="Location is unsuitable">Location is unsuitable</option>
+                                            <option value="Property condition is unsatisfactory">Property condition is unsatisfactory</option>
+                                            <option value="Tenant found another property">Tenant found another property</option>
+                                            <option value="Other">Other</option>
+                                        </Select>
+                                    </FormControl>
+                                    {declineReason === 'Other' && (
+                                        <FormControl>
+                                            <FormLabel>Other reason (optional)</FormLabel>
+                                            <Textarea
+                                                value={declineReasonDetails}
+                                                maxLength={1000}
+                                                isDisabled={actionLoading}
+                                                onChange={(event) => setDeclineReasonDetails(event.target.value)}
+                                                placeholder="Tell us why you are not interested"
+                                            />
+                                        </FormControl>
+                                    )}
+                                </VStack>
+                            )}
                             {actionError && <Text color="red.600" mt={3}>{actionError}</Text>}
                         </AlertDialogBody>
                         <AlertDialogFooter>
@@ -982,7 +1304,9 @@ export default function MyInspectionBookings() {
                                 isLoading={actionLoading}
                                 loadingText="Cancelling"
                             >
-                                Cancel inspection
+                                {isDecliningAttendedBooking
+                                    ? 'Confirm decline'
+                                    : 'Cancel inspection'}
                             </Button>
                         </AlertDialogFooter>
                     </AlertDialogContent>

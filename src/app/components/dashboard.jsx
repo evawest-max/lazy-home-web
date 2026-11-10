@@ -666,7 +666,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                         <HStack justify="space-between" mb={4} flexWrap="wrap" rowGap={3}>
                             <VStack align="start" spacing={0}>
                                 <Text fontSize={{ base: 'xl', md: '2xl' }} fontWeight="bold" color="white">
-                                    SafeTenants
+                                    RentGidi
                                 </Text>
                                 <Text fontSize="xs" color="whiteAlpha.800">
                                     Welcome back, {user.fullName.split(' ')[0]}!

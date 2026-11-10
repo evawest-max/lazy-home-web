@@ -155,7 +155,7 @@ export default function Profile({ onLogout, user }) {
 
                 {/* Header */}
                 <Heading mb={8} color="teal.700">
-                    SafeTenant Profile
+                    RentGidi Profile
                 </Heading>
 
                 {/* Profile Card */}

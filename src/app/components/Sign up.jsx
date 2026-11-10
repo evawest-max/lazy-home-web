@@ -202,7 +202,7 @@ export default function SignUp() {
 
         {/* Terms */}
         <Text fontSize="xs" color="gray.500" textAlign="center">
-          By signing up, you agree to SafeTenants Terms and Privacy Policy
+          By signing up, you agree to RentGidi Terms and Privacy Policy
         </Text>
       </VStack>
 

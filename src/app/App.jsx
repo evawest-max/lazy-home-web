@@ -36,6 +36,8 @@ import AdminFinancialSummary from './components/AdminComponents/AdminFinancialSu
 import AdminUserManagementDashboard from './components/AdminComponents/AdminUserManagement';
 import AdminAllUsersPage from './components/AdminComponents/AdminAllUsersPage';
 import AdminAllPropertiesPage from './components/AdminComponents/AdminAllPropertiesPage';
+import AdminInspectionsPage from './components/AdminComponents/AdminInspectionsPage';
+import AdminUnresolvedDisputesPage from './components/AdminComponents/AdminUnresolvedDisputesPage';
 import AdminWalletManagement from './components/AdminComponents/AdminWalletManagement';
 import AdminViewSingleUserWallet from './components/AdminComponents/AdminViewSingleUserWallet';
 import AdminUserVerificationPage from './components/AdminComponents/AdminUserVerificationPage';
@@ -404,6 +406,8 @@ export default function App() {
             <Route path="/user-management" element={loadingUser ? (<Spinner />) : user && (user.role == "super_admin" || user.role == "admin" || user.role == "moderator") ? (<AdminUserManagementDashboard onLogout={logout} user={user} />) : (<Navigate to="/login" />)} />
             <Route path="/all-users" element={loadingUser ? (<Spinner />) : user && user.role == "super_admin" ? (<AdminAllUsersPage onLogout={logout} user={user} />) : (<Navigate to="/login" />)} />
             <Route path="/all-properties" element={loadingUser ? (<Spinner />) : user && user.role == "super_admin" ? (<AdminAllPropertiesPage onLogout={logout} user={user} />) : (<Navigate to="/login" />)} />
+            <Route path="/admin-inspections" element={loadingUser ? (<Spinner />) : user && (user.role == "super_admin" || user.role == "admin" || user.role == "moderator") ? (<AdminInspectionsPage />) : (<Navigate to="/login" />)} />
+            <Route path="/admin-unresolved-disputes" element={loadingUser ? (<Spinner />) : user && (user.role == "super_admin" || user.role == "admin" || user.role == "moderator") ? (<AdminUnresolvedDisputesPage />) : (<Navigate to="/login" />)} />
             <Route path="/admin-user-verification" element={loadingUser ? (<Spinner />) : user && (user.role == "super_admin" || user.role == "admin" || user.role == "moderator") ? (<AdminUserVerificationPage onLogout={logout} user={user} />) : (<Navigate to="/login" />)} />
             <Route path="/admin-support-chat" element={loadingUser ? (<Spinner />) : user && (user.role == "super_admin" || user.role == "admin" || user.role == "moderator") ? (<AdminSupportChat user={user} />) : (<Navigate to="/login" />)} />
             <Route path="/awaiting-transfer-otp" element={loadingUser ? (<Spinner />) : user && (user.role == "super_admin" || user.role == "admin") ? (<AwaitingTransferOTPPage />) : (<Navigate to="/login" />)} />

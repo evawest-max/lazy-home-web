@@ -47,7 +47,7 @@ export default function DownloadAgreementButton({ escrowid }) {
                     },
 
                     { text: 'RESIDENTIAL TENANCY AGREEMENT', style: 'docTitle' },
-                    { text: 'This legally binding document is securely managed and recorded via SafeTenant.', style: 'tagline' },
+                    { text: 'This legally binding document is securely managed and recorded via RentGidi.', style: 'tagline' },
 
                     { text: '1. PARTIES & PROPERTY', style: 'sectionHeader' },
                     {
@@ -80,7 +80,7 @@ export default function DownloadAgreementButton({ escrowid }) {
                         text: [
                             'The Tenant agrees to pay a monthly rent amount of ₦',
                             { text: (data.payoutBreakdown?.rentAmount || 0).toLocaleString(), bold: true },
-                            '. Rent payments are due in advance on or before the 1st day of each calendar month. Payments shall be delivered electronically through the SafeTenant platform or via methods expressly permitted by the Landlord.'
+                            '. Rent payments are due in advance on or before the 1st day of each calendar month. Payments shall be delivered electronically through the RentGidi platform or via methods expressly permitted by the Landlord.'
                         ],
                         style: 'bodyText'
                     },
