@@ -358,7 +358,7 @@ export default function InspectionFeedback() {
                 ✓ Get instant FULL REFUND to your account
               </Text>
               <Text fontSize="sm" fontWeight="600" color="brand.gray.800" textAlign="center">
-                ✓ Your escrow protection covers you 100%
+                ✓ Your RentGidi protection covers you 100%
               </Text>
             </VStack>
           </VStack>

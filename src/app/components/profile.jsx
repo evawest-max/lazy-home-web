@@ -286,6 +286,7 @@ export default function Profile({ onLogout, user }) {
                     p={6}
                     borderRadius="2xl"
                     boxShadow="xl"
+                    mb={8}
                 >
                     <Heading size="md" mb={4} color="teal.700">
                         Account Management

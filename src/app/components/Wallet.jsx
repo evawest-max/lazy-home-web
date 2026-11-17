@@ -20,6 +20,7 @@ import {
     useToast,
     Badge,
     ButtonGroup,
+    Flex,
 } from '@chakra-ui/react';
 import { useEffect, useState } from 'react';
 import { getActiveSettlementAccount, getBankcodes, getSingleTransaction, getwallet, getwalletTransactions, initializeFundwallet, requestWalletWithdrawal } from '../../../api';
@@ -31,7 +32,25 @@ const formatCurrency = (v) => {
     return `₦${n.toLocaleString()}`;
 };
 
-export default function Wallet() {
+// Put this above your component — once, reuse everywhere
+const getInitials = (name = "") =>
+    name
+        .trim()
+        .split(/\s+/)
+        .slice(0, 2)
+        .map((p) => p[0]?.toUpperCase())
+        .join("") || "RG";
+
+const WALLET_STATUS_STYLES = {
+    active: { bg: "#EDF7F3", color: "#0B5345", dot: "#23A87D", label: "Active" },
+    frozen: { bg: "#FEF3C7", color: "#92400E", dot: "#F59E0B", label: "Frozen" },
+    suspended: { bg: "#FEE2E2", color: "#991B1B", dot: "#EF4444", label: "Suspended" },
+    pending: { bg: "#EDF3FF", color: "#195BD5", dot: "#3B82F6", label: "Pending" },
+};
+
+
+
+export default function Wallet({ user }) {
     const [loading, setLoading] = useState(true);
     const [transactions, setTransactions] = useState([]);
     const [balance, setBalance] = useState(0);
@@ -50,23 +69,27 @@ export default function Wallet() {
     const [activeSettlementAccount, setActiveSettlementAccount] = useState(null);
     const toast = useToast();
     const [banks, setBanks] = useState([]);
+    const [wallet, setWallet] = useState({});
 
-useEffect(() => {
-    const fetchBanks = async () => {
-        try {
-            const res = await getBankcodes();
-            setBanks(res.data.data);
-        } catch (err) {
-            console.error(err);
-        }
+    // Inside your component:
+    const walletStatus = WALLET_STATUS_STYLES[wallet.status?.toLowerCase()] || WALLET_STATUS_STYLES.active;
+
+    useEffect(() => {
+        const fetchBanks = async () => {
+            try {
+                const res = await getBankcodes();
+                setBanks(res.data.data);
+            } catch (err) {
+                console.error(err);
+            }
+        };
+        fetchBanks();
+    }, []);
+
+    const getBankName = (code) => {
+        const bank = banks.find(b => b.code === code);
+        return bank ? bank.name : code;
     };
-    fetchBanks();
-}, []);
-
-const getBankName = (code) => {
-    const bank = banks.find(b => b.code === code);
-    return bank ? bank.name : code;
-};
 
 
     useEffect(() => {
@@ -103,6 +126,7 @@ const getBankName = (code) => {
             try {
                 const wallet = await fetchWallet();
                 if (!mounted) return;
+                setWallet(wallet);
                 const maybeBalance = wallet.balance ?? wallet?.balance;
                 if (typeof maybeBalance === 'number') {
                     setBalance(maybeBalance / 100);
@@ -265,7 +289,42 @@ const getBankName = (code) => {
                 <Box bg="white" p={{ base: 5, md: 6 }} borderRadius="xl" boxShadow="sm">
                     <Stack direction={{ base: 'column', md: 'row' }} align="center" justify="space-between" spacing={4}>
                         <VStack align="start" spacing={1} w={{ base: '100%', md: 'auto' }}>
-                            <Text fontSize={{ base: 'sm', md: 'md' }} color="brand.gray.600">Wallet balance</Text>
+                            <Flex justify="space-between" align="center" w="100%">
+                                <Text fontSize={{ base: 'sm', md: 'md' }} color="brand.gray.600">Wallet balance</Text>
+                                <HStack spacing={3}>
+                                    <Badge
+                                        display="flex"
+                                        alignItems="center"
+                                        gap={2}
+                                        px={3}
+                                        py={1.5}
+                                        borderRadius="full"
+                                        bg={walletStatus.bg}
+                                        color={walletStatus.color}
+                                        fontSize="9px"
+                                        fontWeight="800"
+                                        letterSpacing=".06em"
+                                        textTransform="uppercase"
+                                    >
+                                        <Box w="6px" h="6px" borderRadius="full" bg={walletStatus.dot} />
+                                        {walletStatus.label}
+                                    </Badge>
+                                    <Flex
+                                        w={8}
+                                        h={8}
+                                        align="center"
+                                        justify="center"
+                                        borderRadius="full"
+                                        bg="#183F35"
+                                        color="white"
+                                        fontSize="10px"
+                                        fontWeight="800"
+                                        title={user?.fullName || "Account"}
+                                    >
+                                        {getInitials(user?.fullName)}
+                                    </Flex>
+                                </HStack>
+                            </Flex>
                             <Text fontSize={{ base: '2xl', md: '3xl' }} fontWeight="bold" color="brand.primary">{formatCurrency(balance)}</Text>
                         </VStack>
                         <Box display="flex" gap={3} flexWrap="wrap" w={{ base: '100%', md: 'auto' }} justifyContent={{ base: 'space-between', md: 'flex-end' }}>

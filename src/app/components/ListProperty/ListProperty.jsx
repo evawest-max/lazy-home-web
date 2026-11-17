@@ -210,7 +210,7 @@ const areas = getAreasForLga(formData.lga);
                     ✓ Your listing will be verified within 24 hours
                   </Text>
                   <Text fontSize="sm" fontWeight="600" color="brand.gray.800" textAlign="center">
-                    ✓ All payments held in escrow for your safety
+                    ✓ All payments held in secured RentGidi account for your safety
                   </Text>
                   <Text fontSize="sm" fontWeight="600" color="brand.gray.800" textAlign="center">
                     ✓ Get paid only after successful inspection

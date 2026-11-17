@@ -66,7 +66,7 @@ export default function BeforeAfter() {
               <HStack spacing={2} align="start">
                 <CheckCircle size={16} color="#2E7D32" style={{ marginTop: 2, flexShrink: 0 }} />
                 <Text fontSize="xs" color="brand.gray.700" fontWeight="600">
-                  Pay into secure escrow
+                  Pay into Secure Holding Account
                 </Text>
               </HStack>
 

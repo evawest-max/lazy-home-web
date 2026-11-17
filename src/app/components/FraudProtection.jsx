@@ -49,7 +49,7 @@ export default function FraudProtection() {
               <CheckCircle size={20} color="#2E7D32" />
               <VStack align="start" spacing={0} flex={1}>
                 <Text fontSize="sm" fontWeight="600" color="brand.gray.800">
-                  Escrow Holds Payment
+                  RentGidi Holds Payment
                 </Text>
                 <Text fontSize="xs" color="brand.gray.600">
                   Fraudsters can't access money until you approve

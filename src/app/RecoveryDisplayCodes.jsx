@@ -79,7 +79,7 @@ export default function RecoveryCodesDisplay({ recoveryCodes, onCompleteSetup })
             const url = URL.createObjectURL(blob);
             const a = document.createElement("a");
             a.href = url;
-            a.download = "lazyhomes-recovery-codes.txt";
+            a.download = "RentGidi-recovery-codes.txt";
             a.click();
             URL.revokeObjectURL(url);
           }}

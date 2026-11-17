@@ -4,14 +4,15 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { getRecommendedProperties, getSingleProperty, saveProperty } from '../../../api';
 import PropertyCard from './PropertyCard';
-import { AlertCircle, ArrowLeft, Bath, Bed, Calendar, Copy, Eye, HeartPulse, LockIcon, Save, Share, ShieldCheck, Square, Toilet } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Bath, Bed, Calendar, Copy, Eye, Heart, LockIcon, Save, Share, Share2, ShieldCheck, Square, Toilet } from 'lucide-react';
+import { CheckIcon, CopyIcon } from '@chakra-ui/icons';
 
 const formatCurrency = (value) => {
   if (value === null || value === undefined || value === "") return "N/A";
   return `₦${Number(value).toLocaleString()}`;
 };
 
-export default function PropertyDetails({user}) {
+export default function PropertyDetails({ user }) {
   const { id } = useParams();
   const [property, setProperty] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -58,6 +59,7 @@ export default function PropertyDetails({user}) {
 
         if (isMounted) {
           setProperty(payload || null);
+          setPropertySaved(Boolean(payload?.isSaved));
           setCurrentIndex(0);
         }
       } catch (error) {
@@ -178,7 +180,7 @@ export default function PropertyDetails({user}) {
         )}
 
         {imageUrls.length > 1 && (
-          <HStack position="absolute" bottom={3} left={4} right={4} justify="center" spacing={2} wrap="wrap" overflowX="auto" maxW="90%" boxShadow="md"> // ✅ enable horizontal scroll
+          <HStack position="absolute" bottom={3} left={4} right={4} justify="center" spacing={2} wrap="wrap" overflowX="auto" maxW="90%" boxShadow="md">
             {imageUrls.map((image, index) => (
               <Button
                 key={`${image}-${index}`}
@@ -188,7 +190,7 @@ export default function PropertyDetails({user}) {
                 color={index === currentIndex ? "white" : "brand.gray.800"}
                 borderRadius="full"
                 px={3}
-                flexShrink={0}    // ✅ prevent buttons from shrinking
+                flexShrink={0}
               >
                 {index + 1}
               </Button>
@@ -220,7 +222,7 @@ export default function PropertyDetails({user}) {
             <HStack justify="center" bg="brand.success" py={2} px={3} borderRadius="lg">
               <ShieldCheck size={18} color="white" />
               <Text fontSize="sm" color="white" fontWeight="bold">
-                ESCROW PROTECTED - YOUR MONEY IS SAFE
+                RENTGIDI PROTECTED - YOUR MONEY IS SAFE
               </Text>
             </HStack>
 
@@ -239,19 +241,28 @@ export default function PropertyDetails({user}) {
                 {formatCurrency(rentAmount)} {property.rentDuration ? `/${property.rentDuration}` : ""}
               </Text>
               <VStack align="end">
-                <Text fontSize="sm" fontWeight="400" color="brand.gray.800">{property.views || '0'} views </Text>
+                <Text fontSize="sm" fontWeight="800" color="brand.gray.800" >{property.views || '0'} {property.views === 1 ? 'view' : 'views'} </Text>
                 <HStack spacing={3}>
-                  <Button
+                  <IconButton
+                    type="button"
                     size="sm"
+                    border="1px solid green"
                     bg={propertySaved ? 'brand.success' : 'white'}
-                    color={propertySaved ? 'white' : 'brand.gray.800'}
+                    color={propertySaved ? 'white' : 'green.500'}
+                    borderRadius="full"
+                    aria-label={propertySaved ? 'Property saved' : 'Save property'}
+                    icon={<Heart size={18} fill={propertySaved ? 'currentColor' : 'none'} strokeWidth={2.2} />}
                     _hover={{ bg: propertySaved ? 'brand.success' : 'brand.background' }}
                     onClick={async () => {
                       try {
                         setIsSaving(true);
-                        await saveProperty(id);
-                        setPropertySaved(true);
-                        setTimeout(() => setPropertySaved(false), 3000);
+                        const res = await saveProperty(id);
+                        console.log(res)
+                        if (res.data.data.unsaved) {
+                          setPropertySaved(false);
+                        } else {
+                          setPropertySaved(true);
+                        }
                       } catch (err) {
                         console.error('Failed to save property', err);
                         toast({
@@ -266,15 +277,17 @@ export default function PropertyDetails({user}) {
                       }
                     }}
                     isLoading={isSaving}
-                    leftIcon={<HeartPulse size={14} color='red' fill='red' />}
-                  >
-                    {propertySaved ? 'Saved' : 'Save'}
-                  </Button>
+                  />
 
                   <Button
                     size="sm"
                     bg={shareSaved ? 'brand.success' : 'white'}
-                    color={shareSaved ? 'white' : 'brand.gray.800'}
+                    color={shareSaved ? 'white' : 'green.500'}
+                    borderRadius="full"
+                    border="1px solid"
+                    borderColor={shareSaved ? 'brand.success' : 'green.500'}
+                    aria-label={shareSaved ? 'Link copied' : 'Share property link'}
+                    leftIcon={shareSaved ? <CheckIcon /> : <Share2 size={14} />}
                     _hover={{ bg: shareSaved ? 'brand.success' : 'brand.background' }}
                     onClick={async () => {
                       try {
@@ -296,9 +309,8 @@ export default function PropertyDetails({user}) {
                       }
                     }}
                     isLoading={isSharing}
-                    leftIcon={<Copy size={14} />}
                   >
-                    {shareSaved ? 'Link copied' : 'Copy link'}
+                    {shareSaved ? 'Link copied' : 'Share'}
                   </Button>
                 </HStack>
               </VStack>
@@ -401,12 +413,12 @@ export default function PropertyDetails({user}) {
 
       <Box position="fixed" bottom={0} left={0} right={0} bg="white" borderTop="2px solid" borderColor="brand.success" p={6} boxShadow="2xl">
         <Grid templateColumns="1fr 1fr" gap={3} w="100%">
-        <Button as={Link} to={`/book-inspection/${property._id}`} variant="secondary" leftIcon={<Calendar size={18} />} size="lg">
+          <Button as={Link} to={`/book-inspection/${property._id}`} variant="secondary" leftIcon={<Calendar size={18} />} size="lg">
             Book Inspection
           </Button>
-        <Button as={Link} to={`/secure-payment/${property._id}`} variant="primary" leftIcon={<LockIcon size={18} />} size="lg" w="100%">
-          Secure Property
-        </Button>
+          <Button as={Link} to={`/secure-payment/${property._id}`} variant="primary" leftIcon={<LockIcon size={18} />} size="lg" w="100%">
+            Secure Property
+          </Button>
         </Grid>
       </Box>
     </Box>

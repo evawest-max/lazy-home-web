@@ -127,13 +127,13 @@ export default function ListPropertyStep3({ formData, setFormData, onBack, onNex
             <HStack justify="center" bg="brand.success" py={3} px={4} borderRadius="lg" w="100%">
               <ShieldCheck size={20} color="white" />
               <Text fontSize="sm" fontWeight="bold" color="white">
-                ESCROW PROTECTS YOUR PAYMENT
+                RENTGIDI PROTECTS YOUR PAYMENT
               </Text>
             </HStack>
 
             <VStack spacing={2} bg="brand.background" p={4} borderRadius="lg" w="100%">
               <Text fontSize="sm" fontWeight="600" color="brand.gray.800" textAlign="center">
-                ✓ Renter pays into secure escrow, not directly to you
+                ✓ Renter pays into secure RentGidi account, not directly to you
               </Text>
               <Text fontSize="sm" fontWeight="600" color="brand.gray.800" textAlign="center">
                 ✓ You get paid only after successful inspection
@@ -474,7 +474,7 @@ export default function ListPropertyStep3({ formData, setFormData, onBack, onNex
                 Payment Protection
               </Text>
               <Text fontSize="xs" color="brand.gray.600">
-                Your payment is 100% safe with escrow. You only get paid after renter confirms inspection and gives consent.
+                Your payment is 100% safe with RentGidi. You only get paid after renter confirms inspection and gives consent.
               </Text>
             </VStack>
           </HStack>

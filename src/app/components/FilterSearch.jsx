@@ -142,7 +142,7 @@ const toggleAmenity = (id) => {
             <HStack spacing={2} mt={3} bg="whiteAlpha.200" py={2} px={3} borderRadius="lg">
               <ShieldCheck size={16} color="white" />
               <Text fontSize="xs" fontWeight="600">
-                All properties are escrow protected
+                All properties are RentGidi protected
               </Text>
             </HStack>
           </DrawerHeader>
@@ -445,7 +445,7 @@ const toggleAmenity = (id) => {
               <HStack spacing={2} bg="brand.background" py={2} px={4} borderRadius="lg" w="100%" justify="center">
                 <ShieldCheck size={16} color="#2E7D32" />
                 <Text fontSize="xs" fontWeight="bold" color="brand.success">
-                  All results are escrow protected & verified
+                  All results are RentGidi protected & verified
                 </Text>
               </HStack>
               <Button

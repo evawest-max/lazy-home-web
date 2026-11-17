@@ -27,7 +27,7 @@ export default function HowItWorks() {
                 1. Pay Safely
               </Text>
               <Text fontSize="sm" color="brand.gray.600">
-                Your money goes into secure escrow, NOT to the landlord
+                Your money goes into secure RentGidi account, NOT to the landlord
               </Text>
             </VStack>
           </HStack>

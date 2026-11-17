@@ -1,6 +1,6 @@
 import React from 'react'
-import { Box, Button, VStack, Text, Heading, HStack, Divider } from '@chakra-ui/react';
-import { Mail, Phone, Chrome, ShieldCheck, RefreshCw, Lock, Home, Search, FileText, User, LayoutDashboard } from 'lucide-react';
+import { Box, VStack, Text, HStack } from '@chakra-ui/react';
+import { Heart, Home, Search, User, LayoutDashboard } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function Navbar({ active }) {
@@ -28,6 +28,12 @@ export default function Navbar({ active }) {
               <VStack spacing={1} cursor="pointer" color={active === 'property-listings' ? 'brand.primary' : 'brand.gray.400'}>
                 <Search size={24} />
                 <Text fontSize="xs" fontWeight="600">Find property</Text>
+              </VStack>
+            </Link>
+            <Link to="/favorites" style={{ textDecoration: 'none' }}>
+              <VStack spacing={1} cursor="pointer" color={active === 'favorites' ? 'brand.primary' : 'brand.gray.400'}>
+                <Heart size={24} />
+                <Text fontSize="xs" fontWeight="600">Favorites</Text>
               </VStack>
             </Link>
             <Link to="/dashboard" style={{ textDecoration: 'none' }}>

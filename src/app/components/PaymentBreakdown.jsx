@@ -199,7 +199,7 @@ export default function PaymentBreakdown({user}) {
               <VStack spacing={2}>
                 <ShieldCheck size={32} color="white" />
                 <Text fontSize="md" fontWeight="bold" color="white">
-                  100% ESCROW PROTECTED
+                  100% PROTECTED RENT PAYMENTS
                 </Text>
                 <Text fontSize="sm" color="whiteAlpha.900">
                   Your money is completely safe
@@ -317,7 +317,7 @@ export default function PaymentBreakdown({user}) {
                 <ShieldCheck size={20} color="white" />
               </Box>
               <Text fontSize="lg" fontWeight="bold" color="brand.primary">
-                How Escrow Protects You
+                How RentGidi Protects You
               </Text>
             </HStack>
 
@@ -343,7 +343,7 @@ export default function PaymentBreakdown({user}) {
                       Your Money is LOCKED
                     </Text>
                     <Text fontSize="sm" color="whiteAlpha.900">
-                      Payment stays in secure escrow account. Landlord CANNOT touch it yet.
+                      Payment stays locked in your wallet. Landlord CANNOT touch it yet.
                     </Text>
                   </VStack>
                 </HStack>
@@ -435,7 +435,7 @@ export default function PaymentBreakdown({user}) {
 
         <RefundGuarantee />
 
-        <Box bg="brand.background" border="2px dashed" borderColor="brand.success" borderRadius="lg" p={5}>
+        <Box bg="brand.background" border="2px dashed" borderColor="brand.success" borderRadius="lg" p={5} mb={20}>
           <VStack spacing={3}>
             <Text fontSize="md" fontWeight="bold" color="brand.success" textAlign="center">
               🛡️ YOUR PROTECTION GUARANTEE
@@ -462,7 +462,7 @@ export default function PaymentBreakdown({user}) {
           <HStack spacing={2} bg="brand.background" py={2} px={4} borderRadius="lg" w="100%" justify="center">
             <ShieldCheck size={16} color="#2E7D32" />
             <Text fontSize="xs" fontWeight="bold" color="brand.success">
-              100% SAFE - MONEY PROTECTED BY ESCROW
+              100% SAFE - Payment stays locked in your wallet.
             </Text>
           </HStack>
           {!user ? (
@@ -484,7 +484,7 @@ export default function PaymentBreakdown({user}) {
             onClick={openConfirmDialog}
             isLoading={confirming}
           >
-            Pay to Escrow
+            Pay Safely Now
           </Button>
           )}
           <AlertDialog
@@ -496,7 +496,7 @@ export default function PaymentBreakdown({user}) {
             <AlertDialogOverlay>
               <AlertDialogContent>
                 <AlertDialogHeader fontSize="lg" fontWeight="bold">
-                  Confirm Escrow Payment
+                  Confirm Protected Payment
                 </AlertDialogHeader>
 
                 <AlertDialogBody>

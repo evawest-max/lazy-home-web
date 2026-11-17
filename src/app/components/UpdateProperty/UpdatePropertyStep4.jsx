@@ -505,7 +505,7 @@ function UpdatePropertyStep4({ updatedFormdata, setUpdatedFormdata, onBack, onSu
                             }}
                         >
                             <Text fontSize="sm" color="brand.gray.700">
-                                I understand that payments are held in escrow until renter approves inspection
+                                I understand that payments are held in RentGidi account until renter approves inspection
                             </Text>
                         </Checkbox>
 

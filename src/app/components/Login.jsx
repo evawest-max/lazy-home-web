@@ -68,7 +68,7 @@ export default function Login({ onLogin }) {
                 </HStack>
                 <HStack spacing={2} flex={1}>
                   <Lock size={16} color="#2E7D32" />
-                  <Text fontSize="xs" color="brand.gray.700">Escrow protected</Text>
+                  <Text fontSize="xs" color="brand.gray.700">RentGidi protected</Text>
                 </HStack>
               </HStack>
             </VStack>

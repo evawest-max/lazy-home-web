@@ -15,6 +15,7 @@ import {
   Button,
   Icon,
   Avatar,
+  Image,
 } from '@chakra-ui/react';
 import { Search, MapPin, SlidersHorizontal, Home, User, FileText, ShieldCheck, Bell, AlertCircle } from 'lucide-react';
 import PropertyCard from './PropertyCard';
@@ -27,6 +28,7 @@ import FilterSearch from './FilterSearch';
 import { useEffect, useState } from 'react';
 import { getAllProperties, getAppReviews, getFeaturedProperties, getUnreadCount } from '../../../api';
 import { Link } from 'react-router-dom';
+import logo from '../../assets/logo2.png';
 
 export default function HomeScreen({ user }) {
   const [properties, setProperties] = useState([]);
@@ -120,13 +122,14 @@ export default function HomeScreen({ user }) {
   return (
     <Box minH="100vh" bg="brand.background" pb="80px">
       <VStack spacing={0} align="stretch">
-        <Box bg="brand.primary" px={6} pt={12} pb={8}>
+        <Box bg="brand.primary" px={{ base: 4, sm: 6, md: 8, lg: 12 }} pt={{ base: 10, md: 12 }} pb={4}>
           <VStack spacing={4} align="stretch">
             <HStack justify="space-between" mb={4}>
               <VStack align="start" spacing={0}>
-                <Text fontSize="2xl" fontWeight="bold" color="white">
+                {/* <Text fontSize="2xl" fontWeight="bold" color="white">
                   RentGidi
-                </Text>
+                </Text> */}
+                <Image src={logo} alt="RentGidi Logo" w={{ base: "80px", sm: "80px", md: "150px" }} />
                 {user && <Text fontSize="xs" color="whiteAlpha.800">
                   Welcome back, {user.fullName.split(' ')[0]}!
                 </Text>}
@@ -177,15 +180,16 @@ export default function HomeScreen({ user }) {
                 />}
               </HStack>
             </HStack>
+            
             <HStack spacing={2} justify="center" bg="whiteAlpha.200" py={2} px={3} borderRadius="full">
               <ShieldCheck size={16} color="white" />
               <Text fontSize="xs" color="white" fontWeight="600">
-                PAY SAFELY WITH ESCROW PROTECTION
+                PAY SAFELY WITH RENTGIDI
               </Text>
             </HStack>
 
             <Text fontSize="2xl" fontWeight="bold" color="white" textAlign="center">
-              Find Your Perfect Home
+              Rent & manage properties in Nigeria seamlessly.
             </Text>
 
             {/* <InputGroup size="lg">
@@ -220,25 +224,25 @@ export default function HomeScreen({ user }) {
 
         <TrustBanner />
 
-        <Box bg="brand.success" px={6} py={4}>
+        <Box bg="brand.success" align="stretch" px={{ base: 4, sm: 6, md: 8, lg: 12 }} pt={6}  maxW="1400px" mx="auto" w="100%">
           <VStack spacing={2}>
             <Text fontSize="sm" fontWeight="bold" color="white" textAlign="center">
               🛡️ ZERO RISK GUARANTEE
             </Text>
             <Text fontSize="xs" color="whiteAlpha.900" textAlign="center">
-              Your money is held safely in escrow. Get 100% refund if property doesn't match listing.
+              You get 100% refund if property doesn't match listing.
             </Text>
           </VStack>
         </Box>
 
-        <VStack spacing={4} px={6} py={6} align="stretch">
+        <VStack align="stretch" px={{ base: 4, sm: 6, md: 8, lg: 12 }} pt={6} spacing={4} maxW="1400px" mx="auto" w="100%">
           <BeforeAfter />
         </VStack>
 
-        <VStack spacing={4} px={6} align="stretch">
+        <VStack align="stretch" px={{ base: 4, sm: 6, md: 8, lg: 12 }} pt={6} spacing={4} maxW="1400px" mx="auto" w="100%">
           <HStack justify="space-between" align="center">
             <Text fontSize="lg" fontWeight="600" color="brand.gray.800">
-              What Renters Say About Us
+              What Renters Say About RentGidi
             </Text>
             <Text fontSize="sm" color="brand.gray.600">
               {reviewSummary.averageRating.toFixed(1)} ★ · {reviewSummary.totalReviews} reviews
@@ -282,13 +286,13 @@ export default function HomeScreen({ user }) {
           )}
         </VStack>
 
-        <VStack spacing={4} px={6} mt={6} mb={6} align="stretch">
+        <VStack align="stretch" px={{ base: 4, sm: 6, md: 8, lg: 12 }} pt={6} spacing={4} maxW="1400px" mx="auto" w="100%">
           <HStack justify="space-between" align="center">
             <Text fontSize="lg" fontWeight="600" color="brand.gray.800">
               Featured Properties
             </Text>
             <Badge bg="brand.success" color="white" fontSize="xs" px={3} py={1}>
-              All Escrow Protected
+              All RentGidi Protected
             </Badge>
           </HStack>
 
@@ -321,7 +325,7 @@ export default function HomeScreen({ user }) {
           </Button>
         </VStack>
 
-        <Box bg="white" mx={6} p={6} borderRadius="xl" boxShadow="sm">
+        <Box bg="white" mx={{ base: 4, sm: 6, md: 8, lg: 12 }} my={{ base: 4, sm: 6, md: 8, lg: 12 }} p={{ base: 4, sm: 6, md: 8, lg: 12 }} borderRadius="xl" boxShadow="sm">
           <VStack spacing={4}>
             <Text fontSize="md" fontWeight="bold" color="brand.primary" textAlign="center">
               Why Choose RentGidi?
@@ -332,7 +336,7 @@ export default function HomeScreen({ user }) {
                 <Text fontSize="2xl">🛡️</Text>
                 <VStack align="start" spacing={0} flex={1}>
                   <Text fontSize="sm" fontWeight="600">Zero Fraud Risk</Text>
-                  <Text fontSize="xs" color="brand.gray.600">Escrow holds money until you approve</Text>
+                  <Text fontSize="xs" color="brand.gray.600">RentGidi SafePay holds your funds securely until you confirm move-in</Text>
                 </VStack>
               </HStack>
 

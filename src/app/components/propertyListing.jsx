@@ -16,6 +16,7 @@ import {
     Spinner,
     Icon,
     Avatar,
+    Image,
 } from '@chakra-ui/react';
 import { Search, MapPin, ShieldCheck, Bell, AlertCircle } from 'lucide-react';
 import PropertyCard from './PropertyCard';
@@ -25,6 +26,7 @@ import { useEffect, useState } from 'react';
 import { advancedPropertySearch, getAllProperties, getUnreadCount } from '../../../api';
 import { Link } from 'react-router-dom';
 import { stateToLgas } from './StateToLgas';
+import logo from '../../assets/logo2.png';
 
 
 
@@ -63,29 +65,30 @@ export default function PropertyListing({ user }) {
         sortOrder: 'desc',
     });
 
-const lgasForFilter = filters.state ? stateToLgas[filters.state] || [] : [];
+    const lgasForFilter = filters.state ? stateToLgas[filters.state] || [] : [];
 
     const hasActiveFilters = Object.values(filters).some(v =>
-        Array.isArray(v)? v.length > 0 : v!== '' && v!= null
+        Array.isArray(v) ? v.length > 0 : v !== '' && v != null
     );
     const fetchProperties = async (page = 1, activeFilters = filters) => {
         try {
             setLoading(true);
             // clean empty values
             const clean = {};
-            Object.entries(activeFilters).forEach(([k,v]) => {
-                if (Array.isArray(v)? v.length : v!== '' && v!= null) clean[k] = v;
+            Object.entries(activeFilters).forEach(([k, v]) => {
+                if (Array.isArray(v) ? v.length : v !== '' && v != null) clean[k] = v;
             });
 
             const apiCall = Object.keys(clean).length > 0
-               ? advancedPropertySearch
+                ? advancedPropertySearch
                 : getAllProperties;
 
-            const res = await apiCall({ page, limit: itemsPerPage,...clean });
-            const data = res?.data?.data?? {};
+            const res = await apiCall({ page, limit: itemsPerPage, ...clean });
+            const data = res?.data?.data ?? {};
+            console.log("Fetched properties:", data.properties ?? data.data ?? []);
 
-            setProperties(data.properties?? data.data?? []);
-            setTotalPages(data.pages?? data.totalPages?? 1);
+            setProperties(data.properties ?? data.data ?? []);
+            setTotalPages(data.pages ?? data.totalPages ?? 1);
             setCurrentPage(page);
         } catch (err) {
             console.error(err);
@@ -110,7 +113,7 @@ const lgasForFilter = filters.state ? stateToLgas[filters.state] || [] : [];
     }, [currentPage]);
 
     const updateFilter = (key, value) => {
-        setFilters(prev => ({...prev, [key]: value }));
+        setFilters(prev => ({ ...prev, [key]: value }));
         setCurrentPage(1);
     };
     // handlers for top bar
@@ -119,30 +122,30 @@ const lgasForFilter = filters.state ? stateToLgas[filters.state] || [] : [];
         updateFilter('search', e.target.value);
     };
 
-const handleLocationChange = (e) => {
-  const val = e.target.value; // "Lekki" is now "Eti-Osa" or "Port Harcourt"
-  if (!val) {
-    setFilters(prev => ({ ...prev, state: '', area: '' }));
-    fetchProperties(1, { ...filters, state: '', area: '' });
-    return;
-  }
-  // if grouped select returns "LGA, State"
-  if (val.includes(',')) {
-    const [area, state] = val.split(',').map(s => s.trim());
-    const next = { ...filters, area, state };
-    setFilters(next);
-    fetchProperties(1, next);
-  } else {
-    // state only select
-    const next = { ...filters, state: val, area: '' };
-    setFilters(next);
-    fetchProperties(1, next);
-  }
-};
+    const handleLocationChange = (e) => {
+        const val = e.target.value; // "Lekki" is now "Eti-Osa" or "Port Harcourt"
+        if (!val) {
+            setFilters(prev => ({ ...prev, state: '', area: '' }));
+            fetchProperties(1, { ...filters, state: '', area: '' });
+            return;
+        }
+        // if grouped select returns "LGA, State"
+        if (val.includes(',')) {
+            const [area, state] = val.split(',').map(s => s.trim());
+            const next = { ...filters, area, state };
+            setFilters(next);
+            fetchProperties(1, next);
+        } else {
+            // state only select
+            const next = { ...filters, state: val, area: '' };
+            setFilters(next);
+            fetchProperties(1, next);
+        }
+    };
 
     const handleApplyAdvancedFilters = (payload) => {
         // payload from FilterSearch drawer
-        setFilters(prev => ({...prev,...payload }));
+        setFilters(prev => ({ ...prev, ...payload }));
         setCurrentPage(1);
     };
     const handleClearAll = () => {
@@ -165,7 +168,7 @@ const handleLocationChange = (e) => {
         setCurrentPage((prev) => Math.min(prev + 1, totalPages));
     };
 
-    
+
 
     const fetchUnreadCount = async () => {
         console.log("counting unread")
@@ -231,13 +234,14 @@ const handleLocationChange = (e) => {
     return (
         <Box minH="100vh" bg="brand.background" pb="80px">
             <VStack spacing={0} align="stretch">
-                <Box bg="brand.primary" px={6} pt={12} pb={8}>
+                <Box bg="brand.primary" px={{ base: 4, sm: 6, md: 8, lg: 12 }} pt={{ base: 10, md: 12 }} pb={4} >
                     <VStack spacing={4} align="stretch">
                         <HStack justify="space-between" mb={4}>
                             <VStack align="start" spacing={0}>
-                                <Text fontSize="2xl" fontWeight="bold" color="white">
+                                {/* <Text fontSize="2xl" fontWeight="bold" color="white">
                                     RentGidi
-                                </Text>
+                                </Text> */}
+                                <Image src={logo} alt="RentGidi Logo" w={{ base: "80px", sm: "80px", md: "150px" }} />
                                 {user && <Text fontSize="xs" color="whiteAlpha.800">
                                     Welcome back, {user.fullName.split(' ')[0]}!
                                 </Text>}
@@ -290,7 +294,7 @@ const handleLocationChange = (e) => {
                         <HStack spacing={2} justify="center" bg="whiteAlpha.200" py={2} px={3} borderRadius="full">
                             <ShieldCheck size={16} color="white" />
                             <Text fontSize="xs" color="white" fontWeight="600">
-                                PAY SAFELY WITH ESCROW PROTECTION
+                                100% PROTECTED RENT PAYMENTS
                             </Text>
                         </HStack>
 
@@ -320,57 +324,57 @@ const handleLocationChange = (e) => {
                             />
                         </InputGroup>
 
-<HStack spacing={3}>
-  <Select
-    bg="white"
-    placeholder="All States"
-    flex={1}
-    value={filters.state}
-    onChange={(e) => {
-      const state = e.target.value;
-      const next = { ...filters, state, area: '' };
-      setFilters(next);
-      fetchProperties(1, next);
-    }}
-  >
-    <option value="">All States</option>
-    {Object.keys(stateToLgas).sort().map((state) => (
-      <option key={state} value={state}>{state}</option>
-    ))}
-  </Select>
+                        <HStack spacing={3}>
+                            <Select
+                                bg="white"
+                                placeholder="All States"
+                                flex={1}
+                                value={filters.state}
+                                onChange={(e) => {
+                                    const state = e.target.value;
+                                    const next = { ...filters, state, area: '' };
+                                    setFilters(next);
+                                    fetchProperties(1, next);
+                                }}
+                            >
+                                <option value="">All States</option>
+                                {Object.keys(stateToLgas).sort().map((state) => (
+                                    <option key={state} value={state}>{state}</option>
+                                ))}
+                            </Select>
 
-  <Select
-    bg="white"
-    placeholder={filters.state ? `All in ${filters.state}` : "Select State first"}
-    flex={1}
-    value={filters.area ? `${filters.area}, ${filters.state}` : ''}
-    onChange={handleLocationChange}
-    isDisabled={!filters.state}
-  >
-    <option value="">All Areas</option>
-    {lgasForFilter.map((lga) => (
-      <option key={lga} value={`${lga}, ${filters.state}`}>{lga}</option>
-    ))}
-  </Select>
+                            <Select
+                                bg="white"
+                                placeholder={filters.state ? `All in ${filters.state}` : "Select State first"}
+                                flex={1}
+                                value={filters.area ? `${filters.area}, ${filters.state}` : ''}
+                                onChange={handleLocationChange}
+                                isDisabled={!filters.state}
+                            >
+                                <option value="">All Areas</option>
+                                {lgasForFilter.map((lga) => (
+                                    <option key={lga} value={`${lga}, ${filters.state}`}>{lga}</option>
+                                ))}
+                            </Select>
 
-  <FilterSearch 
-    setProperties={setProperties} 
-    fetchProperties={fetchProperties} 
-    setFilterPayload={setFilterPayload}
-    stateToLgas={stateToLgas}
-  />
-</HStack>
+                            <FilterSearch
+                                setProperties={setProperties}
+                                fetchProperties={fetchProperties}
+                                setFilterPayload={setFilterPayload}
+                                stateToLgas={stateToLgas}
+                            />
+                        </HStack>
                     </VStack>
                 </Box>
 
 
-                <VStack spacing={4} px={6} align="stretch" mb={6}>
+                <VStack align="stretch" px={{ base: 4, sm: 6, md: 8, lg: 12 }} pt={6} spacing={4} maxW="1400px" mx="auto" w="100%">
                     <HStack justify="space-between" align="center">
                         <Text fontSize="lg" fontWeight="600" color="brand.gray.800">
                             All Properties
                         </Text>
                         <Badge bg="brand.success" color="white" fontSize="xs" px={3} py={1}>
-                            All Escrow Protected
+                            Verified & Protected
                         </Badge>
                     </HStack>
 
@@ -413,7 +417,7 @@ const handleLocationChange = (e) => {
                                 <Text fontSize="2xl">🛡️</Text>
                                 <VStack align="start" spacing={0} flex={1}>
                                     <Text fontSize="sm" fontWeight="600">Zero Fraud Risk</Text>
-                                    <Text fontSize="xs" color="brand.gray.600">Escrow holds money until you approve</Text>
+                                    <Text fontSize="xs" color="brand.gray.600">Funds stay locked until you approve</Text>
                                 </VStack>
                             </HStack>
 

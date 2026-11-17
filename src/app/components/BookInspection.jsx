@@ -184,8 +184,11 @@ export default function BookInspection() {
                 duration: 5000,
                 isClosable: true,
             });
+            // setTimeout(() => {
+            //     navigate("/dashboard", { state: { parameter: 1 } })
+            // }, 3000);
             setTimeout(() => {
-                navigate("/dashboard", { state: { parameter: 1 } })
+                navigate("/my-inspections")
             }, 3000);
         } catch (error) {
             toast({
@@ -262,7 +265,7 @@ export default function BookInspection() {
                                 ✓ Fully refundable if you rent this property
                             </Text>
                             <Text fontSize="sm" fontWeight="600" color="brand.gray.800" textAlign="center">
-                                ✓ Held in escrow until inspection complete
+                                ✓ Payment stays locked in your wallet until inspection complete
                             </Text>
                             <Text fontSize="sm" fontWeight="600" color="brand.gray.800" textAlign="center">
                                 ✓ Agent gets paid only after you visit
@@ -550,7 +553,7 @@ export default function BookInspection() {
                     <HStack spacing={2} bg="brand.background" py={2} px={4} borderRadius="lg" w="100%" justify="center">
                         <ShieldCheck size={16} color="#2E7D32" />
                         <Text fontSize="xs" fontWeight="bold" color="brand.success">
-                            ESCROW PROTECTED - NOT REFUNDABLE IF YOU RENT
+                            RentGidi PROTECTED - NOT REFUNDABLE IF YOU RENT
                         </Text>
                     </HStack>
                     <Button

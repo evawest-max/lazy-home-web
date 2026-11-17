@@ -14,7 +14,7 @@ export default function TrustBanner() {
               100% Secure
             </Text>
             <Text fontSize="xs" color="brand.gray.600" textAlign="center">
-              Escrow Protected
+              RentGidi Protected
             </Text>
           </VStack>
 

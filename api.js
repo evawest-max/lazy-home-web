@@ -374,6 +374,12 @@ export const saveProperty = (id) =>
     `/api/v1/properties/${id}/save`
   );
 
+export const getAllSavedProperties = () =>
+  API.get(
+    `/api/v1/properties/my-saved`, {
+    params: { page: 1, limit: 10 },
+  });
+
 export const getAnalyticsDashboardAndProperties =
   () =>
     API.get(
@@ -564,14 +570,14 @@ export const cancelInspectionBooking = (
   return reason ? API.patch(url, { reason }) : API.patch(url);
 };
 
-  export const acceptInspectionBooking = (
+export const acceptInspectionBooking = (
   commitmentId
 ) =>
   API.patch(
     `/api/v1/viewing-commitments/${commitmentId}/accept`
   );
 
-  export const declineInspectionBooking = (
+export const declineInspectionBooking = (
   commitmentId
 ) =>
   API.patch(
@@ -1086,7 +1092,7 @@ export const getAllInspections = (query = {}) =>
     params: { disputedOnly: "false", page: 1, limit: 20, ...query },
   });
 
-  export const getAllUnresolvedDispute = (query = {}) =>
+export const getAllUnresolvedDispute = (query = {}) =>
   API.get("/api/v1/admin/disputes", {
     params: { page: 1, limit: 20, ...query },
   });
@@ -1099,11 +1105,11 @@ export const resolveInspectionDisputeFull = (
   }
 ) =>
   API.post(`/api/v1/admin/inspections/${disputeId}/resolve`, {
-    decision : decision || "refund_tenant",
+    decision: decision || "refund_tenant",
     adminNotes,
   });
 
-  export const resolveInspectionDisputePartial = (
+export const resolveInspectionDisputePartial = (
   disputeId,
   {
     decision, // "refund_tenant" | "apply_to_rent" | "partial_forfeit"
@@ -1111,7 +1117,7 @@ export const resolveInspectionDisputeFull = (
   }
 ) =>
   API.post(`/api/v1/admin/inspections/${disputeId}/resolve`, {
-    decision : decision || "partial_forfeit",
+    decision: decision || "partial_forfeit",
     adminNotes,
   });
 

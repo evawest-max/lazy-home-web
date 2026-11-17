@@ -14,7 +14,7 @@ export default function EscrowExplainer() {
               Your Money is 100% Safe
             </Text>
             <Text fontSize="sm" color="brand.gray.600">
-              How RentGidi Escrow Protects You
+              How RentGidi Protects You
             </Text>
           </VStack>
         </HStack>
@@ -41,7 +41,7 @@ export default function EscrowExplainer() {
                   <Text fontWeight="600" fontSize="sm">You Pay</Text>
                 </HStack>
                 <Text fontSize="xs" color="brand.gray.700">
-                  Money goes into secure escrow account (NOT to landlord yet)
+                  Money goes into secure RentGidi account (NOT to landlord yet)
                 </Text>
               </VStack>
             </HStack>

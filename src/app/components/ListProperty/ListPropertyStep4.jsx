@@ -578,7 +578,7 @@ export default function ListPropertyStep4({ formData, setFormData, onBack, onSub
                             }}
                         >
                             <Text fontSize="sm" color="brand.gray.700">
-                                I understand that payments are held in escrow until renter approves inspection
+                                I understand that payments are held in RentGidi account until renter approves inspection
                             </Text>
                         </Checkbox>
 

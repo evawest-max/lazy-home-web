@@ -75,6 +75,7 @@ import DualReviewModal from './leaveReviewsButton';
 import EscrowDetailsModal from './EscrowDetailsModal';
 import PropertyDetailsModal from './PropertyDetailsModal';
 import { FiArrowLeft, FiMessageSquare, FiStar } from 'react-icons/fi';
+import logo from '../../assets/logo2.png';
 
 
 export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
@@ -665,9 +666,10 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                     <Box maxW="1400px" mx="auto" w="100%">
                         <HStack justify="space-between" mb={4} flexWrap="wrap" rowGap={3}>
                             <VStack align="start" spacing={0}>
-                                <Text fontSize={{ base: 'xl', md: '2xl' }} fontWeight="bold" color="white">
+                                {/* <Text fontSize={{ base: 'xl', md: '2xl' }} fontWeight="bold" color="white">
                                     RentGidi
-                                </Text>
+                                </Text> */}
+                                <Image src={logo} alt="RentGidi Logo" w={{ base: "80px", sm: "80px", md: "150px" }} />
                                 <Text fontSize="xs" color="whiteAlpha.800">
                                     Welcome back, {user.fullName.split(' ')[0]}!
                                 </Text>
@@ -1168,7 +1170,7 @@ export default function Dashboard({ onNavigate, user, setUpdatedFormdata }) {
                             My Inspections
                         </Button>
                         <Text fontSize="lg" fontWeight="600" color="brand.gray.800">
-                            Escrow Transactions
+                            Secured Transactions
                         </Text>
 
                         <VStack align="stretch" spacing={3}>

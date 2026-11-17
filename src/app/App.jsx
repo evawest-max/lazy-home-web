@@ -2,7 +2,6 @@ import { Box, ChakraProvider, Spinner, useToast } from '@chakra-ui/react';
 import theme from './theme'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 // import ScreenRouter from './components/ScreenRouter';
-import LandingPage from './components/LandingPage';
 import Login from './components/Login';
 import { useEffect, useState } from 'react';
 import HomeScreen from './components/HomeScreen';
@@ -11,6 +10,7 @@ import OTPVerification from './components/OTPVerification';
 import SignInForm from './components/login form';
 import PropertyListing from './components/propertyListing';
 import PropertyDetails from './components/PropertyDetails';
+import Favorites from './components/Favorites';
 import PaymentBreakdown from './components/PaymentBreakdown';
 import ListProperty from './components/ListProperty/ListProperty';
 import Profile from './components/profile';
@@ -48,6 +48,7 @@ import AppReviewsPage from './components/AppReviewsPage';
 import AdminAppReviewsPage from './components/AdminComponents/AdminAppReviewsPage';
 import AdminLandlordReviewsPage from './components/AdminComponents/AdminLandlordReviewsPage';
 import AdminSupportChat from './components/AdminComponents/AdminSupportChat';
+import { LandingPage } from './components/LandingPage';
 
 const LISTING_DRAFT_KEY = 'listingFormData';
 
@@ -362,7 +363,7 @@ export default function App() {
       <Router>
         <Box position="absolute" top={0} left={0} width="100%" height="100%" bg="white">
           <Routes>
-            <Route path="/" element={<LandingPage />} />
+            <Route path="/" element={<LandingPage user={user} />} />
             <Route path="/login" element={!user ? <Login onLogin={login} /> : <Navigate to="/dashboard" />} />
             <Route path="/signup" element={!user ? <SignUp /> : <Navigate to="/dashboard" />} />
             <Route path="/otp" element={loadingUser ? (<Spinner />) : user ? <OTPVerification phone={user.phone} /> : <Navigate to="/login" />} />
@@ -372,6 +373,7 @@ export default function App() {
             <Route path="/verify/:token" element={<VerifyEmail />} />
             <Route path="/home" element={<HomeScreen user={user} />} />
             <Route path="/property-listings" element={<PropertyListing user={user} />} />
+            <Route path="/favorites" element={loadingUser ? <Spinner /> : user ? <Favorites /> : <Navigate to="/login" />} />
             <Route path="/property/:id" element={<PropertyDetails user={user} />} />
             <Route path="/app-reviews" element={<AppReviewsPage />} />
             <Route path="/admin-app-reviews" element={loadingUser ? (<Spinner />) : user && (user.role === 'super_admin' || user.role === 'admin' || user.role === 'moderator') ? <AdminAppReviewsPage /> : <Navigate to="/login" />} />
